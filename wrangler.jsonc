@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "digitalwebsite",
+  "main": "worker.js",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS"
+  },
+
+  "vars": {
+    "CHARGILY_MODE": "test",
+    "APP_URL": "https://digitalwebsite.pages.dev",
+    "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
+    "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com"
+  }
+}

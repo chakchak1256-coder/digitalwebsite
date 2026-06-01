@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("dz_theme")||"dark")</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Seed Data — DigiStore DZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+:root{--accent:#10B981;--accent-rgb:16,185,129;--accent-dark:#059669;--bg:#0C0C0C;--bg2:#141414;--bg3:#1E1E1E;--text:#F2F2F2;--text-muted:#71717A;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.03);--radius:12px;--radius-sm:8px;--transition:.18s ease;}
+[data-theme="light"]{--bg:#fff;--bg2:#F4F4F5;--bg3:#E9E9EB;--text:#0A0A0A;--text-muted:#52525B;--border:rgba(0,0,0,.08);--card:rgba(0,0,0,.025);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:40px 5vw;max-width:940px;margin:0 auto}
+h1,h2,h3{font-family:'Syne',sans-serif}
+button{cursor:pointer;border:none;font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+.back{display:inline-flex;align-items:center;gap:.4rem;color:var(--text-muted);font-size:.85rem;margin-bottom:2rem;transition:color var(--transition)}
+.back:hover{color:var(--text)}
+.page-title{font-size:1.8rem;font-weight:800;margin-bottom:.3rem}
+.page-sub{color:var(--text-muted);font-size:.88rem;margin-bottom:1.5rem}
+
+/* Storage bar */
+#storage-bar-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;margin-bottom:1.5rem}
+.storage-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;font-size:.83rem}
+.storage-label{color:var(--text-muted)}
+#storage-pct{font-weight:700}
+.bar-track{height:8px;background:var(--bg3);border-radius:99px;overflow:hidden}
+#bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .3s ease}
+#storage-warning{display:none;margin-top:.6rem;font-size:.78rem;color:#F59E0B;display:flex;align-items:center;gap:.4rem}
+
+/* Warning */
+.warning-box{display:flex;align-items:flex-start;gap:.8rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:.87rem;color:#F59E0B;line-height:1.6}
+.warning-box i{margin-top:2px;flex-shrink:0}
+
+/* Card */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.2rem}
+.card-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.card-title i{color:var(--accent)}
+
+/* Grid */
+.seed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.75rem;margin-bottom:1.1rem}
+.seed-item{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;transition:border-color var(--transition);user-select:none;position:relative}
+.seed-item.selected{border-color:var(--accent);background:rgba(var(--accent-rgb),.06)}
+.seed-item.done{opacity:.45;cursor:default}
+.seed-item img{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--bg3)}
+.seed-item-body{padding:.6rem .8rem}
+.seed-item-name{font-weight:600;font-size:.82rem;margin-bottom:.15rem}
+.seed-item-meta{font-size:.72rem;color:var(--text-muted)}
+.check-icon{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:none;align-items:center;justify-content:center;font-size:.65rem}
+.seed-item.selected .check-icon{display:flex}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--radius-sm);font-weight:600;font-size:.875rem;transition:all var(--transition)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px)}
+.btn-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#EF4444}
+.btn-danger:hover{background:rgba(239,68,68,.18)}
+.btn-sm{padding:7px 13px;font-size:.8rem}
+.btn-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:center}
+.sel-row{display:flex;gap:.5rem;margin-bottom:.8rem}
+.sel-btn{padding:4px 10px;border-radius:99px;font-size:.73rem;font-weight:600;background:var(--card);border:1px solid var(--border);color:var(--text-muted);transition:all var(--transition)}
+.sel-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Counts */
+.counts-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.count-pill{padding:5px 14px;border-radius:99px;background:var(--card);border:1px solid var(--border);font-size:.8rem;font-weight:600}
+.count-pill span{color:var(--accent)}
+
+/* Log */
+#log{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;font-family:monospace;font-size:.8rem;max-height:200px;overflow-y:auto;display:none;margin-top:1rem;line-height:1.9}
+#log.show{display:block}
+.log-ok{color:#10B981}.log-err{color:#EF4444}.log-info{color:var(--text-muted)}
+</style>
+</head>
+<body>
+<a href="index.html" class="back"><i class="fa-solid fa-arrow-left"></i> Back to Store</a>
+<div id="emergency-banner" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:var(--radius);padding:1.2rem 1.4rem;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#EF4444;margin-bottom:.3rem;font-size:1rem">⚠️ Storage is Full — Nothing can be saved</div>
+      <div style="font-size:.83rem;color:var(--text-muted)">Your browser storage is completely full. Click the button to wipe all store data (products, categories, orders, cart) and free up space. Settings are kept.</div>
+    </div>
+    <button onclick="emergencyClear()" style="padding:10px 20px;background:#EF4444;color:#fff;border-radius:var(--radius-sm);font-weight:700;font-size:.875rem;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0">
+      <i class="fa-solid fa-trash" style="margin-right:.4rem"></i>Clear Storage Now
+    </button>
+  </div>
+</div>
+
+<h1 class="page-title">🌱 Seed Data</h1>
+<p class="page-sub">Add demo products and categories to your store. All data is saved in your browser's localStorage.</p>
+
+<!-- Storage usage -->
+<div id="storage-bar-wrap">
+  <div class="storage-top">
+    <span class="storage-label"><i class="fa-solid fa-database" style="color:var(--accent);margin-right:.35rem"></i>localStorage Usage</span>
+    <span id="storage-pct">Calculating…</span>
+  </div>
+  <div class="bar-track"><div id="bar-fill" style="width:0%"></div></div>
+  <div id="storage-warning" style="display:none;margin-top:.6rem;font-size:.78rem;color:#F59E0B">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="storage-warning-text"></span>
+  </div>
+</div>
+
+<div class="warning-box">
+  <i class="fa-solid fa-circle-info"></i>
+  <div>Images are stored as <strong>URLs only</strong> (not downloaded), so they use very little space.
+  If storage is full, <strong>clear old data below first</strong> before adding new items.</div>
+</div>
+
+<!-- Counts -->
+<div class="counts-row">
+  <div class="count-pill">📦 Products: <span id="cnt-prods">—</span></div>
+  <div class="count-pill">🗂️ Categories: <span id="cnt-cats">—</span></div>
+</div>
+
+<!-- Categories -->
+<div class="card">
+  <div class="card-title"><i class="fa-solid fa-tags"></i> Categories</div>
+  <div class="sel-row">
+    <button class="sel-btn" onclick="selectAll('cat')">Select All</button>
+    <button class="sel-btn" onclick="selectNone('cat')">Select None</button>
+  </div>
+  <div class="seed-grid" id="cat-grid"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary btn-sm" onclick="seedCats()"><i class="fa-solid fa-plus"></i> Add Selected</button>
+    <button class="btn btn-danger btn-sm" onclick="clearCats()"><i class="fa-solid fa-trash"></i> Clear All Categories</button>
+  </div>
+</div>
+
+<!-- Products -->
+<div class="card">
+  <div class="card-title"><i class="fa-solid fa-box-archive"></i> Products</div>
+  <div class="sel-row">
+    <button class="sel-btn" onclick="selectAll('prod')">Select All</button>
+    <button class="sel-btn" onclick="selectNone('prod')">Select None</button>
+  </div>
+  <div class="seed-grid" id="prod-grid"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary btn-sm" onclick="seedProds()"><i class="fa-solid fa-plus"></i> Add Selected</button>
+    <button class="btn btn-danger btn-sm" onclick="clearProds()"><i class="fa-solid fa-trash"></i> Clear All Products</button>
+  </div>
+</div>
+
+<!-- Reset -->
+<div class="card">
+  <div class="card-title"><i class="fa-solid fa-broom"></i> Reset Store Data</div>
+  <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:.9rem">Clears ALL products, categories, orders and cart. Settings (store name, colors) are kept.</p>
+  <button class="btn btn-danger btn-sm" onclick="resetAll()"><i class="fa-solid fa-triangle-exclamation"></i> Reset Everything (keep settings)</button>
+</div>
+
+<div id="log"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase.js"></script>
+<script>
+'use strict';
+
+const SEED_CATS = [
+  { name:'Streaming',      emoji:'🎬', image:'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&q=60&auto=format&fit=crop' },
+  { name:'Music',          emoji:'🎵', image:'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=400&q=60&auto=format&fit=crop' },
+  { name:'Design',         emoji:'🎨', image:'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&q=60&auto=format&fit=crop' },
+  { name:'VPN & Security', emoji:'🔒', image:'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=60&auto=format&fit=crop' },
+  { name:'Gaming',         emoji:'🎮', image:'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400&q=60&auto=format&fit=crop' },
+  { name:'Ebooks',         emoji:'📚', image:'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&q=60&auto=format&fit=crop' },
+  { name:'Social Media',   emoji:'📱', image:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400&q=60&auto=format&fit=crop' },
+  { name:'Courses',        emoji:'🎓', image:'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=60&auto=format&fit=crop' },
+];
+
+const SEED_PRODS = [
+  { name:'Netflix Premium 4K',        category:'Streaming',      price:1200, oldPrice:2000, badge:'HOT',
+    description:'Full Premium 4K Netflix account. 4 screens, Ultra HD. Instant delivery.',
+    images:['https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Spotify Premium 3 Months',  category:'Music',          price:800,  oldPrice:1400, badge:'SALE',
+    description:'Spotify Premium. Ad-free, offline music. 3 months guaranteed.',
+    images:['https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Canva Pro Annual',           category:'Design',         price:2500, oldPrice:4000, badge:'BEST SELLER',
+    description:'Canva Pro full access. Unlimited designs, premium templates, brand kit.',
+    images:['https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=700&q=70&auto=format&fit=crop'] },
+  { name:'NordVPN 1 Year',             category:'VPN & Security', price:3200, oldPrice:5000, badge:'NEW',
+    description:'NordVPN 1-year subscription. 60+ countries, 6 devices.',
+    images:['https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Disney+ 6 Months',           category:'Streaming',      price:900,                badge:'HOT',
+    description:'Disney+ Premium. Marvel, Star Wars, Pixar and more.',
+    images:['https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Xbox Game Pass Ultimate 3M', category:'Gaming',         price:1500, oldPrice:2200, badge:'NEW',
+    description:'Xbox Game Pass Ultimate 3 months. 100+ games. Xbox Live Gold included.',
+    images:['https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Adobe Photoshop CC',         category:'Design',         price:3800,               badge:'PREMIUM',
+    description:'Adobe Photoshop Creative Cloud. 1 year license.',
+    images:['https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Python Mastery Bundle',      category:'Ebooks',         price:600,  oldPrice:1200, badge:'SALE',
+    description:'5-book Python bundle. Beginner to advanced. PDF + EPUB.',
+    images:['https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=700&q=70&auto=format&fit=crop'] },
+  { name:'YouTube Premium 6 Months',   category:'Streaming',      price:1100, oldPrice:1800, badge:'HOT',
+    description:'YouTube Premium — ad-free, background play, YouTube Music included.',
+    images:['https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=700&q=70&auto=format&fit=crop'] },
+  { name:'LinkedIn Premium 1 Month',   category:'Social Media',   price:900,                badge:'NEW',
+    description:'LinkedIn Premium Career. InMail credits, AI tools.',
+    images:['https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=700&q=70&auto=format&fit=crop'] },
+  { name:'Duolingo Super 3 Months',    category:'Courses',        price:700,  oldPrice:1100, badge:'SALE',
+    description:'Duolingo Super — no ads, unlimited hearts, offline lessons.',
+    images:['https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&q=70&auto=format&fit=crop'] },
+  { name:'ExpressVPN 1 Year',          category:'VPN & Security', price:2800,               badge:'BEST SELLER',
+    description:'ExpressVPN 1 year. Ultra-fast, 160+ locations, no-logs.',
+    images:['https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=700&q=70&auto=format&fit=crop'] },
+];
+
+const selCats  = new Set();
+const selProds = new Set();
+
+// ── Storage diagnostics ──────────────────────────────────────
+function calcStorage() {
+  let bytes = 0;
+  for (const k in localStorage) {
+    if (!localStorage.hasOwnProperty(k)) continue;
+    bytes += (k.length + (localStorage[k]||'').length) * 2;
+  }
+  const kb   = bytes / 1024;
+  const max  = 5 * 1024; // ~5MB typical limit
+  const pct  = Math.min(100, Math.round(kb / max * 100));
+  const fill = document.getElementById('bar-fill');
+  const pctEl = document.getElementById('storage-pct');
+  const warn  = document.getElementById('storage-warning');
+  const warnTxt = document.getElementById('storage-warning-text');
+
+  if (fill)   fill.style.width = pct + '%';
+  if (fill)   fill.style.background = pct > 80 ? '#EF4444' : pct > 55 ? '#F59E0B' : 'var(--accent)';
+  if (pctEl)  pctEl.textContent = `${Math.round(kb)} KB / ~5120 KB (${pct}%)`;
+
+  if (pct > 80) {
+    if (warn) warn.style.display = 'flex';
+    if (warnTxt) warnTxt.textContent = pct >= 100
+      ? 'Storage is FULL — clear data below before adding new items.'
+      : `Storage is ${pct}% full — clear old data soon to avoid save failures.`;
+  } else {
+    if (warn) warn.style.display = 'none';
+  }
+  return { kb, pct };
+}
+
+// ── Render grids ─────────────────────────────────────────────
+function renderCatGrid() {
+  const grid = document.getElementById('cat-grid');
+  const existing = new Set(DB.getAll('categories').map(c => c.name));
+  grid.innerHTML = '';
+  SEED_CATS.forEach((cat, i) => {
+    const done = existing.has(cat.name);
+    const div  = document.createElement('div');
+    div.className = 'seed-item' + (done ? ' done' : selCats.has(i) ? ' selected' : '');
+    div.innerHTML = `
+      <img src="${cat.image}" alt="${cat.name}" loading="lazy"/>
+      <div class="seed-item-body">
+        <div class="seed-item-name">${cat.emoji} ${cat.name}</div>
+        <div class="seed-item-meta">${done ? '✅ Already in store' : 'Click to select'}</div>
+      </div>
+      <div class="check-icon"><i class="fa-solid fa-check"></i></div>`;
+    if (!done) {
+      div.onclick = () => {
+        selCats.has(i) ? selCats.delete(i) : selCats.add(i);
+        div.classList.toggle('selected', selCats.has(i));
+      };
+    }
+    grid.appendChild(div);
+  });
+}
+
+function renderProdGrid() {
+  const grid = document.getElementById('prod-grid');
+  const existing = new Set(DB.getAll('products').map(p => p.name));
+  grid.innerHTML = '';
+  SEED_PRODS.forEach((prod, i) => {
+    const done = existing.has(prod.name);
+    const div  = document.createElement('div');
+    div.className = 'seed-item' + (done ? ' done' : selProds.has(i) ? ' selected' : '');
+    div.innerHTML = `
+      <img src="${prod.images[0]}" alt="${prod.name}" loading="lazy"/>
+      <div class="seed-item-body">
+        <div class="seed-item-name">${prod.name}</div>
+        <div class="seed-item-meta">${prod.price.toLocaleString()} DA${prod.oldPrice ? ' · was '+prod.oldPrice.toLocaleString() : ''} · ${prod.category}</div>
+        <div class="seed-item-meta" style="margin-top:2px">${done ? '✅ Already in store' : 'Click to select'}</div>
+      </div>
+      <div class="check-icon"><i class="fa-solid fa-check"></i></div>`;
+    if (!done) {
+      div.onclick = () => {
+        selProds.has(i) ? selProds.delete(i) : selProds.add(i);
+        div.classList.toggle('selected', selProds.has(i));
+      };
+    }
+    grid.appendChild(div);
+  });
+}
+
+function updateCounts() {
+  document.getElementById('cnt-prods').textContent = DB.getAll('products').length;
+  document.getElementById('cnt-cats').textContent  = DB.getAll('categories').length;
+  calcStorage();
+}
+
+// ── Selection helpers ────────────────────────────────────────
+function selectAll(type) {
+  if (type === 'cat') {
+    const existing = new Set(DB.getAll('categories').map(c => c.name));
+    SEED_CATS.forEach((c, i) => { if (!existing.has(c.name)) selCats.add(i); });
+    renderCatGrid();
+  } else {
+    const existing = new Set(DB.getAll('products').map(p => p.name));
+    SEED_PRODS.forEach((p, i) => { if (!existing.has(p.name)) selProds.add(i); });
+    renderProdGrid();
+  }
+}
+function selectNone(type) {
+  if (type === 'cat') { selCats.clear(); renderCatGrid(); }
+  else { selProds.clear(); renderProdGrid(); }
+}
+
+// ── Seed actions ─────────────────────────────────────────────
+function seedCats() {
+  if (!selCats.size) { logMsg('No categories selected.', 'err'); return; }
+  let added = 0, failed = 0;
+  selCats.forEach(i => {
+    const result = DB.add('categories', SEED_CATS[i]);
+    if (result) { logMsg(`✅ Added: ${SEED_CATS[i].name}`, 'ok'); added++; }
+    else        { logMsg(`❌ Failed: ${SEED_CATS[i].name} — localStorage may be full!`, 'err'); failed++; }
+  });
+  selCats.clear();
+  logMsg(failed ? `Done: ${added} added, ${failed} FAILED (clear storage below).` : `Done. ${added} categor${added===1?'y':'ies'} added.`, failed ? 'err' : 'info');
+  updateCounts(); renderCatGrid();
+}
+
+function seedProds() {
+  if (!selProds.size) { logMsg('No products selected.', 'err'); return; }
+  let added = 0, failed = 0;
+  // Reverse so newest appears first
+  [...selProds].reverse().forEach(i => {
+    const result = DB.add('products', SEED_PRODS[i]);
+    if (result) { logMsg(`✅ Added: ${SEED_PRODS[i].name}`, 'ok'); added++; }
+    else        { logMsg(`❌ Failed: ${SEED_PRODS[i].name} — localStorage may be full!`, 'err'); failed++; }
+  });
+  selProds.clear();
+  logMsg(failed ? `Done: ${added} added, ${failed} FAILED (clear storage below).` : `Done. ${added} product${added===1?'':'s'} added.`, failed ? 'err' : 'info');
+  updateCounts(); renderProdGrid();
+}
+
+function clearCats() {
+  if (!confirm('Delete ALL categories from the store?')) return;
+  localStorage.removeItem('dz_categories');
+  logMsg('All categories cleared.', 'info');
+  updateCounts(); renderCatGrid(); renderProdGrid();
+}
+
+function clearProds() {
+  if (!confirm('Delete ALL products from the store?')) return;
+  localStorage.removeItem('dz_products');
+  logMsg('All products cleared.', 'info');
+  updateCounts(); renderProdGrid();
+}
+
+function resetAll() {
+  if (!confirm('Reset ALL store data?\n\nProducts, categories, orders, and cart will be deleted.\nSettings (store name, colors) will be kept.')) return;
+  const keep = localStorage.getItem('dz_settings');
+  // Clear everything dz_ except settings
+  Object.keys(localStorage).filter(k => k.startsWith('dz_') && k !== 'dz_settings' && k !== 'dz_theme' && k !== 'dz_auth')
+    .forEach(k => localStorage.removeItem(k));
+  logMsg('All store data cleared. Settings preserved.', 'info');
+  updateCounts(); renderCatGrid(); renderProdGrid();
+}
+
+// ── Log ───────────────────────────────────────────────────────
+function logMsg(msg, type='info') {
+  const log = document.getElementById('log');
+  log.classList.add('show');
+  const line = document.createElement('div');
+  line.className = 'log-' + type;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Init ──────────────────────────────────────────────────────
+function emergencyClear() {
+  if (!confirm('Clear ALL store data?\n\nThis will delete products, categories, orders and cart.\nSettings (store name, colors, logo) are kept.')) return;
+  const keep = { dz_settings: localStorage.getItem('dz_settings'), dz_theme: localStorage.getItem('dz_theme'), dz_auth: localStorage.getItem('dz_auth') };
+  localStorage.clear();
+  Object.entries(keep).forEach(([k,v]) => { if (v !== null) localStorage.setItem(k, v); });
+  logMsg('✅ Storage cleared. You can now add products and categories.', 'ok');
+  updateCounts(); renderCatGrid(); renderProdGrid();
+  document.getElementById('emergency-banner').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateCounts();
+  renderCatGrid();
+  renderProdGrid();
+  // Show emergency banner if storage is over 90%
+  const { pct } = calcStorage();
+  if (pct >= 90) {
+    document.getElementById('emergency-banner').style.display = 'block';
+  }
+  window.addEventListener('storage:full', () => {
+    logMsg('❌ localStorage is FULL! Use the red button at the top to clear storage.', 'err');
+    document.getElementById('emergency-banner').style.display = 'block';
+    calcStorage();
+  });
+});
+</script>
+</body>
+</html>
