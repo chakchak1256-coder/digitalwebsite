@@ -1,13 +1,12 @@
 {
-  "name": "digistore-dz",
+  "name": "digital-website",
   "version": "1.0.0",
-  "description": "DigiStore DZ — Chargily Pay + Cloudflare Workers",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "build": "mkdir -p public && cp *.html firebase.js public/ && cp -r pics public/",
+    "deploy": "npm run build && npx wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "^4.96.0"
+    "wrangler": "^3.0.0"
   }
 }
