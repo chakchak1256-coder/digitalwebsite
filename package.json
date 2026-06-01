@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "mkdir -p public && cp *.html firebase.js public/ && cp -r pics public/",
-    "deploy": "npm run build && npx wrangler deploy"
+    "deploy": "npx wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"
