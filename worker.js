@@ -236,8 +236,8 @@ export default {
       return json({ error: 'Not found.' }, 404);
     }
 
-    // ── Non-API routes: let Cloudflare Pages serve the static files ──
-    return new Response('Not found.', { status: 404 });
+    // ── Non-API routes: serve static files via the ASSETS binding ──
+    return env.ASSETS.fetch(request);
   },
 };
 
