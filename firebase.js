@@ -87,6 +87,31 @@ const UserAuth = {
     }
   },
 
+  async loginWithApple() {
+    try {
+      const provider = new firebase.auth.OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      const cred = await _auth.signInWithPopup(provider);
+      const user = cred.user;
+      const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Apple User');
+      await _db.collection('users').doc(user.uid).set({
+        id: user.uid,
+        email: user.email || '',
+        name: name,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      this._current = { id: user.uid, email: user.email || '', name: name };
+      window.dispatchEvent(new Event('auth:change'));
+      return { user: this._current };
+    } catch(e) {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        return { error: null };
+      }
+      return { error: this._msg(e.code) };
+    }
+  },
+
   logout() { _auth.signOut(); this._current = null; window.dispatchEvent(new Event('auth:change')); },
 
   async getAll() {
