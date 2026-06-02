@@ -505,7 +505,7 @@ select.form-input option{background:var(--bg2)}
             <div class="form-section-title"><i class="fa-solid fa-circle-info"></i> Product Information</div>
             <div class="form-grid">
               <div class="form-group full"><label class="form-label">Product Name</label><input class="form-input" id="prod-name" placeholder="e.g. Netflix Premium 4K" required/></div>
-              <div class="form-group"><label class="form-label">Category</label><select class="form-input" id="prod-cat" required><option value="">Select category...</option></select></div>
+              <div class="form-group"><label class="form-label">Category <span>(optional)</span></label><select class="form-input" id="prod-cat"><option value="">No category</option></select></div>
               <div class="form-group"><label class="form-label">Language <span>(optional)</span></label><input class="form-input" id="prod-lang" placeholder="e.g. Arabic, English"/></div>
               <div class="form-group"><label class="form-label">Price (DA)</label><input class="form-input" id="prod-price" type="number" min="0" placeholder="1500" required/></div>
               <div class="form-group"><label class="form-label">Old Price (DA) <span>(optional)</span></label><input class="form-input" id="prod-old-price" type="number" min="0" placeholder="2500"/></div>
@@ -1164,7 +1164,7 @@ async function saveProduct(e) {
     images: productImages,
     variables: variables
   };
-  if (!data.name || !data.category || !data.price) { showToast('Please fill required fields'); return; }
+  if (!data.name || !data.price) { showToast('Please fill required fields (name and price)'); return; }
   const btn = document.getElementById('save-prod-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
   try {
