@@ -89,9 +89,30 @@ img{max-width:100%;display:block}
 </div>
 
 <h1 class="page-title">🌱 Seed Data</h1>
-<p class="page-sub">Add demo products and categories to your store. All data is saved in your browser's localStorage.</p>
+<p class="page-sub">Add demo products and categories to your store. Data is saved to <strong>Firestore</strong>. Make sure your Firestore security rules allow writes.</p>
 
 <!-- Storage usage -->
+<!-- Firestore Rules Notice -->
+<div id="rules-notice" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:var(--radius);padding:1rem 1.2rem;margin-bottom:1.2rem">
+  <div style="display:flex;align-items:flex-start;gap:.8rem">
+    <i class="fa-solid fa-circle-info" style="color:#3B82F6;margin-top:2px;flex-shrink:0"></i>
+    <div style="font-size:.85rem;line-height:1.7">
+      <strong style="color:#3B82F6">Before seeding: check your Firestore Security Rules</strong><br>
+      If you see <em>"Firestore write returned null"</em> or <em>"permission-denied"</em> errors, your Firestore rules are blocking writes.<br>
+      <strong>Fix:</strong> Go to <a href="https://console.firebase.google.com" target="_blank" style="color:#3B82F6;text-decoration:underline">Firebase Console</a> → <em>Firestore Database → Rules</em> → paste this and click <strong>Publish</strong>:
+      <pre style="background:var(--bg3);border-radius:6px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;overflow-x:auto;color:var(--text)">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+      <span style="color:var(--text-muted);font-size:.78rem">⚠️ This is for development/testing only. Set proper auth rules before going to production.</span>
+    </div>
+  </div>
+</div>
+
 <div id="storage-bar-wrap">
   <div class="storage-top">
     <span class="storage-label"><i class="fa-solid fa-database" style="color:var(--accent);margin-right:.35rem"></i>localStorage Usage</span>
@@ -327,12 +348,15 @@ async function seedCats() {
   for (const i of indices) {
     try {
       const result = await DB.add('categories', SEED_CATS[i]);
-      if (result) { logMsg(`✅ Added: ${SEED_CATS[i].name}`, 'ok'); added++; }
-      else        { logMsg(`❌ Failed: ${SEED_CATS[i].name} — Firestore write returned null`, 'err'); failed++; }
+      logMsg(`✅ Added: ${SEED_CATS[i].name}`, 'ok'); added++;
     } catch(err) {
-      logMsg(`❌ Error: ${SEED_CATS[i].name} — ${err.message || err}`, 'err'); failed++;
+      const msg = (err.code === 'permission-denied' || (err.message||'').includes('Missing or insufficient permissions'))
+        ? `❌ PERMISSION DENIED — Go to Firebase Console → Firestore → Rules and allow writes. (${SEED_CATS[i].name})`
+        : `❌ Error: ${SEED_CATS[i].name} — ${err.message || err}`;
+      logMsg(msg, 'err'); failed++;
     }
   }
+  if (failed && added === 0) logMsg('💡 Tip: Open Firebase Console → Firestore Database → Rules tab → set: allow read, write: if true; → Publish', 'err');
   logMsg(failed ? `Done: ${added} added, ${failed} FAILED.` : `Done. ${added} categor${added===1?'y':'ies'} added.`, failed ? 'err' : 'info');
   updateCounts(); renderCatGrid();
 }
@@ -345,13 +369,16 @@ async function seedProds() {
   selProds.clear();
   for (const i of indices) {
     try {
-      const result = await DB.add('products', SEED_PRODS[i]);
-      if (result) { logMsg(`✅ Added: ${SEED_PRODS[i].name}`, 'ok'); added++; }
-      else        { logMsg(`❌ Failed: ${SEED_PRODS[i].name} — Firestore write returned null`, 'err'); failed++; }
+      await DB.add('products', SEED_PRODS[i]);
+      logMsg(`✅ Added: ${SEED_PRODS[i].name}`, 'ok'); added++;
     } catch(err) {
-      logMsg(`❌ Error: ${SEED_PRODS[i].name} — ${err.message || err}`, 'err'); failed++;
+      const msg = (err.code === 'permission-denied' || (err.message||'').includes('Missing or insufficient permissions'))
+        ? `❌ PERMISSION DENIED — Fix Firestore Rules first. (${SEED_PRODS[i].name})`
+        : `❌ Error: ${SEED_PRODS[i].name} — ${err.message || err}`;
+      logMsg(msg, 'err'); failed++;
     }
   }
+  if (failed && added === 0) logMsg('💡 Tip: Firebase Console → Firestore Database → Rules → set: allow read, write: if true; → Publish', 'err');
   logMsg(failed ? `Done: ${added} added, ${failed} FAILED.` : `Done. ${added} product${added===1?'':'s'} added.`, failed ? 'err' : 'info');
   updateCounts(); renderProdGrid();
 }

@@ -267,7 +267,15 @@ const DB = {
       try { localStorage.setItem('dz_fc_' + col, JSON.stringify(this._cache[col])); } catch(e) {}
       this._emit(col);
       return saved;
-    } catch(e) { console.error('DB.add:', e); return null; }
+    } catch(e) {
+      // Log a helpful hint for the most common cause (Firestore security rules)
+      if (e.code === 'permission-denied' || (e.message && e.message.includes('Missing or insufficient permissions'))) {
+        console.error('[DigiStore] Firestore write BLOCKED by security rules. Go to Firebase Console → Firestore → Rules and set: allow read, write: if true; (for testing) or proper auth rules.');
+      } else {
+        console.error('DB.add error:', e);
+      }
+      throw e; // Re-throw so callers (seed, admin) can show proper error messages
+    }
   },
 
   async update(col, id, data) {
