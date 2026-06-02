@@ -1029,8 +1029,17 @@ async function saveProduct(e) {
   const id = document.getElementById('edit-prod-id').value;
   const data = { name: document.getElementById('prod-name').value.trim(), category: document.getElementById('prod-cat').value, language: document.getElementById('prod-lang').value.trim(), price: parseFloat(document.getElementById('prod-price').value)||0, oldPrice: parseFloat(document.getElementById('prod-old-price').value)||null, badge: document.getElementById('prod-badge').value||null, featured: document.getElementById('prod-featured').checked, description: document.getElementById('prod-desc').value.trim(), images: productImages };
   if (!data.name || !data.category || !data.price) { showToast('Please fill required fields'); return; }
-  if (id) DB.update('products', id, data); else DB.add('products', data);
-  resetProductForm(); showPanel('products'); showToast(id ? 'Product updated!' : 'Product added!');
+  const btn = document.getElementById('save-prod-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
+  try {
+    if (id) await DB.update('products', id, data); else await DB.add('products', data);
+    resetProductForm(); showPanel('products'); showToast(id ? 'Product updated!' : 'Product added!');
+  } catch(err) {
+    showToast('❌ Save failed: ' + (err.message || err));
+    console.error('saveProduct:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span id="save-prod-btn-text">' + (id ? 'Update Product' : 'Save Product') + '</span>'; }
+  }
 }
 function deleteProduct(id) { confirmAction('Delete this product?', 'This action cannot be undone.', () => { DB.delete('products', id); renderProductsList(); showToast('Product deleted'); }); }
 
@@ -1041,7 +1050,7 @@ function renderCategoriesList() {
   if (!cats.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-tags"></i><p>No categories yet.</p></div></td></tr>`; return; }
   tbody.innerHTML = cats.map(c => {
     const count = prods.filter(p => p.category === c.name).length;
-    const img = c.image && c.image.length > 100 ? c.image : null;
+    const img = c.image && c.image.length > 0 ? c.image : null;
     return `<tr>
       <td><div class="td-img">${img?`<img src="${img}" alt=""/>`:`<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">${c.emoji||'📦'}</div>`}</div></td>
       <td><strong>${c.name}</strong></td>
@@ -1087,8 +1096,17 @@ async function saveCategory(e) {
   const id = document.getElementById('edit-cat-id').value;
   const data = { name: document.getElementById('cat-name').value.trim(), emoji: document.getElementById('cat-emoji').value.trim(), image: catImage||null };
   if (!data.name) { showToast('Category name is required'); return; }
-  if (id) DB.update('categories', id, data); else DB.add('categories', data);
-  resetCategoryForm(); showPanel('categories'); showToast(id ? 'Category updated!' : 'Category added!');
+  const btn = document.getElementById('save-cat-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving\u2026'; }
+  try {
+    if (id) await DB.update('categories', id, data); else await DB.add('categories', data);
+    resetCategoryForm(); showPanel('categories'); showToast(id ? 'Category updated!' : 'Category added!');
+  } catch(err) {
+    showToast('\u274C Save failed: ' + (err.message || err));
+    console.error('saveCategory:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span id="save-cat-btn-text">' + (id ? 'Update Category' : 'Save Category') + '</span>'; }
+  }
 }
 function deleteCategory(id) { confirmAction('Delete this category?', 'Products in this category will remain but unlinked.', () => { DB.delete('categories', id); renderCategoriesList(); showToast('Category deleted'); }); }
 

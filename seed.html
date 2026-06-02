@@ -319,30 +319,40 @@ function selectNone(type) {
 }
 
 // ── Seed actions ─────────────────────────────────────────────
-function seedCats() {
+async function seedCats() {
   if (!selCats.size) { logMsg('No categories selected.', 'err'); return; }
   let added = 0, failed = 0;
-  selCats.forEach(i => {
-    const result = DB.add('categories', SEED_CATS[i]);
-    if (result) { logMsg(`✅ Added: ${SEED_CATS[i].name}`, 'ok'); added++; }
-    else        { logMsg(`❌ Failed: ${SEED_CATS[i].name} — localStorage may be full!`, 'err'); failed++; }
-  });
+  const indices = [...selCats];
   selCats.clear();
-  logMsg(failed ? `Done: ${added} added, ${failed} FAILED (clear storage below).` : `Done. ${added} categor${added===1?'y':'ies'} added.`, failed ? 'err' : 'info');
+  for (const i of indices) {
+    try {
+      const result = await DB.add('categories', SEED_CATS[i]);
+      if (result) { logMsg(`✅ Added: ${SEED_CATS[i].name}`, 'ok'); added++; }
+      else        { logMsg(`❌ Failed: ${SEED_CATS[i].name} — Firestore write returned null`, 'err'); failed++; }
+    } catch(err) {
+      logMsg(`❌ Error: ${SEED_CATS[i].name} — ${err.message || err}`, 'err'); failed++;
+    }
+  }
+  logMsg(failed ? `Done: ${added} added, ${failed} FAILED.` : `Done. ${added} categor${added===1?'y':'ies'} added.`, failed ? 'err' : 'info');
   updateCounts(); renderCatGrid();
 }
 
-function seedProds() {
+async function seedProds() {
   if (!selProds.size) { logMsg('No products selected.', 'err'); return; }
   let added = 0, failed = 0;
   // Reverse so newest appears first
-  [...selProds].reverse().forEach(i => {
-    const result = DB.add('products', SEED_PRODS[i]);
-    if (result) { logMsg(`✅ Added: ${SEED_PRODS[i].name}`, 'ok'); added++; }
-    else        { logMsg(`❌ Failed: ${SEED_PRODS[i].name} — localStorage may be full!`, 'err'); failed++; }
-  });
+  const indices = [...selProds].reverse();
   selProds.clear();
-  logMsg(failed ? `Done: ${added} added, ${failed} FAILED (clear storage below).` : `Done. ${added} product${added===1?'':'s'} added.`, failed ? 'err' : 'info');
+  for (const i of indices) {
+    try {
+      const result = await DB.add('products', SEED_PRODS[i]);
+      if (result) { logMsg(`✅ Added: ${SEED_PRODS[i].name}`, 'ok'); added++; }
+      else        { logMsg(`❌ Failed: ${SEED_PRODS[i].name} — Firestore write returned null`, 'err'); failed++; }
+    } catch(err) {
+      logMsg(`❌ Error: ${SEED_PRODS[i].name} — ${err.message || err}`, 'err'); failed++;
+    }
+  }
+  logMsg(failed ? `Done: ${added} added, ${failed} FAILED.` : `Done. ${added} product${added===1?'':'s'} added.`, failed ? 'err' : 'info');
   updateCounts(); renderProdGrid();
 }
 
