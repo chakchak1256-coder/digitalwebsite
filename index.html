@@ -969,12 +969,30 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doModalLogin()"/></div>
       <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer"><input type="checkbox" id="am-l-rem" style="accent-color:var(--primary)"/><span style="font-size:.83rem;color:var(--text-muted)">Keep me signed in</span></label>
       <button onclick="doModalLogin()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-lock-open"></i> Sign In</button>
+      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
     </div>
     <div id="am-reg" style="display:none">
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Name</label><input class="form-input" id="am-r-name" type="text" placeholder="Your name"/></div>
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label><input class="form-input" id="am-r-email" type="email" placeholder="your@email.com"/></div>
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doModalRegister()"/></div>
       <button onclick="doModalRegister()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
     </div>
   </div>
 </div>
@@ -1321,38 +1339,14 @@ function renderAllProducts(filterCat) {
 
 // ===== PRODUCT DETAIL =====
 function openProductDetail(id, fromAllPage = true) {
-  // Always fetch fresh from Firestore to pick up newly added variants.
-  // Fall back to cache for instant display while the fetch is in flight.
-  const cached = DB.getById('products', id); if (!cached) return;
+  const prod = DB.getById('products', id); if (!prod) return;
   fromAll = fromAllPage || document.getElementById('all-products-page').classList.contains('active');
+  const s = Settings.get();
+  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('product-page').classList.add('active');
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
-
-  // Render immediately with cached data so the page feels instant
-  _renderProductDetail(cached);
-
-  // Fetch fresh from Firestore and re-render — this fixes stale localStorage
-  // cache that is missing variants added after the user last visited
-  _db.collection('products').doc(id).get().then(doc => {
-    if (doc.exists) {
-      const fresh = { ...doc.data(), id: doc.id };
-      // Update in-memory + localStorage cache for subsequent opens
-      if (DB._cache.products) {
-        const i = DB._cache.products.findIndex(x => x.id === id);
-        if (i >= 0) DB._cache.products[i] = fresh;
-        else DB._cache.products.unshift(fresh);
-        try { localStorage.setItem('dz_fc_products', JSON.stringify(DB._cache.products)); } catch(e) {}
-      }
-      _renderProductDetail(fresh);
-    }
-  }).catch(() => { /* keep cached render — offline or rules issue */ });
-}
-
-function _renderProductDetail(prod) {
-  const s = Settings.get();
-  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
@@ -1395,19 +1389,10 @@ function _renderProductDetail(prod) {
   const variantLbl  = document.getElementById('pd-variant-label');
   let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  // Support both storage formats:
-  // - prod.variants: flat array [{ label, price }, ...]
-  // - prod.variables: grouped array [{ title, items: [{ label, price }] }]
-  const flatVariants = prod.variants && prod.variants.length ? prod.variants
-    : (prod.variables && prod.variables.length && prod.variables[0].items && prod.variables[0].items.length)
-      ? prod.variables[0].items
-      : null;
-  const variantGroupTitle = (prod.variables && prod.variables[0] && prod.variables[0].title) || prod.variantName || 'Choose Option';
-
-  if (flatVariants) {
-    variantLbl.textContent = variantGroupTitle;
+  if (prod.variants && prod.variants.length) {
+    variantLbl.textContent = prod.variantName || 'Choose Option';
     variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    flatVariants.forEach((v, i) => {
+    prod.variants.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       const s2 = Settings.get();
@@ -1417,8 +1402,8 @@ function _renderProductDetail(prod) {
     variantWrap.style.display = '';
     // Pre-select first option
     variantSel.selectedIndex = 1;
-    activeProd = { ...prod, price: flatVariants[0].price, variantLabel: flatVariants[0].label };
-    document.getElementById('pd-price').textContent = flatVariants[0].price.toLocaleString() + ' ' + s.currency;
+    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
+    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
   } else {
     variantWrap.style.display = 'none';
     variantSel.innerHTML = '';
@@ -1430,7 +1415,7 @@ function _renderProductDetail(prod) {
       activeProd = { ...prod };
       document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
     } else {
-      const v = flatVariants[idx];
+      const v = prod.variants[idx];
       activeProd = { ...prod, price: v.price, variantLabel: v.label };
       document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
     }
@@ -1724,6 +1709,15 @@ async function doModalRegister() {
   showToast('Account created! Welcome, ' + r.user.name + ' 🎉');
   if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
 }
+async function doGoogleSignIn() {
+  const r = await UserAuth.loginWithGoogle();
+  if (r.error) { showAuthModalError(r.error); return; }
+  const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
+  closeLoginModal(); initUserAuth();
+  showToast('Welcome, ' + r.user.name + '! 👋');
+  if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
+}
+
 function doUserLogout() {
   UserAuth.logout(); initUserAuth();
   document.getElementById('user-menu').style.display = 'none';
@@ -2161,12 +2155,30 @@ function updateWaFloat() {
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doModalLogin()"/></div>
       <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer"><input type="checkbox" id="am-l-rem" style="accent-color:var(--primary)"/><span style="font-size:.83rem;color:var(--text-muted)">Keep me signed in</span></label>
       <button onclick="doModalLogin()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-lock-open"></i> Sign In</button>
+      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
     </div>
     <div id="am-reg" style="display:none">
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Name</label><input class="form-input" id="am-r-name" type="text" placeholder="Your name"/></div>
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label><input class="form-input" id="am-r-email" type="email" placeholder="your@email.com"/></div>
       <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doModalRegister()"/></div>
       <button onclick="doModalRegister()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
     </div>
   </div>
 </div>
@@ -2512,38 +2524,14 @@ function renderAllProducts(filterCat) {
 
 // ===== PRODUCT DETAIL =====
 function openProductDetail(id, fromAllPage = true) {
-  // Always fetch fresh from Firestore to pick up newly added variants.
-  // Fall back to cache for instant display while the fetch is in flight.
-  const cached = DB.getById('products', id); if (!cached) return;
+  const prod = DB.getById('products', id); if (!prod) return;
   fromAll = fromAllPage || document.getElementById('all-products-page').classList.contains('active');
+  const s = Settings.get();
+  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('product-page').classList.add('active');
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
-
-  // Render immediately with cached data so the page feels instant
-  _renderProductDetail(cached);
-
-  // Fetch fresh from Firestore and re-render — this fixes stale localStorage
-  // cache that is missing variants added after the user last visited
-  _db.collection('products').doc(id).get().then(doc => {
-    if (doc.exists) {
-      const fresh = { ...doc.data(), id: doc.id };
-      // Update in-memory + localStorage cache for subsequent opens
-      if (DB._cache.products) {
-        const i = DB._cache.products.findIndex(x => x.id === id);
-        if (i >= 0) DB._cache.products[i] = fresh;
-        else DB._cache.products.unshift(fresh);
-        try { localStorage.setItem('dz_fc_products', JSON.stringify(DB._cache.products)); } catch(e) {}
-      }
-      _renderProductDetail(fresh);
-    }
-  }).catch(() => { /* keep cached render — offline or rules issue */ });
-}
-
-function _renderProductDetail(prod) {
-  const s = Settings.get();
-  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
@@ -2586,19 +2574,10 @@ function _renderProductDetail(prod) {
   const variantLbl  = document.getElementById('pd-variant-label');
   let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  // Support both storage formats:
-  // - prod.variants: flat array [{ label, price }, ...]
-  // - prod.variables: grouped array [{ title, items: [{ label, price }] }]
-  const flatVariants = prod.variants && prod.variants.length ? prod.variants
-    : (prod.variables && prod.variables.length && prod.variables[0].items && prod.variables[0].items.length)
-      ? prod.variables[0].items
-      : null;
-  const variantGroupTitle = (prod.variables && prod.variables[0] && prod.variables[0].title) || prod.variantName || 'Choose Option';
-
-  if (flatVariants) {
-    variantLbl.textContent = variantGroupTitle;
+  if (prod.variants && prod.variants.length) {
+    variantLbl.textContent = prod.variantName || 'Choose Option';
     variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    flatVariants.forEach((v, i) => {
+    prod.variants.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       const s2 = Settings.get();
@@ -2608,8 +2587,8 @@ function _renderProductDetail(prod) {
     variantWrap.style.display = '';
     // Pre-select first option
     variantSel.selectedIndex = 1;
-    activeProd = { ...prod, price: flatVariants[0].price, variantLabel: flatVariants[0].label };
-    document.getElementById('pd-price').textContent = flatVariants[0].price.toLocaleString() + ' ' + s.currency;
+    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
+    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
   } else {
     variantWrap.style.display = 'none';
     variantSel.innerHTML = '';
@@ -2621,7 +2600,7 @@ function _renderProductDetail(prod) {
       activeProd = { ...prod };
       document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
     } else {
-      const v = flatVariants[idx];
+      const v = prod.variants[idx];
       activeProd = { ...prod, price: v.price, variantLabel: v.label };
       document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
     }
@@ -2870,6 +2849,15 @@ async function doModalRegister() {
   showToast('Account created! Welcome, ' + r.user.name + ' 🎉');
   if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
 }
+async function doGoogleSignIn() {
+  const r = await UserAuth.loginWithGoogle();
+  if (r.error) { showAuthModalError(r.error); return; }
+  const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
+  closeLoginModal(); initUserAuth();
+  showToast('Welcome, ' + r.user.name + '! 👋');
+  if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
+}
+
 function doUserLogout() {
   UserAuth.logout(); initUserAuth();
   document.getElementById('user-menu').style.display = 'none';

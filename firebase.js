@@ -62,6 +62,31 @@ const UserAuth = {
     } catch(e) { return { error: this._msg(e.code) }; }
   },
 
+  async loginWithGoogle() {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const cred = await _auth.signInWithPopup(provider);
+      const user = cred.user;
+      // Upsert user doc in Firestore (merge so existing data is kept)
+      await _db.collection('users').doc(user.uid).set({
+        id: user.uid,
+        email: user.email,
+        name: user.displayName || user.email.split('@')[0],
+        photoURL: user.photoURL || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      this._current = { id: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
+      window.dispatchEvent(new Event('auth:change'));
+      return { user: this._current };
+    } catch(e) {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        return { error: null }; // user just closed the popup — not an error
+      }
+      return { error: this._msg(e.code) };
+    }
+  },
+
   logout() { _auth.signOut(); this._current = null; window.dispatchEvent(new Event('auth:change')); },
 
   async getAll() {
