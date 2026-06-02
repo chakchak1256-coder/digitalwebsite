@@ -195,40 +195,68 @@ const SEED_CATS = [
 const SEED_PRODS = [
   { name:'Netflix Premium 4K',        category:'Streaming',      price:1200, oldPrice:2000, badge:'HOT',
     description:'Full Premium 4K Netflix account. 4 screens, Ultra HD. Instant delivery.',
-    images:['https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=700&q=70&auto=format&fit=crop'] },
-  { name:'Spotify Premium 3 Months',  category:'Music',          price:800,  oldPrice:1400, badge:'SALE',
-    description:'Spotify Premium. Ad-free, offline music. 3 months guaranteed.',
-    images:['https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=700&q=70&auto=format&fit=crop'] },
+    images:['https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:1200},{label:'3 Months',price:3200},{label:'6 Months',price:5800},{label:'12 Months',price:10000}] },
+      { title:'Screens',  items:[{label:'1 Screen',price:1200},{label:'2 Screens',price:1600},{label:'4 Screens (Premium)',price:2000}] }
+    ]},
+  { name:'Spotify Premium',           category:'Music',          price:800,  oldPrice:1400, badge:'SALE',
+    description:'Spotify Premium. Ad-free, offline music, unlimited skips.',
+    images:['https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:800},{label:'3 Months',price:2100},{label:'6 Months',price:3800},{label:'12 Months',price:6500}] }
+    ]},
   { name:'Canva Pro Annual',           category:'Design',         price:2500, oldPrice:4000, badge:'BEST SELLER',
     description:'Canva Pro full access. Unlimited designs, premium templates, brand kit.',
     images:['https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=700&q=70&auto=format&fit=crop'] },
-  { name:'NordVPN 1 Year',             category:'VPN & Security', price:3200, oldPrice:5000, badge:'NEW',
-    description:'NordVPN 1-year subscription. 60+ countries, 6 devices.',
-    images:['https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=700&q=70&auto=format&fit=crop'] },
-  { name:'Disney+ 6 Months',           category:'Streaming',      price:900,                badge:'HOT',
+  { name:'NordVPN',                    category:'VPN & Security', price:3200, oldPrice:5000, badge:'NEW',
+    description:'NordVPN subscription. 60+ countries, 6 devices simultaneously.',
+    images:['https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:1100},{label:'6 Months',price:4500},{label:'1 Year',price:7000},{label:'2 Years',price:11000}] }
+    ]},
+  { name:'Disney+',                    category:'Streaming',      price:900,                badge:'HOT',
     description:'Disney+ Premium. Marvel, Star Wars, Pixar and more.',
-    images:['https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=700&q=70&auto=format&fit=crop'] },
-  { name:'Xbox Game Pass Ultimate 3M', category:'Gaming',         price:1500, oldPrice:2200, badge:'NEW',
-    description:'Xbox Game Pass Ultimate 3 months. 100+ games. Xbox Live Gold included.',
-    images:['https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=700&q=70&auto=format&fit=crop'] },
+    images:['https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:900},{label:'3 Months',price:2400},{label:'6 Months',price:4200}] }
+    ]},
+  { name:'Xbox Game Pass Ultimate',    category:'Gaming',         price:1500, oldPrice:2200, badge:'NEW',
+    description:'Xbox Game Pass Ultimate. 100+ games. Xbox Live Gold included.',
+    images:['https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:1500},{label:'3 Months',price:3800},{label:'12 Months',price:12000}] }
+    ]},
   { name:'Adobe Photoshop CC',         category:'Design',         price:3800,               badge:'PREMIUM',
     description:'Adobe Photoshop Creative Cloud. 1 year license.',
     images:['https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=700&q=70&auto=format&fit=crop'] },
   { name:'Python Mastery Bundle',      category:'Ebooks',         price:600,  oldPrice:1200, badge:'SALE',
     description:'5-book Python bundle. Beginner to advanced. PDF + EPUB.',
     images:['https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=700&q=70&auto=format&fit=crop'] },
-  { name:'YouTube Premium 6 Months',   category:'Streaming',      price:1100, oldPrice:1800, badge:'HOT',
+  { name:'YouTube Premium',            category:'Streaming',      price:1100, oldPrice:1800, badge:'HOT',
     description:'YouTube Premium — ad-free, background play, YouTube Music included.',
-    images:['https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=700&q=70&auto=format&fit=crop'] },
-  { name:'LinkedIn Premium 1 Month',   category:'Social Media',   price:900,                badge:'NEW',
+    images:['https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:1100},{label:'3 Months',price:2900},{label:'6 Months',price:5200},{label:'12 Months',price:9000}] }
+    ]},
+  { name:'LinkedIn Premium',           category:'Social Media',   price:900,                badge:'NEW',
     description:'LinkedIn Premium Career. InMail credits, AI tools.',
-    images:['https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=700&q=70&auto=format&fit=crop'] },
-  { name:'Duolingo Super 3 Months',    category:'Courses',        price:700,  oldPrice:1100, badge:'SALE',
+    images:['https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:900},{label:'3 Months',price:2500},{label:'6 Months',price:4500}] }
+    ]},
+  { name:'Duolingo Super',             category:'Courses',        price:700,  oldPrice:1100, badge:'SALE',
     description:'Duolingo Super — no ads, unlimited hearts, offline lessons.',
-    images:['https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&q=70&auto=format&fit=crop'] },
-  { name:'ExpressVPN 1 Year',          category:'VPN & Security', price:2800,               badge:'BEST SELLER',
-    description:'ExpressVPN 1 year. Ultra-fast, 160+ locations, no-logs.',
-    images:['https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=700&q=70&auto=format&fit=crop'] },
+    images:['https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:700},{label:'3 Months',price:1800},{label:'12 Months',price:5000}] }
+    ]},
+  { name:'ExpressVPN',                 category:'VPN & Security', price:2800,               badge:'BEST SELLER',
+    description:'ExpressVPN subscription. Ultra-fast, 160+ locations, no-logs.',
+    images:['https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=700&q=70&auto=format&fit=crop'],
+    variables:[
+      { title:'Duration', items:[{label:'1 Month',price:1400},{label:'6 Months',price:5500},{label:'1 Year',price:8500}] }
+    ]},
 ];
 
 const selCats  = new Set();

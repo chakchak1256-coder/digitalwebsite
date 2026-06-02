@@ -247,6 +247,26 @@ select.form-input option{background:var(--bg2)}
 .btn-add-variant:hover{background:rgba(var(--accent-rgb),.16)}
 .variant-hint{font-size:.73rem;color:var(--text-muted);margin-top:.4rem;line-height:1.5}
 
+/* VARIABLE GROUP BUILDER */
+.variable-group {
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:1rem 1.1rem;margin-bottom:.85rem;
+}
+.variable-group-header {
+  display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;
+}
+.variable-group-header .form-input {
+  flex:1;font-weight:600;
+}
+.btn-remove-group {
+  width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444;
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;cursor:pointer;
+  transition:background var(--transition);
+}
+.btn-remove-group:hover{background:rgba(239,68,68,.18)}
+.variable-items-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem}
+
 /* IMAGE UPLOAD */
 .img-upload-zone{border:1px dashed var(--border);border-radius:var(--radius);padding:1.8rem;
   text-align:center;cursor:pointer;transition:border-color var(--transition),background var(--transition);position:relative;overflow:hidden}
@@ -504,23 +524,18 @@ select.form-input option{background:var(--bg2)}
             </div>
             <div class="img-previews" id="prod-img-previews"></div>
           </div>
-          <!-- VARIANTS SECTION -->
+          <!-- VARIABLES SECTION -->
           <div class="form-section">
-            <div class="form-section-title"><i class="fa-solid fa-list-ul"></i> Product Variants <span style="font-weight:400;font-size:.75rem;color:var(--text-muted);margin-left:.4rem">(optional)</span></div>
-            <div class="form-group" style="margin-bottom:1rem">
-              <label class="form-label">Variant Name <span>(e.g. Duration, Plan, Size)</span></label>
-              <input class="form-input" id="prod-variant-name" placeholder="e.g. Duration" style="max-width:280px"/>
-            </div>
-            <label class="form-label">Options <span>(each option has a label and its own price)</span></label>
-            <div class="variant-list" id="variant-options-list"></div>
-            <button type="button" class="btn-add-variant" onclick="addVariantOption()">
-              <i class="fa-solid fa-plus"></i> Add Option
-            </button>
-            <div class="variant-hint">
+            <div class="form-section-title"><i class="fa-solid fa-sliders"></i> Product Variables <span style="font-weight:400;font-size:.75rem;color:var(--text-muted);margin-left:.4rem">(optional)</span></div>
+            <div class="variant-hint" style="margin-bottom:1rem">
               <i class="fa-solid fa-circle-info"></i>
-              Leave all options empty (or remove them) to disable variants for this product.<br/>
-              When a customer opens this product, they'll see a dropdown to pick an option — the price updates automatically.
+              Add one or more variable groups (e.g. <strong>Months</strong> with options like 1 Month, 3 Months, 12 Months).
+              Customers will see a dropdown per group. Each option can have its own price.
             </div>
+            <div id="variable-groups-list"></div>
+            <button type="button" class="btn-add-variant" onclick="addVariableGroup()" style="margin-top:.5rem">
+              <i class="fa-solid fa-plus"></i> Add Variable Group
+            </button>
           </div>
           <div style="display:flex;gap:.75rem">
             <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> <span id="save-prod-btn-text">Save Product</span></button>
@@ -871,7 +886,7 @@ let currentPanel = 'dashboard';
 let editProductData = null;
 let editCategoryData = null;
 let productImages = [];
-let variantOptions = []; // [{label:'', price:''}]
+let variableGroups = []; // [{title:'', items:[{label:'', price:''}]}]
 let catImage = null;
 let tempLogoLight = null;
 let tempLogoDark = null;
@@ -1036,22 +1051,27 @@ function loadProductForm() {
     document.getElementById('prod-desc').value = p.description||'';
     productImages = [...(p.images||[])];
     renderProductImagePreviews();
-    // Load variants
-    document.getElementById('prod-variant-name').value = p.variantName || '';
-    variantOptions = (p.variants || []).map(v => ({ label: v.label, price: v.price }));
-    renderVariantOptions();
+    // Load variable groups
+    variableGroups = (p.variables || []).map(grp => ({
+      title: grp.title || '',
+      items: (grp.items || []).map(it => ({ label: it.label || '', price: it.price != null ? it.price : '' }))
+    }));
+    // Legacy: migrate old variantName/variants to variables if no variables yet
+    if (!variableGroups.length && p.variantName && (p.variants||[]).length) {
+      variableGroups = [{ title: p.variantName, items: p.variants.map(v => ({ label: v.label, price: v.price })) }];
+    }
+    renderVariableGroups();
     document.getElementById('add-prod-title').textContent = 'Edit Product';
     document.getElementById('save-prod-btn-text').textContent = 'Update Product';
   }
 }
 function editProduct(id) { editProductData = DB.getById('products', id); showPanel('add-product'); }
 function resetProductForm() {
-  editProductData = null; productImages = []; variantOptions = [];
+  editProductData = null; productImages = []; variableGroups = [];
   document.getElementById('product-form').reset();
   document.getElementById('edit-prod-id').value = '';
   document.getElementById('prod-img-previews').innerHTML = '';
-  document.getElementById('prod-variant-name').value = '';
-  document.getElementById('variant-options-list').innerHTML = '';
+  document.getElementById('variable-groups-list').innerHTML = '';
   document.getElementById('add-prod-title').textContent = 'Add New Product';
   document.getElementById('save-prod-btn-text').textContent = 'Save Product';
 }
@@ -1066,36 +1086,84 @@ function renderProductImagePreviews() {
 }
 function removeProductImage(i) { productImages.splice(i, 1); renderProductImagePreviews(); }
 
-// ===== VARIANT BUILDER =====
-function addVariantOption() {
-  variantOptions.push({ label: '', price: '' });
-  renderVariantOptions();
-  // Focus the last label input
-  const inputs = document.querySelectorAll('.vo-label');
-  if (inputs.length) inputs[inputs.length - 1].focus();
+// ===== VARIABLE GROUP BUILDER =====
+// variableGroups: Array of { title: string, items: [{label, price}] }
+function addVariableGroup() {
+  variableGroups.push({ title: '', items: [{ label: '', price: '' }] });
+  renderVariableGroups();
+  // Focus the new group title input
+  const titles = document.querySelectorAll('.vg-title');
+  if (titles.length) titles[titles.length - 1].focus();
 }
-function removeVariantOption(i) { variantOptions.splice(i, 1); renderVariantOptions(); }
-function renderVariantOptions() {
-  const list = document.getElementById('variant-options-list');
-  list.innerHTML = '';
-  variantOptions.forEach((opt, i) => {
-    const row = document.createElement('div');
-    row.className = 'variant-row';
-    row.innerHTML = `
-      <input class="form-input vo-label" type="text" placeholder="Option label (e.g. 1 Month)" value="${escHtml(opt.label)}" oninput="variantOptions[${i}].label=this.value" style="flex:2"/>
-      <input class="form-input vo-price" type="number" min="0" placeholder="Price (DA)" value="${opt.price}" oninput="variantOptions[${i}].price=this.value" style="flex:1;min-width:110px"/>
-      <button type="button" class="btn-remove-variant" onclick="removeVariantOption(${i})" title="Remove"><i class="fa-solid fa-xmark"></i></button>`;
-    list.appendChild(row);
+function removeVariableGroup(gi) {
+  variableGroups.splice(gi, 1);
+  renderVariableGroups();
+}
+function addVariableItem(gi) {
+  variableGroups[gi].items.push({ label: '', price: '' });
+  renderVariableGroups();
+  // Focus the new item label input in this group
+  const rows = document.querySelectorAll(`.vi-label-${gi}`);
+  if (rows.length) rows[rows.length - 1].focus();
+}
+function removeVariableItem(gi, ii) {
+  variableGroups[gi].items.splice(ii, 1);
+  renderVariableGroups();
+}
+function renderVariableGroups() {
+  const container = document.getElementById('variable-groups-list');
+  container.innerHTML = '';
+  variableGroups.forEach((grp, gi) => {
+    const card = document.createElement('div');
+    card.className = 'variable-group';
+    const itemsHtml = grp.items.map((item, ii) => `
+      <div class="variant-row">
+        <input class="form-input vi-label-${gi}" type="text" placeholder="Option label (e.g. 1 Month)" value="${escHtml(item.label)}"
+          oninput="variableGroups[${gi}].items[${ii}].label=this.value" style="flex:2"/>
+        <input class="form-input" type="number" min="0" placeholder="Price (DA)" value="${escHtml(item.price)}"
+          oninput="variableGroups[${gi}].items[${ii}].price=this.value" style="flex:1;min-width:110px"/>
+        <button type="button" class="btn-remove-variant" onclick="removeVariableItem(${gi},${ii})" title="Remove item"><i class="fa-solid fa-xmark"></i></button>
+      </div>`).join('');
+    card.innerHTML = `
+      <div class="variable-group-header">
+        <span style="font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);white-space:nowrap">Group Title</span>
+        <input class="form-input vg-title" type="text" placeholder="e.g. Months, Plan, Size" value="${escHtml(grp.title)}"
+          oninput="variableGroups[${gi}].title=this.value"/>
+        <button type="button" class="btn-remove-group" onclick="removeVariableGroup(${gi})" title="Remove group"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <div class="variable-items-list">${itemsHtml}</div>
+      <button type="button" class="btn-add-variant" onclick="addVariableItem(${gi})" style="margin-top:.2rem">
+        <i class="fa-solid fa-plus"></i> Add Option
+      </button>`;
+    container.appendChild(card);
   });
 }
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 async function saveProduct(e) {
   e.preventDefault();
   const id = document.getElementById('edit-prod-id').value;
-  // Collect variants
-  const variantName = document.getElementById('prod-variant-name').value.trim();
-  const validVariants = variantOptions.filter(v => v.label.trim() && v.price !== '' && !isNaN(parseFloat(v.price)));
-  const data = { name: document.getElementById('prod-name').value.trim(), category: document.getElementById('prod-cat').value, language: document.getElementById('prod-lang').value.trim(), price: parseFloat(document.getElementById('prod-price').value)||0, oldPrice: parseFloat(document.getElementById('prod-old-price').value)||null, badge: document.getElementById('prod-badge').value||null, featured: document.getElementById('prod-featured').checked, description: document.getElementById('prod-desc').value.trim(), images: productImages, variantName: variantName || null, variants: validVariants.length ? validVariants.map(v => ({ label: v.label.trim(), price: parseFloat(v.price) })) : [] };
+  // Collect variable groups — filter out empty groups and empty items
+  const variables = variableGroups
+    .map(grp => ({
+      title: grp.title.trim(),
+      items: grp.items
+        .filter(it => it.label.trim())
+        .map(it => ({ label: it.label.trim(), price: it.price !== '' && !isNaN(parseFloat(it.price)) ? parseFloat(it.price) : null }))
+    }))
+    .filter(grp => grp.title && grp.items.length > 0);
+
+  const data = {
+    name: document.getElementById('prod-name').value.trim(),
+    category: document.getElementById('prod-cat').value,
+    language: document.getElementById('prod-lang').value.trim(),
+    price: parseFloat(document.getElementById('prod-price').value)||0,
+    oldPrice: parseFloat(document.getElementById('prod-old-price').value)||null,
+    badge: document.getElementById('prod-badge').value||null,
+    featured: document.getElementById('prod-featured').checked,
+    description: document.getElementById('prod-desc').value.trim(),
+    images: productImages,
+    variables: variables
+  };
   if (!data.name || !data.category || !data.price) { showToast('Please fill required fields'); return; }
   const btn = document.getElementById('save-prod-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
