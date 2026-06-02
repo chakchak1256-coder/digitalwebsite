@@ -95,6 +95,7 @@ UserAuth.init();
 // ================================================================
 const Purchases = {
   async add(userId, userEmail, product, extra = {}) {
+    const now = new Date().toISOString();
     const doc = {
       userId, userEmail,
       productId:    product.id    || '',
@@ -103,8 +104,8 @@ const Purchases = {
       productType:  product.category || extra.productType || 'Digital',
       accessLink:   extra.accessLink  || '',
       status:       'pending',
-      purchaseDate: firebase.firestore.FieldValue.serverTimestamp(),
-      createdAt:    new Date().toISOString(),
+      purchaseDate: now,
+      createdAt:    now,
     };
     const ref = await _db.collection('purchases').add(doc);
     return { ...doc, id: ref.id };
