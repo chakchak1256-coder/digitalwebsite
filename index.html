@@ -1321,14 +1321,38 @@ function renderAllProducts(filterCat) {
 
 // ===== PRODUCT DETAIL =====
 function openProductDetail(id, fromAllPage = true) {
-  const prod = DB.getById('products', id); if (!prod) return;
+  // Always fetch fresh from Firestore to pick up newly added variants.
+  // Fall back to cache for instant display while the fetch is in flight.
+  const cached = DB.getById('products', id); if (!cached) return;
   fromAll = fromAllPage || document.getElementById('all-products-page').classList.contains('active');
-  const s = Settings.get();
-  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('product-page').classList.add('active');
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
+
+  // Render immediately with cached data so the page feels instant
+  _renderProductDetail(cached);
+
+  // Fetch fresh from Firestore and re-render — this fixes stale localStorage
+  // cache that is missing variants added after the user last visited
+  _db.collection('products').doc(id).get().then(doc => {
+    if (doc.exists) {
+      const fresh = { ...doc.data(), id: doc.id };
+      // Update in-memory + localStorage cache for subsequent opens
+      if (DB._cache.products) {
+        const i = DB._cache.products.findIndex(x => x.id === id);
+        if (i >= 0) DB._cache.products[i] = fresh;
+        else DB._cache.products.unshift(fresh);
+        try { localStorage.setItem('dz_fc_products', JSON.stringify(DB._cache.products)); } catch(e) {}
+      }
+      _renderProductDetail(fresh);
+    }
+  }).catch(() => { /* keep cached render — offline or rules issue */ });
+}
+
+function _renderProductDetail(prod) {
+  const s = Settings.get();
+  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
@@ -2479,14 +2503,38 @@ function renderAllProducts(filterCat) {
 
 // ===== PRODUCT DETAIL =====
 function openProductDetail(id, fromAllPage = true) {
-  const prod = DB.getById('products', id); if (!prod) return;
+  // Always fetch fresh from Firestore to pick up newly added variants.
+  // Fall back to cache for instant display while the fetch is in flight.
+  const cached = DB.getById('products', id); if (!cached) return;
   fromAll = fromAllPage || document.getElementById('all-products-page').classList.contains('active');
-  const s = Settings.get();
-  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('product-page').classList.add('active');
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
+
+  // Render immediately with cached data so the page feels instant
+  _renderProductDetail(cached);
+
+  // Fetch fresh from Firestore and re-render — this fixes stale localStorage
+  // cache that is missing variants added after the user last visited
+  _db.collection('products').doc(id).get().then(doc => {
+    if (doc.exists) {
+      const fresh = { ...doc.data(), id: doc.id };
+      // Update in-memory + localStorage cache for subsequent opens
+      if (DB._cache.products) {
+        const i = DB._cache.products.findIndex(x => x.id === id);
+        if (i >= 0) DB._cache.products[i] = fresh;
+        else DB._cache.products.unshift(fresh);
+        try { localStorage.setItem('dz_fc_products', JSON.stringify(DB._cache.products)); } catch(e) {}
+      }
+      _renderProductDetail(fresh);
+    }
+  }).catch(() => { /* keep cached render — offline or rules issue */ });
+}
+
+function _renderProductDetail(prod) {
+  const s = Settings.get();
+  const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
 
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
