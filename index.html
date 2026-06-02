@@ -516,6 +516,19 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   display:flex;align-items:center;gap:4px;
 }
 .pd-desc{color:var(--text-muted);line-height:1.75;font-size:.875rem;margin-bottom:1.6rem}
+/* variant selector */
+.pd-variant-wrap{margin-bottom:1.2rem}
+.pd-variant-label{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;display:block;text-transform:uppercase;letter-spacing:.06em}
+.pd-variant-select{
+  width:100%;padding:11px 14px;border-radius:var(--radius-sm);
+  background:var(--bg3);border:1px solid var(--border-strong);
+  color:var(--text);font-size:.88rem;font-weight:600;outline:none;
+  cursor:pointer;transition:border-color var(--transition);appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+}
+.pd-variant-select:focus{border-color:var(--accent)}
+.pd-variant-select option{background:var(--bg2);color:var(--text)}
 .pd-actions{display:flex;flex-direction:column;gap:.55rem}
 .btn-add-cart{
   width:100%;padding:13px;border-radius:var(--radius-sm);
@@ -1081,6 +1094,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         </div>
         <div class="pd-badges" id="pd-badges"></div>
         <p class="pd-desc" id="pd-desc"></p>
+        <!-- Variant selector — shown only if product has variants -->
+        <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
+          <span class="pd-variant-label" id="pd-variant-label">Choose Option</span>
+          <select class="pd-variant-select" id="pd-variant-select" onchange="onVariantChange(this)">
+            <option value="">— Select an option —</option>
+          </select>
+        </div>
         <div class="pd-actions">
           <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
@@ -1345,8 +1365,46 @@ function openProductDetail(id, fromAllPage = true) {
     meta.innerHTML += `<div class="meta-row"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`;
   });
 
-  document.getElementById('pd-add-btn').onclick = () => addToCart(prod);
-  document.getElementById('pd-buy-btn').onclick = () => { addToCart(prod); closeProductDetail(); toggleCart(); };
+  // ── Variant selector ───────────────────────────────────────────
+  const variantWrap = document.getElementById('pd-variant-wrap');
+  const variantSel  = document.getElementById('pd-variant-select');
+  const variantLbl  = document.getElementById('pd-variant-label');
+  let   activeProd  = { ...prod }; // clone — price may be overridden by variant
+
+  if (prod.variants && prod.variants.length) {
+    variantLbl.textContent = prod.variantName || 'Choose Option';
+    variantSel.innerHTML = '<option value="">— Select an option —</option>';
+    prod.variants.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const s2 = Settings.get();
+      opt.textContent = v.label + ' — ' + v.price.toLocaleString() + ' ' + s2.currency;
+      variantSel.appendChild(opt);
+    });
+    variantWrap.style.display = '';
+    // Pre-select first option
+    variantSel.selectedIndex = 1;
+    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
+    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+  } else {
+    variantWrap.style.display = 'none';
+    variantSel.innerHTML = '';
+  }
+
+  window.onVariantChange = function(sel) {
+    const idx = parseInt(sel.value);
+    if (isNaN(idx)) {
+      activeProd = { ...prod };
+      document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
+    } else {
+      const v = prod.variants[idx];
+      activeProd = { ...prod, price: v.price, variantLabel: v.label };
+      document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
+    }
+  };
+
+  document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
+  document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
   document.getElementById('pd-back').onclick = closeProductDetail;
 }
 
@@ -2194,6 +2252,13 @@ function updateWaFloat() {
         </div>
         <div class="pd-badges" id="pd-badges"></div>
         <p class="pd-desc" id="pd-desc"></p>
+        <!-- Variant selector — shown only if product has variants -->
+        <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
+          <span class="pd-variant-label" id="pd-variant-label">Choose Option</span>
+          <select class="pd-variant-select" id="pd-variant-select" onchange="onVariantChange(this)">
+            <option value="">— Select an option —</option>
+          </select>
+        </div>
         <div class="pd-actions">
           <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
@@ -2458,8 +2523,46 @@ function openProductDetail(id, fromAllPage = true) {
     meta.innerHTML += `<div class="meta-row"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`;
   });
 
-  document.getElementById('pd-add-btn').onclick = () => addToCart(prod);
-  document.getElementById('pd-buy-btn').onclick = () => { addToCart(prod); closeProductDetail(); toggleCart(); };
+  // ── Variant selector ───────────────────────────────────────────
+  const variantWrap = document.getElementById('pd-variant-wrap');
+  const variantSel  = document.getElementById('pd-variant-select');
+  const variantLbl  = document.getElementById('pd-variant-label');
+  let   activeProd  = { ...prod }; // clone — price may be overridden by variant
+
+  if (prod.variants && prod.variants.length) {
+    variantLbl.textContent = prod.variantName || 'Choose Option';
+    variantSel.innerHTML = '<option value="">— Select an option —</option>';
+    prod.variants.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const s2 = Settings.get();
+      opt.textContent = v.label + ' — ' + v.price.toLocaleString() + ' ' + s2.currency;
+      variantSel.appendChild(opt);
+    });
+    variantWrap.style.display = '';
+    // Pre-select first option
+    variantSel.selectedIndex = 1;
+    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
+    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+  } else {
+    variantWrap.style.display = 'none';
+    variantSel.innerHTML = '';
+  }
+
+  window.onVariantChange = function(sel) {
+    const idx = parseInt(sel.value);
+    if (isNaN(idx)) {
+      activeProd = { ...prod };
+      document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
+    } else {
+      const v = prod.variants[idx];
+      activeProd = { ...prod, price: v.price, variantLabel: v.label };
+      document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
+    }
+  };
+
+  document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
+  document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
   document.getElementById('pd-back').onclick = closeProductDetail;
 }
 

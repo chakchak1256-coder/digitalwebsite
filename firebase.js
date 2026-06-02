@@ -373,7 +373,7 @@ function adjustColor(hex,amount){const rgb=hexToRgb(hex);if(!rgb)return hex;cons
 const Cart = {
   get(){try{return JSON.parse(localStorage.getItem('dz_cart')||'[]');}catch{return[];}},
   _save(c){try{localStorage.setItem('dz_cart',JSON.stringify(c));}catch{}window.dispatchEvent(new Event('cart:update'));},
-  add(prod,qty=1){const c=this.get();const ex=c.find(i=>i.id===prod.id);if(ex)ex.qty+=qty;else c.push({id:prod.id,name:prod.name,price:prod.price,img:(prod.images||[])[0]||null,qty});this._save(c);},
+  add(prod,qty=1){const c=this.get();const cartId=prod.variantLabel?(prod.id+'__'+prod.variantLabel):prod.id;const ex=c.find(i=>i.id===cartId);if(ex)ex.qty+=qty;else c.push({id:cartId,productId:prod.id,name:prod.variantLabel?(prod.name+' — '+prod.variantLabel):prod.name,price:prod.price,img:(prod.images||[])[0]||null,qty,variantLabel:prod.variantLabel||null});this._save(c);},
   remove(id){this._save(this.get().filter(i=>i.id!==id));},
   setQty(id,qty){if(qty<1)return this.remove(id);const c=this.get();const it=c.find(i=>i.id===id);if(it){it.qty=qty;this._save(c);}},
   clear(){localStorage.removeItem('dz_cart');window.dispatchEvent(new Event('cart:update'));},
