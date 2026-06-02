@@ -485,9 +485,9 @@ async function doModalRegister() {
 
 async function doGoogleSignIn() {
   const r = await UserAuth.loginWithGoogle();
-  if (r.error) { showAuthModalError(r.error); return; }
+  if (r && r.error) { showAuthModalError(r.error); return; }
   closeLoginModal();
-  showToast('Welcome, ' + r.user.name + '! 👋');
+  if (r && r.user) showToast('Welcome, ' + r.user.name + '! 👋');
 }
 
 function doUserLogout() {
@@ -612,8 +612,8 @@ function makePurchaseCard(purchase) {
   const date = new Date(purchase.purchaseDate?.toDate?.() || purchase.purchaseDate || purchase.createdAt)
     .toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' });
   const typeIcon = getTypeIcon(purchase.productType);
-  const hasLink = purchase.accessLink && purchase.accessLink.trim();
-  const accessLabel = getAccessLabel(purchase.productType);
+  const hasAccess = (purchase.accessData && Object.values(purchase.accessData).some(v => v))
+    || (purchase.accessLink && purchase.accessLink.trim());
 
   card.innerHTML = `
     <div class="pc-image">
@@ -624,14 +624,11 @@ function makePurchaseCard(purchase) {
       <div class="pc-name">${purchase.productName}</div>
       <div class="pc-date"><i class="fa-regular fa-calendar"></i> Purchased ${date}</div>
       <div class="pc-actions">
-        ${hasLink
-          ? `<button class="pc-access-btn" onclick="openAccess('${purchase.id}','${escapeAttr(purchase.accessLink)}')">
-              <i class="fa-solid fa-${getAccessIcon(purchase.productType)}"></i> ${accessLabel}
-             </button>
-             <button class="pc-copy-btn" id="copy-${purchase.id}" onclick="copyAccess('${purchase.id}','${escapeAttr(purchase.accessLink)}')">
-               <i class="fa-regular fa-copy"></i> Copy
+        ${hasAccess
+          ? `<button class="pc-access-btn" onclick="openDetailModal(JSON.parse(this.dataset.p))" data-p="${escapeAttr(JSON.stringify(purchase))}">
+              <i class="fa-solid fa-key"></i> View Credentials
              </button>`
-          : `<div class="pc-no-link"><i class="fa-solid fa-clock"></i> Access link coming soon</div>`
+          : `<div class="pc-no-link"><i class="fa-solid fa-clock"></i> Credentials coming soon</div>`
         }
       </div>
     </div>`;
@@ -662,6 +659,48 @@ function getAccessIcon(type) {
   const t = (type || '').toLowerCase();
   return (t.includes('ebook')||t.includes('book')||t.includes('template')) ? 'download' : 'external-link-alt';
 }
+function _buildAccessSection(purchase) {
+  // Prefer structured accessData (new format), fall back to legacy accessLink
+  const data = purchase.accessData && Object.keys(purchase.accessData).length
+    ? purchase.accessData : null;
+  const legacyLink = purchase.accessLink || '';
+
+  if (!data && !legacyLink) {
+    return `<div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem">
+      <i class="fa-solid fa-clock" style="margin-bottom:.3rem;display:block;font-size:1.2rem;opacity:.4"></i>
+      Credentials not yet provided. Admin will add them soon.
+    </div>`;
+  }
+
+  const entries = data
+    ? Object.entries(data).filter(([k]) => k)
+    : [['Access', legacyLink]];
+
+  const rows = entries.map(([label, value]) => {
+    const safe = escapeAttr(value || '');
+    const isLink = (value || '').startsWith('http');
+    return `
+    <div style="margin-bottom:.65rem">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:.28rem">${label}</div>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <div style="flex:1;font-size:.86rem;word-break:break-all;background:rgba(0,0,0,.15);padding:.5rem .75rem;border-radius:7px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${value || '—'}</div>
+        ${value ? `<button onclick="navigator.clipboard.writeText('${safe}').then(()=>showToast('${label} copied!'))"
+          style="flex-shrink:0;width:32px;height:32px;border-radius:7px;background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer" title="Copy ${label}">
+          <i class="fa-regular fa-copy" style="font-size:.8rem"></i></button>` : ''}
+        ${isLink ? `<button onclick="window.open('${safe}','_blank')"
+          style="flex-shrink:0;width:32px;height:32px;border-radius:7px;background:var(--card);border:1px solid var(--border);color:var(--text-muted);display:flex;align-items:center;justify-content:center;cursor:pointer" title="Open">
+          <i class="fa-solid fa-external-link-alt" style="font-size:.75rem"></i></button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+    <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem"><i class="fa-solid fa-key"></i> Your Access Credentials</div>
+    ${rows}
+  </div>`;
+}
+
 function escapeAttr(s) { return (s || '').replace(/'/g, "\'").replace(/"/g, '&quot;'); }
 
 function openAccess(id, link) {
@@ -694,19 +733,7 @@ function openDetailModal(purchase) {
       <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
       <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace;color:var(--text-muted)">${purchase.id}</span></div>
     </div>
-    ${purchase.accessLink ? `
-    <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
-      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem"><i class="fa-solid fa-key"></i> Access Link / Credentials</div>
-      <div style="font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.6rem .8rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${purchase.accessLink}</div>
-      <div style="display:flex;gap:.5rem;margin-top:.75rem">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="navigator.clipboard.writeText('${escapeAttr(purchase.accessLink)}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy</button>
-        ${purchase.accessLink.startsWith('http') ? `<button class="btn btn-outline btn-sm" style="flex:1" onclick="window.open('${escapeAttr(purchase.accessLink)}','_blank')"><i class="fa-solid fa-external-link-alt"></i> Open</button>` : ''}
-      </div>
-    </div>` : `
-    <div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem">
-      <i class="fa-solid fa-clock" style="margin-bottom:.3rem;display:block;font-size:1.2rem;opacity:.4"></i>
-      Access link not yet provided. Admin will add it soon.
-    </div>`}`;
+    ${_buildAccessSection(purchase)};
   document.getElementById('detail-modal').classList.add('open');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
