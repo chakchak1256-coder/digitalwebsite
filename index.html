@@ -1395,10 +1395,19 @@ function _renderProductDetail(prod) {
   const variantLbl  = document.getElementById('pd-variant-label');
   let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  if (prod.variants && prod.variants.length) {
-    variantLbl.textContent = prod.variantName || 'Choose Option';
+  // Support both storage formats:
+  // - prod.variants: flat array [{ label, price }, ...]
+  // - prod.variables: grouped array [{ title, items: [{ label, price }] }]
+  const flatVariants = prod.variants && prod.variants.length ? prod.variants
+    : (prod.variables && prod.variables.length && prod.variables[0].items && prod.variables[0].items.length)
+      ? prod.variables[0].items
+      : null;
+  const variantGroupTitle = (prod.variables && prod.variables[0] && prod.variables[0].title) || prod.variantName || 'Choose Option';
+
+  if (flatVariants) {
+    variantLbl.textContent = variantGroupTitle;
     variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    prod.variants.forEach((v, i) => {
+    flatVariants.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       const s2 = Settings.get();
@@ -1408,8 +1417,8 @@ function _renderProductDetail(prod) {
     variantWrap.style.display = '';
     // Pre-select first option
     variantSel.selectedIndex = 1;
-    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
-    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+    activeProd = { ...prod, price: flatVariants[0].price, variantLabel: flatVariants[0].label };
+    document.getElementById('pd-price').textContent = flatVariants[0].price.toLocaleString() + ' ' + s.currency;
   } else {
     variantWrap.style.display = 'none';
     variantSel.innerHTML = '';
@@ -1421,7 +1430,7 @@ function _renderProductDetail(prod) {
       activeProd = { ...prod };
       document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
     } else {
-      const v = prod.variants[idx];
+      const v = flatVariants[idx];
       activeProd = { ...prod, price: v.price, variantLabel: v.label };
       document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
     }
@@ -2577,10 +2586,19 @@ function _renderProductDetail(prod) {
   const variantLbl  = document.getElementById('pd-variant-label');
   let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  if (prod.variants && prod.variants.length) {
-    variantLbl.textContent = prod.variantName || 'Choose Option';
+  // Support both storage formats:
+  // - prod.variants: flat array [{ label, price }, ...]
+  // - prod.variables: grouped array [{ title, items: [{ label, price }] }]
+  const flatVariants = prod.variants && prod.variants.length ? prod.variants
+    : (prod.variables && prod.variables.length && prod.variables[0].items && prod.variables[0].items.length)
+      ? prod.variables[0].items
+      : null;
+  const variantGroupTitle = (prod.variables && prod.variables[0] && prod.variables[0].title) || prod.variantName || 'Choose Option';
+
+  if (flatVariants) {
+    variantLbl.textContent = variantGroupTitle;
     variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    prod.variants.forEach((v, i) => {
+    flatVariants.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       const s2 = Settings.get();
@@ -2590,8 +2608,8 @@ function _renderProductDetail(prod) {
     variantWrap.style.display = '';
     // Pre-select first option
     variantSel.selectedIndex = 1;
-    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
-    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+    activeProd = { ...prod, price: flatVariants[0].price, variantLabel: flatVariants[0].label };
+    document.getElementById('pd-price').textContent = flatVariants[0].price.toLocaleString() + ' ' + s.currency;
   } else {
     variantWrap.style.display = 'none';
     variantSel.innerHTML = '';
@@ -2603,7 +2621,7 @@ function _renderProductDetail(prod) {
       activeProd = { ...prod };
       document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
     } else {
-      const v = prod.variants[idx];
+      const v = flatVariants[idx];
       activeProd = { ...prod, price: v.price, variantLabel: v.label };
       document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
     }
