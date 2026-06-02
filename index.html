@@ -1094,8 +1094,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         </div>
         <div class="pd-badges" id="pd-badges"></div>
         <p class="pd-desc" id="pd-desc"></p>
-        <!-- Variable selectors — one dropdown per variable group -->
-        <div id="pd-variables-wrap"></div>
+        <!-- Variant selector — shown only if product has variants -->
+        <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
+          <span class="pd-variant-label" id="pd-variant-label">Choose Option</span>
+          <select class="pd-variant-select" id="pd-variant-select" onchange="onVariantChange(this)">
+            <option value="">— Select an option —</option>
+          </select>
+        </div>
         <div class="pd-actions">
           <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
@@ -1250,7 +1255,7 @@ function makeProductCard(prod) {
       <img src="${img}" alt="${prod.name}" loading="lazy"/>
     </div>
     <div class="prod-info">
-      ${prod.category ? `<div class="prod-cat">${prod.category}</div>` : ''}
+      <div class="prod-cat">${prod.category||''}</div>
       <div class="prod-name">${prod.name}</div>
       <div class="prod-price-row">
         <div class="prod-prices">
@@ -1307,7 +1312,7 @@ function renderAllProducts(filterCat) {
   }
   const q = (document.getElementById('search-input')||{}).value?.toLowerCase()||'';
   let prods = DB.getAll('products');
-  if (filterCat !== 'all') prods = prods.filter(p => (p.category || '') === filterCat);
+  if (filterCat !== 'all') prods = prods.filter(p => p.category === filterCat);
   if (q) prods = prods.filter(p => p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q));
   const g = document.getElementById('all-products-grid'); g.innerHTML = '';
   if (!prods.length) { g.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:3rem">No products found.</p>'; return; }
@@ -1325,7 +1330,7 @@ function openProductDetail(id, fromAllPage = true) {
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
 
-  const pdCat = document.getElementById('pd-cat'); pdCat.textContent = prod.category||''; pdCat.style.display = prod.category ? '' : 'none';
+  document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
   document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
   document.getElementById('pd-desc').textContent = prod.description||'';
@@ -1356,80 +1361,47 @@ function openProductDetail(id, fromAllPage = true) {
   });
 
   const meta = document.getElementById('pd-meta'); meta.innerHTML = '';
-  [['Language',prod.language||'International'],['Added',new Date(prod.createdAt).toLocaleDateString('en-DZ')]].concat(prod.category ? [['Category',prod.category]] : []).forEach(([l,v]) => {
+  [['Category',prod.category||'—'],['Language',prod.language||'International'],['Added',new Date(prod.createdAt).toLocaleDateString('en-DZ')]].forEach(([l,v]) => {
     meta.innerHTML += `<div class="meta-row"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`;
   });
 
-  // ── Variable selectors (multi-group) ──────────────────────────
-  const varsWrap = document.getElementById('pd-variables-wrap');
-  varsWrap.innerHTML = '';
+  // ── Variant selector ───────────────────────────────────────────
+  const variantWrap = document.getElementById('pd-variant-wrap');
+  const variantSel  = document.getElementById('pd-variant-select');
+  const variantLbl  = document.getElementById('pd-variant-label');
+  let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  // Holds selected items per group: { groupIndex: itemIndex }
-  const selectedVars = {};
-  let activeProd = { ...prod };
-
-  // Legacy: support old single-group variants
-  const variables = prod.variables && prod.variables.length
-    ? prod.variables
-    : (prod.variants && prod.variants.length && prod.variantName)
-      ? [{ title: prod.variantName, items: prod.variants }]
-      : [];
-
-  function rebuildActiveProd() {
-    // Price: use the selected variable item price if exactly one group has a price,
-    // otherwise fall back to base product price. If multiple groups are selected
-    // we use the first group that has a priced selection.
-    let overridePrice = null;
-    const labelParts = [];
-    variables.forEach((grp, gi) => {
-      const ii = selectedVars[gi];
-      if (ii != null) {
-        const item = grp.items[ii];
-        if (item) {
-          labelParts.push(item.label);
-          if (item.price != null && overridePrice === null) overridePrice = item.price;
-        }
-      }
+  if (prod.variants && prod.variants.length) {
+    variantLbl.textContent = prod.variantName || 'Choose Option';
+    variantSel.innerHTML = '<option value="">— Select an option —</option>';
+    prod.variants.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const s2 = Settings.get();
+      opt.textContent = v.label + ' — ' + v.price.toLocaleString() + ' ' + s2.currency;
+      variantSel.appendChild(opt);
     });
-    activeProd = { ...prod,
-      price: overridePrice != null ? overridePrice : prod.price,
-      variantLabel: labelParts.join(' / ') || undefined
-    };
-    document.getElementById('pd-price').textContent = activeProd.price.toLocaleString() + ' ' + s.currency;
+    variantWrap.style.display = '';
+    // Pre-select first option
+    variantSel.selectedIndex = 1;
+    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
+    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+  } else {
+    variantWrap.style.display = 'none';
+    variantSel.innerHTML = '';
   }
 
-  if (variables.length) {
-    variables.forEach((grp, gi) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'pd-variant-wrap';
-      const lbl = document.createElement('span');
-      lbl.className = 'pd-variant-label';
-      lbl.textContent = grp.title || 'Choose Option';
-      const sel = document.createElement('select');
-      sel.className = 'pd-variant-select';
-      sel.innerHTML = '<option value="">— Select ' + (grp.title || 'option') + ' —</option>';
-      grp.items.forEach((item, ii) => {
-        const opt = document.createElement('option');
-        opt.value = ii;
-        opt.textContent = item.price != null
-          ? item.label + ' — ' + item.price.toLocaleString() + ' ' + s.currency
-          : item.label;
-        sel.appendChild(opt);
-      });
-      // Pre-select first item
-      sel.selectedIndex = 1;
-      selectedVars[gi] = 0;
-      sel.onchange = () => {
-        const v = parseInt(sel.value);
-        selectedVars[gi] = isNaN(v) ? null : v;
-        rebuildActiveProd();
-      };
-      wrap.appendChild(lbl);
-      wrap.appendChild(sel);
-      varsWrap.appendChild(wrap);
-    });
-    rebuildActiveProd();
-  }
+  window.onVariantChange = function(sel) {
+    const idx = parseInt(sel.value);
+    if (isNaN(idx)) {
+      activeProd = { ...prod };
+      document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
+    } else {
+      const v = prod.variants[idx];
+      activeProd = { ...prod, price: v.price, variantLabel: v.label };
+      document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
+    }
+  };
 
   document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
   document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
@@ -2063,7 +2035,7 @@ function updateWaFloat() {
      Production:   https://yourdomain.com
      ─────────────────────────────────────────────────────────────── -->
 <script>
-  window.DIGISTORE_BACKEND_URL = 'https://digistore-dz.YOUR_ACCOUNT.workers.dev';
+  window.DIGISTORE_BACKEND_URL = 'https://digital-website.chakchak1256.workers.dev';
 </script>
 
 </body>
