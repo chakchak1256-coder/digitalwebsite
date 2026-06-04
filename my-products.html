@@ -619,6 +619,16 @@ async function renderPurchases() {
   purchases.forEach(p => grid.appendChild(makePurchaseCard(p)));
 }
 
+function getPurchaseStatus(p) {
+  if (p.status === 'canceled_by_client') return 'canceled_by_client';
+  if (p.status === 'canceled_by_admin') return 'canceled_by_admin';
+  if (p.status === 'picked_up') return 'picked_up';
+  const hasData = p.accessData && Object.values(p.accessData).some(v => v);
+  const hasLink = p.accessLink && p.accessLink.trim();
+  if (p.status === 'completed' || hasData || hasLink) return 'completed';
+  return 'pending';
+}
+
 function makePurchaseCard(purchase) {
   const card = document.createElement('div');
   card.className = 'purchase-card';
@@ -626,8 +636,20 @@ function makePurchaseCard(purchase) {
   const date = new Date(purchase.purchaseDate?.toDate?.() || purchase.purchaseDate || purchase.createdAt)
     .toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' });
   const typeIcon = getTypeIcon(purchase.productType);
-  const hasAccess = (purchase.accessData && Object.values(purchase.accessData).some(v => v))
-    || (purchase.accessLink && purchase.accessLink.trim());
+  const effStatus = getPurchaseStatus(purchase);
+  const hasAccess = effStatus === 'completed' || effStatus === 'picked_up';
+  const isCanceled = effStatus === 'canceled_by_client' || effStatus === 'canceled_by_admin';
+
+  const statusBar = isCanceled
+    ? `<div style="margin-top:.5rem;display:flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;color:#EF4444">
+        <i class="fa-solid fa-ban"></i>
+        ${effStatus === 'canceled_by_admin' ? 'Canceled by admin' : 'Order canceled'}
+       </div>`
+    : effStatus === 'picked_up'
+    ? `<div style="margin-top:.5rem;display:flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;color:#818CF8">
+        <i class="fa-solid fa-box-open"></i> Picked up
+       </div>`
+    : '';
 
   card.innerHTML = `
     <div class="pc-image">
@@ -637,8 +659,11 @@ function makePurchaseCard(purchase) {
     <div class="pc-body">
       <div class="pc-name">${purchase.productName}</div>
       <div class="pc-date"><i class="fa-regular fa-calendar"></i> Purchased ${date}</div>
+      ${statusBar}
       <div class="pc-actions">
-        ${hasAccess
+        ${isCanceled
+          ? `<div class="pc-no-link" style="color:#EF4444;opacity:.7"><i class="fa-solid fa-ban"></i> Order canceled</div>`
+          : hasAccess
           ? `<button class="pc-access-btn" onclick="openDetailModal(JSON.parse(this.dataset.p))" data-p="${escapeAttr(JSON.stringify(purchase))}">
               <i class="fa-solid fa-key"></i> View Credentials
              </button>`
@@ -646,7 +671,7 @@ function makePurchaseCard(purchase) {
         }
       </div>
     </div>`;
-  card.querySelector('.pc-name').onclick = () => openDetailModal(purchase);
+  if (!isCanceled) card.querySelector('.pc-name').onclick = () => openDetailModal(purchase);
   return card;
 }
 
@@ -730,7 +755,7 @@ function copyAccess(id, link) {
   }).catch(() => showToast('Copy failed.'));
 }
 
-function openDetailModal(purchase) {
+async function openDetailModal(purchase) {
   const ts = purchase.purchaseDate?.toDate?.() || purchase.purchaseDate || purchase.createdAt;
   const date = ts ? new Date(ts).toLocaleString('en-DZ') : '—';
   const img = purchase.productImage || generatePlaceholder(purchase.productName || 'Product', 400, 225);
@@ -750,6 +775,18 @@ function openDetailModal(purchase) {
     ${_buildAccessSection(purchase)}
   `;
   document.getElementById('detail-modal').classList.add('open');
+
+  // Mark as picked up when the user opens details for a completed order
+  if (purchase.id && getPurchaseStatus(purchase) === 'completed') {
+    try {
+      await _db.collection('purchases').doc(purchase.id).update({
+        status: 'picked_up',
+        pickedUpAt: new Date().toISOString()
+      });
+      // Refresh the card in the background so it reflects picked_up status
+      renderPurchases();
+    } catch(e) { console.warn('Could not mark as picked up:', e); }
+  }
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 

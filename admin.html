@@ -713,8 +713,14 @@ select.form-input option{background:var(--bg2)}
         </div>
         <div style="display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap">
           <input class="form-input" id="pur-search" style="max-width:260px;padding:8px 12px" placeholder="Search by user or product..." oninput="renderPurchasesAdmin()"/>
-          <select class="form-input" id="pur-filter" style="max-width:180px;padding:8px 12px" onchange="renderPurchasesAdmin()">
-            <option value="all">All Types</option>
+          <select class="form-input" id="pur-filter" style="max-width:220px;padding:8px 12px" onchange="renderPurchasesAdmin()">
+            <option value="all">All Orders</option>
+            <option value="pending">⏳ Pending</option>
+            <option value="completed">✅ Completed</option>
+            <option value="canceled_by_client">❌ Canceled by Client</option>
+            <option value="canceled_by_admin">🚫 Canceled by Admin</option>
+            <option value="picked_up">📦 Picked Up</option>
+            <option value="not_picked_up">🕐 Not Picked Up</option>
           </select>
         </div>
         <div class="table-wrap">
@@ -1395,19 +1401,24 @@ async function renderPurchasesAdmin() {
 
 function _renderPurchasesTable(all) {
   const q = (document.getElementById('pur-search')||{}).value?.toLowerCase()||'';
-  const filterType = (document.getElementById('pur-filter')||{}).value || 'all';
+  const filterStatus = (document.getElementById('pur-filter')||{}).value || 'all';
 
-  // Populate type filter dropdown
-  const sel = document.getElementById('pur-filter');
-  if (sel) {
-    const types = [...new Set(all.map(p => p.productType).filter(Boolean))];
-    const cur = sel.value;
-    sel.innerHTML = '<option value="all">All Types</option>';
-    types.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; if (t===cur) o.selected = true; sel.appendChild(o); });
+  function getEffectiveStatus(p) {
+    if (p.status === 'canceled_by_client') return 'canceled_by_client';
+    if (p.status === 'canceled_by_admin') return 'canceled_by_admin';
+    if (p.status === 'picked_up') return 'picked_up';
+    const hasData = p.accessData && Object.values(p.accessData).some(v => v);
+    const hasLink = p.accessLink && p.accessLink.trim();
+    if (p.status === 'completed' || hasData || hasLink) return 'completed';
+    return 'pending';
   }
 
   let purchases = all;
-  if (filterType !== 'all') purchases = purchases.filter(p => p.productType === filterType);
+  if (filterStatus === 'not_picked_up') {
+    purchases = purchases.filter(p => getEffectiveStatus(p) === 'completed');
+  } else if (filterStatus !== 'all') {
+    purchases = purchases.filter(p => getEffectiveStatus(p) === filterStatus);
+  }
   if (q) purchases = purchases.filter(p =>
     (p.userEmail||'').toLowerCase().includes(q) ||
     (p.productName||'').toLowerCase().includes(q)
@@ -1417,17 +1428,12 @@ function _renderPurchasesTable(all) {
   const count = document.getElementById('pur-count');
   if (count) count.textContent = `(${purchases.length} of ${all.length})`;
 
-  // Badge — show pending count (no accessLink and no accessData)
   const badge = document.getElementById('purchases-badge');
-  const pendingCount = all.filter(p => {
-    const hasData = p.accessData && Object.values(p.accessData).some(v => v);
-    const hasLink = p.accessLink && p.accessLink.trim();
-    return !hasData && !hasLink;
-  }).length;
+  const pendingCount = all.filter(p => getEffectiveStatus(p) === 'pending').length;
   if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount ? 'inline-flex' : 'none'; }
 
   if (!purchases.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-bag-shopping" style="font-size:2rem;opacity:.2;margin-bottom:.5rem;display:block"></i><p>No purchases found.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-bag-shopping" style="font-size:2rem;opacity:.2;margin-bottom:.5rem;display:block"></i><p>No purchases found.</p></div></td></tr>`;
     return;
   }
 
@@ -1441,8 +1447,24 @@ function _renderPurchasesTable(all) {
     const tr = document.createElement('tr');
     const _ts = p.purchaseDate?.toDate?.() || (p.purchaseDate ? new Date(p.purchaseDate) : null) || (p.createdAt ? new Date(p.createdAt) : null);
     const date = _ts && !isNaN(_ts) ? _ts.toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'}) : '—';
-    const isCompleted = (p.accessData && Object.values(p.accessData).some(v => v)) || (p.accessLink && p.accessLink.trim());
+    const effStatus = getEffectiveStatus(p);
+    const isCompleted = effStatus === 'completed';
     const shortLink = isCompleted ? (p.accessLink ? (p.accessLink.length > 30 ? p.accessLink.slice(0,30)+'…' : p.accessLink) : '✓ Multiple fields') : '';
+
+    const statusBadgeMap = {
+      pending: `<span class="status-badge status-pending"><i class="fa-solid fa-clock" style="font-size:.65rem"></i> Pending</span>`,
+      completed: `<span class="status-badge status-done"><i class="fa-solid fa-circle-check" style="font-size:.65rem"></i> Completed</span>`,
+      canceled_by_client: `<span class="status-badge status-cancel"><i class="fa-solid fa-circle-xmark" style="font-size:.65rem"></i> Canceled by Client</span>`,
+      canceled_by_admin: `<span class="status-badge status-cancel"><i class="fa-solid fa-ban" style="font-size:.65rem"></i> Canceled by Admin</span>`,
+      picked_up: `<span class="status-badge" style="background:rgba(99,102,241,.1);color:#818CF8;border:1px solid rgba(99,102,241,.2)"><i class="fa-solid fa-box-open" style="font-size:.65rem"></i> Picked Up</span>`,
+    };
+    const statusBadge = statusBadgeMap[effStatus] || statusBadgeMap.pending;
+
+    const isCanceled = effStatus === 'canceled_by_admin' || effStatus === 'canceled_by_client';
+    const cancelBtn = !isCanceled
+      ? `<button class="btn btn-sm" style="white-space:nowrap;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444" onclick="cancelOrderAdmin('${p.id}','${(p.productName||'').replace(/'/g,"\\'")}')"><i class="fa-solid fa-ban"></i> Cancel</button>`
+      : `<button class="btn btn-sm btn-outline" style="white-space:nowrap;font-size:.75rem" onclick="restoreOrder('${p.id}')"><i class="fa-solid fa-rotate-left"></i> Restore</button>`;
+
     tr.innerHTML = `
       <td>
         <div style="font-weight:600;font-size:.87rem">${p.userEmail||'Unknown'}</div>
@@ -1452,16 +1474,11 @@ function _renderPurchasesTable(all) {
         <div style="font-weight:600;font-size:.87rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.productName||'—'}</div>
         <div style="font-size:.72rem;color:var(--text-muted)">${date}</div>
       </td>
-      <td>
-        ${isCompleted
-          ? `<span class="status-badge status-done"><i class="fa-solid fa-circle-check" style="font-size:.65rem"></i> Completed</span>`
-          : `<span class="status-badge status-pending"><i class="fa-solid fa-clock" style="font-size:.65rem"></i> Pending</span>`
-        }
-      </td>
+      <td>${statusBadge}</td>
       <td>
         ${isCompleted
           ? `<div style="font-size:.76rem;font-family:monospace;color:var(--secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.accessLink}">${shortLink}</div>
-             <button class="btn btn-sm" style="font-size:.7rem;padding:2px 8px;margin-top:2px;background:rgba(var(--secondary-rgb),.08);color:var(--secondary);border:1px solid rgba(var(--secondary-rgb),.15)" onclick="navigator.clipboard.writeText('${(p.accessLink||'').replace(/'/g,"\'")}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy</button>`
+             <button class="btn btn-sm" style="font-size:.7rem;padding:2px 8px;margin-top:2px;background:rgba(var(--secondary-rgb),.08);color:var(--secondary);border:1px solid rgba(var(--secondary-rgb),.15)" onclick="navigator.clipboard.writeText('${(p.accessLink||'').replace(/'/g,"\\'")}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy</button>`
           : `<span style="color:var(--text-muted);font-size:.78rem">—</span>`
         }
       </td>
@@ -1478,7 +1495,8 @@ function _renderPurchasesTable(all) {
           <button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openDeliverModal('${p.id}')">
             <i class="fa-solid fa-paper-plane"></i> Deliver
           </button>
-          <button class="btn btn-sm btn-danger" onclick="deletePurchase('${p.id}','${(p.productName||'').replace(/'/g,"\'")}')"><i class="fa-solid fa-trash"></i></button>
+          ${cancelBtn}
+          <button class="btn btn-sm btn-danger" onclick="deletePurchase('${p.id}','${(p.productName||'').replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -1576,6 +1594,26 @@ function closePurchaseModal() { document.getElementById('purchase-modal').classL
 function deletePurchase(id, name) {
   confirmAction('Delete Purchase', `Delete "${name}"? This cannot be undone.`, () => {
     Purchases.delete(id).then(() => { renderPurchasesAdmin(); showToast('Purchase deleted.'); });
+  });
+}
+
+function cancelOrderAdmin(id, name) {
+  confirmAction('Cancel Order', `Cancel order for "${name}"? The client will see it as canceled by admin.`, async () => {
+    await _db.collection('purchases').doc(id).update({ status: 'canceled_by_admin', canceledAt: new Date().toISOString() });
+    showToast('Order canceled.');
+    renderPurchasesAdmin();
+  });
+}
+
+function restoreOrder(id) {
+  confirmAction('Restore Order', 'Restore this order to pending status?', async () => {
+    const p = _adminAllPurchases.find(x => x.id === id);
+    const hasData = p && p.accessData && Object.values(p.accessData).some(v => v);
+    const hasLink = p && p.accessLink && p.accessLink.trim();
+    const newStatus = (hasData || hasLink) ? 'completed' : 'pending';
+    await _db.collection('purchases').doc(id).update({ status: newStatus, canceledAt: null });
+    showToast('Order restored.');
+    renderPurchasesAdmin();
   });
 }
 

@@ -746,10 +746,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   </div>
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
-    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();">About</a>
-    <a href="#products" data-section="products" onclick="closeMyProducts();closeAllProducts();">Products</a>
-    <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();">Warranty</a>
-    <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();">Contact</a>
+    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">About</a>
+    <a href="#products" data-section="products" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Products</a>
+    <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Warranty</a>
+    <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Contact</a>
     <a href="#" id="my-products-link" onclick="openMyProducts();return false;">My Products</a>
   </div>
   <div class="nav-actions">
@@ -1464,21 +1464,39 @@ function openProductDetail(id, fromAllPage = true) {
   const variantLbl  = document.getElementById('pd-variant-label');
   let   activeProd  = { ...prod }; // clone — price may be overridden by variant
 
-  if (prod.variants && prod.variants.length) {
+  // Normalize: admin saves as prod.variables (groups with items), support both formats
+  // Flatten variables groups into a flat list of {label, price} options
+  let flatVariants = [];
+  if (prod.variables && prod.variables.length) {
+    prod.variables.forEach(grp => {
+      (grp.items || []).forEach(item => {
+        if (item.label) flatVariants.push({
+          label: grp.title ? grp.title + ' — ' + item.label : item.label,
+          price: item.price != null ? item.price : prod.price
+        });
+      });
+    });
+  } else if (prod.variants && prod.variants.length) {
+    flatVariants = prod.variants; // legacy format
+  }
+
+  if (flatVariants.length) {
     variantLbl.textContent = prod.variantName || 'Choose Option';
     variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    prod.variants.forEach((v, i) => {
+    flatVariants.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       const s2 = Settings.get();
-      opt.textContent = v.label + ' — ' + v.price.toLocaleString() + ' ' + s2.currency;
+      const priceStr = v.price != null ? ' — ' + v.price.toLocaleString() + ' ' + s2.currency : '';
+      opt.textContent = v.label + priceStr;
       variantSel.appendChild(opt);
     });
     variantWrap.style.display = '';
     // Pre-select first option
     variantSel.selectedIndex = 1;
-    activeProd = { ...prod, price: prod.variants[0].price, variantLabel: prod.variants[0].label };
-    document.getElementById('pd-price').textContent = prod.variants[0].price.toLocaleString() + ' ' + s.currency;
+    const firstV = flatVariants[0];
+    activeProd = { ...prod, price: firstV.price ?? prod.price, variantLabel: firstV.label };
+    document.getElementById('pd-price').textContent = (firstV.price ?? prod.price).toLocaleString() + ' ' + s.currency;
   } else {
     variantWrap.style.display = 'none';
     variantSel.innerHTML = '';
@@ -1490,9 +1508,9 @@ function openProductDetail(id, fromAllPage = true) {
       activeProd = { ...prod };
       document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
     } else {
-      const v = prod.variants[idx];
-      activeProd = { ...prod, price: v.price, variantLabel: v.label };
-      document.getElementById('pd-price').textContent = v.price.toLocaleString() + ' ' + s.currency;
+      const v = flatVariants[idx];
+      activeProd = { ...prod, price: v.price ?? prod.price, variantLabel: v.label };
+      document.getElementById('pd-price').textContent = (v.price ?? prod.price).toLocaleString() + ' ' + s.currency;
     }
   };
 

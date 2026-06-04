@@ -22,9 +22,21 @@ const UserAuth = {
   _current: null,
 
   init() {
-    _auth.onAuthStateChanged(user => {
+    _auth.onAuthStateChanged(async user => {
       if (user) {
-        this._current = { id: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
+        // Always read email/name from Firestore users doc so registered email is used,
+        // not the Google account email (which may differ if the user used a different email to register)
+        let email = user.email;
+        let name = user.displayName || user.email.split('@')[0];
+        try {
+          const doc = await _db.collection('users').doc(user.uid).get();
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.email) email = data.email;
+            if (data.name) name = data.name;
+          }
+        } catch(e) { /* fallback to auth values */ }
+        this._current = { id: user.uid, email, name };
       } else {
         this._current = null;
       }
@@ -173,15 +185,23 @@ const Purchases = {
 
   async update(id, data) {
     const patch = { ...data };
-    // Mark completed if accessData has values OR accessLink is set
-    const hasAccessData = data.accessData && Object.values(data.accessData).some(v => v);
-    const hasAccessLink = 'accessLink' in data && data.accessLink && data.accessLink.trim();
-    if (hasAccessData || hasAccessLink) {
-      patch.status = 'completed';
-      patch.deliveredAt = new Date().toISOString();
-    } else if ('accessLink' in data && !data.accessLink) {
-      patch.status = 'pending';
-      patch.deliveredAt = null;
+    // Only auto-set status when delivering (accessData/accessLink change),
+    // and only if status is not already a cancel or picked-up state
+    const preservedStatuses = ['canceled_by_client', 'canceled_by_admin', 'picked_up'];
+    const existingStatus = data._existingStatus || null;
+    const isPreserved = preservedStatuses.includes(existingStatus);
+    delete patch._existingStatus; // internal helper, don't write to DB
+
+    if (!isPreserved && !('status' in data)) {
+      const hasAccessData = data.accessData && Object.values(data.accessData).some(v => v);
+      const hasAccessLink = 'accessLink' in data && data.accessLink && data.accessLink.trim();
+      if (hasAccessData || hasAccessLink) {
+        patch.status = 'completed';
+        patch.deliveredAt = new Date().toISOString();
+      } else if ('accessLink' in data && !data.accessLink) {
+        patch.status = 'pending';
+        patch.deliveredAt = null;
+      }
     }
     await _db.collection('purchases').doc(id).update(patch);
   },
