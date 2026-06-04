@@ -1189,10 +1189,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         <p class="pd-desc" id="pd-desc"></p>
         <!-- Variant selector — shown only if product has variants -->
         <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
-          <span class="pd-variant-label" id="pd-variant-label">Choose Option</span>
-          <select class="pd-variant-select" id="pd-variant-select" onchange="onVariantChange(this)">
-            <option value="">— Select an option —</option>
-          </select>
+          <div id="pd-variant-groups"></div>
         </div>
         <div class="pd-actions">
           <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
@@ -1459,60 +1456,79 @@ function openProductDetail(id, fromAllPage = true) {
   });
 
   // ── Variant selector ───────────────────────────────────────────
-  const variantWrap = document.getElementById('pd-variant-wrap');
-  const variantSel  = document.getElementById('pd-variant-select');
-  const variantLbl  = document.getElementById('pd-variant-label');
-  let   activeProd  = { ...prod }; // clone — price may be overridden by variant
+  const variantWrap   = document.getElementById('pd-variant-wrap');
+  const variantGroups = document.getElementById('pd-variant-groups');
+  let   activeProd    = { ...prod }; // clone — price may be overridden by variant selection
 
-  // Normalize: admin saves as prod.variables (groups with items), support both formats
-  // Flatten variables groups into a flat list of {label, price} options
-  let flatVariants = [];
+  // Build group structures: prefer prod.variables (new format), fall back to legacy prod.variants
+  let groups = [];
   if (prod.variables && prod.variables.length) {
-    prod.variables.forEach(grp => {
-      (grp.items || []).forEach(item => {
-        if (item.label) flatVariants.push({
-          label: grp.title ? grp.title + ' — ' + item.label : item.label,
-          price: item.price != null ? item.price : prod.price
-        });
-      });
-    });
+    groups = prod.variables
+      .filter(grp => grp.items && grp.items.some(it => it.label))
+      .map(grp => ({
+        title: grp.title || 'Option',
+        items: grp.items.filter(it => it.label).map(it => ({
+          label: it.label,
+          price: it.price != null ? it.price : prod.price
+        }))
+      }));
   } else if (prod.variants && prod.variants.length) {
-    flatVariants = prod.variants; // legacy format
+    groups = [{ title: prod.variantName || 'Option', items: prod.variants }];
   }
 
-  if (flatVariants.length) {
-    variantLbl.textContent = prod.variantName || 'Choose Option';
-    variantSel.innerHTML = '<option value="">— Select an option —</option>';
-    flatVariants.forEach((v, i) => {
-      const opt = document.createElement('option');
-      opt.value = i;
-      const s2 = Settings.get();
-      const priceStr = v.price != null ? ' — ' + v.price.toLocaleString() + ' ' + s2.currency : '';
-      opt.textContent = v.label + priceStr;
-      variantSel.appendChild(opt);
+  // Track selected item per group; default to first item
+  const selectedByGroup = groups.map(g => g.items[0] || null);
+
+  function computeActiveVariant() {
+    const parts = selectedByGroup.map(item => item ? item.label : null).filter(Boolean);
+    const variantLabel = parts.join(' / ');
+    const price = selectedByGroup[0] ? (selectedByGroup[0].price ?? prod.price) : prod.price;
+    activeProd = { ...prod, price, variantLabel };
+    document.getElementById('pd-price').textContent = price.toLocaleString() + ' ' + s.currency;
+  }
+
+  if (groups.length) {
+    variantGroups.innerHTML = '';
+    const s2 = Settings.get();
+    groups.forEach((grp, gi) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:1rem';
+
+      const lbl = document.createElement('span');
+      lbl.className = 'pd-variant-label';
+      lbl.textContent = grp.title.toUpperCase();
+      wrap.appendChild(lbl);
+
+      const sel = document.createElement('select');
+      sel.className = 'pd-variant-select';
+
+      grp.items.forEach((item, ii) => {
+        const opt = document.createElement('option');
+        opt.value = ii;
+        const priceStr = item.price != null ? ' — ' + item.price.toLocaleString() + ' ' + s2.currency : '';
+        opt.textContent = item.label + priceStr;
+        if (ii === 0) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      sel.addEventListener('change', function() {
+        const idx = parseInt(this.value);
+        selectedByGroup[gi] = isNaN(idx) ? null : grp.items[idx];
+        computeActiveVariant();
+      });
+
+      wrap.appendChild(sel);
+      variantGroups.appendChild(wrap);
     });
+
     variantWrap.style.display = '';
-    // Pre-select first option
-    variantSel.selectedIndex = 1;
-    const firstV = flatVariants[0];
-    activeProd = { ...prod, price: firstV.price ?? prod.price, variantLabel: firstV.label };
-    document.getElementById('pd-price').textContent = (firstV.price ?? prod.price).toLocaleString() + ' ' + s.currency;
+    computeActiveVariant();
   } else {
     variantWrap.style.display = 'none';
-    variantSel.innerHTML = '';
+    if (variantGroups) variantGroups.innerHTML = '';
   }
 
-  window.onVariantChange = function(sel) {
-    const idx = parseInt(sel.value);
-    if (isNaN(idx)) {
-      activeProd = { ...prod };
-      document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
-    } else {
-      const v = flatVariants[idx];
-      activeProd = { ...prod, price: v.price ?? prod.price, variantLabel: v.label };
-      document.getElementById('pd-price').textContent = (v.price ?? prod.price).toLocaleString() + ' ' + s.currency;
-    }
-  };
+  window.onVariantChange = function() {}; // no-op, replaced by per-group listeners
 
   document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
   document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
@@ -1968,7 +1984,7 @@ let _mpFilter = 'all';
 let _mpPurchases = null; // cache for this session
 
 function openMyProducts() {
-  closeProductDetail(); // always close product detail first (it's fixed z-index:810 and blocks nav)
+  closeProductDetail(); // close product detail first (it's fixed z-index:810 and blocks nav)
   const page = document.getElementById('my-products-page');
   page.classList.add('active');
   document.body.classList.add('no-scroll');
