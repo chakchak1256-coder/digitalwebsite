@@ -1521,7 +1521,7 @@ function openProductDetail(id, fromAllPage = true) {
 
 function closeProductDetail() {
   document.getElementById('product-page').classList.remove('active');
-  if (!fromAll) document.body.classList.remove('no-scroll');
+  document.body.classList.remove('no-scroll');
 }
 
 // ===== SHOW MAIN =====
@@ -1968,6 +1968,7 @@ let _mpFilter = 'all';
 let _mpPurchases = null; // cache for this session
 
 function openMyProducts() {
+  closeProductDetail(); // always close product detail first (it's fixed z-index:810 and blocks nav)
   const page = document.getElementById('my-products-page');
   page.classList.add('active');
   document.body.classList.add('no-scroll');
