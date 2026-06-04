@@ -34,16 +34,17 @@ const UserAuth = {
 
   current() { return this._current; },
 
-  async register(email, password, name) {
+  async register(email, password, name, phone) {
     try {
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       const displayName = name || email.split('@')[0];
       await cred.user.updateProfile({ displayName });
       await _db.collection('users').doc(cred.user.uid).set({
         id: cred.user.uid, email: email.toLowerCase(), name: displayName,
+        phone: phone || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      this._current = { id: cred.user.uid, email: cred.user.email, name: displayName };
+      this._current = { id: cred.user.uid, email: cred.user.email, name: displayName, phone: phone || '' };
       window.dispatchEvent(new Event('auth:change'));
       return { user: this._current };
     } catch(e) { return { error: this._msg(e.code) }; }
@@ -82,31 +83,6 @@ const UserAuth = {
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return { error: null }; // user just closed the popup — not an error
-      }
-      return { error: this._msg(e.code) };
-    }
-  },
-
-  async loginWithApple() {
-    try {
-      const provider = new firebase.auth.OAuthProvider('apple.com');
-      provider.addScope('email');
-      provider.addScope('name');
-      const cred = await _auth.signInWithPopup(provider);
-      const user = cred.user;
-      const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Apple User');
-      await _db.collection('users').doc(user.uid).set({
-        id: user.uid,
-        email: user.email || '',
-        name: name,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-      this._current = { id: user.uid, email: user.email || '', name: name };
-      window.dispatchEvent(new Event('auth:change'));
-      return { user: this._current };
-    } catch(e) {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        return { error: null };
       }
       return { error: this._msg(e.code) };
     }
@@ -153,6 +129,10 @@ const Purchases = {
       productImage: (product.images||[])[0] || product.productImage || '',
       productType:  product.category || extra.productType || 'Digital',
       accessLink:   extra.accessLink  || '',
+      proofImages:  extra.proofImages || [],
+      customerName: extra.customerName || '',
+      customerPhone:extra.customerPhone || '',
+      orderNotes:   extra.orderNotes || '',
       status:       'pending',
       purchaseDate: now,
       createdAt:    now,
@@ -193,9 +173,15 @@ const Purchases = {
 
   async update(id, data) {
     const patch = { ...data };
-    if ('accessLink' in data) {
-      patch.status = data.accessLink && data.accessLink.trim() ? 'completed' : 'pending';
-      patch.deliveredAt = data.accessLink ? new Date().toISOString() : null;
+    // Mark completed if accessData has values OR accessLink is set
+    const hasAccessData = data.accessData && Object.values(data.accessData).some(v => v);
+    const hasAccessLink = 'accessLink' in data && data.accessLink && data.accessLink.trim();
+    if (hasAccessData || hasAccessLink) {
+      patch.status = 'completed';
+      patch.deliveredAt = new Date().toISOString();
+    } else if ('accessLink' in data && !data.accessLink) {
+      patch.status = 'pending';
+      patch.deliveredAt = null;
     }
     await _db.collection('purchases').doc(id).update(patch);
   },

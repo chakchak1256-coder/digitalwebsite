@@ -1368,8 +1368,12 @@ function startAdminPurchasesListener() {
     _adminPurchasesUnsub = Purchases.onSnapshotAll((all) => {
       _adminAllPurchases = all;
       // Update badge — pending count only
-      const badge = document.getElementById('purchases-badge');
-      const pendingCount = all.filter(p => !p.accessLink || !p.accessLink.trim()).length;
+    const badge = document.getElementById('purchases-badge');
+    const pendingCount = all.filter(p => {
+      const hasData = p.accessData && Object.values(p.accessData).some(v => v);
+      const hasLink = p.accessLink && p.accessLink.trim();
+      return !hasData && !hasLink;
+    }).length;
       if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount ? 'inline-flex' : 'none'; }
       // Re-render table if panel is visible
       if (document.getElementById('panel-purchases')?.classList.contains('active')) {
@@ -1413,9 +1417,13 @@ function _renderPurchasesTable(all) {
   const count = document.getElementById('pur-count');
   if (count) count.textContent = `(${purchases.length} of ${all.length})`;
 
-  // Badge — show pending count (no accessLink)
+  // Badge — show pending count (no accessLink and no accessData)
   const badge = document.getElementById('purchases-badge');
-  const pendingCount = all.filter(p => !p.accessLink || !p.accessLink.trim()).length;
+  const pendingCount = all.filter(p => {
+    const hasData = p.accessData && Object.values(p.accessData).some(v => v);
+    const hasLink = p.accessLink && p.accessLink.trim();
+    return !hasData && !hasLink;
+  }).length;
   if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount ? 'inline-flex' : 'none'; }
 
   if (!purchases.length) {
@@ -1433,8 +1441,8 @@ function _renderPurchasesTable(all) {
     const tr = document.createElement('tr');
     const _ts = p.purchaseDate?.toDate?.() || (p.purchaseDate ? new Date(p.purchaseDate) : null) || (p.createdAt ? new Date(p.createdAt) : null);
     const date = _ts && !isNaN(_ts) ? _ts.toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'}) : '—';
-    const isCompleted = p.accessLink && p.accessLink.trim();
-    const shortLink = isCompleted ? (p.accessLink.length > 30 ? p.accessLink.slice(0,30)+'…' : p.accessLink) : '';
+    const isCompleted = (p.accessData && Object.values(p.accessData).some(v => v)) || (p.accessLink && p.accessLink.trim());
+    const shortLink = isCompleted ? (p.accessLink ? (p.accessLink.length > 30 ? p.accessLink.slice(0,30)+'…' : p.accessLink) : '✓ Multiple fields') : '';
     tr.innerHTML = `
       <td>
         <div style="font-weight:600;font-size:.87rem">${p.userEmail||'Unknown'}</div>
@@ -1455,6 +1463,14 @@ function _renderPurchasesTable(all) {
           ? `<div style="font-size:.76rem;font-family:monospace;color:var(--secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.accessLink}">${shortLink}</div>
              <button class="btn btn-sm" style="font-size:.7rem;padding:2px 8px;margin-top:2px;background:rgba(var(--secondary-rgb),.08);color:var(--secondary);border:1px solid rgba(var(--secondary-rgb),.15)" onclick="navigator.clipboard.writeText('${(p.accessLink||'').replace(/'/g,"\'")}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy</button>`
           : `<span style="color:var(--text-muted);font-size:.78rem">—</span>`
+        }
+      </td>
+      <td>
+        ${(p.proofImages && p.proofImages.length)
+          ? `<button class="btn btn-sm" style="font-size:.72rem;padding:3px 9px;background:rgba(59,130,246,.08);color:#3B82F6;border:1px solid rgba(59,130,246,.2)" onclick="viewProofImages(${JSON.stringify(p.proofImages).replace(/"/g,'&quot;')})">
+              <i class="fa-solid fa-images"></i> ${p.proofImages.length} proof${p.proofImages.length>1?'s':''}
+             </button>`
+          : `<span style="color:var(--text-muted);font-size:.75rem">No proof</span>`
         }
       </td>
       <td>
