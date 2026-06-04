@@ -1047,24 +1047,11 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         Continue with Google
       </button>
     </div>
-    <div id="am-reg" style="display:none">
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Name</label><input class="form-input" id="am-r-name" type="text" placeholder="Your name"/></div>
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label><input class="form-input" id="am-r-email" type="email" placeholder="your@email.com"/></div>
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doModalRegister()"/></div>
-      <button onclick="doModalRegister()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Create Account</button>
-      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-      </div>
-      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Continue with Google
-      </button>
-      </button>
+    
     </div>
   </div>
 </div>
+
 
 <!-- ===== CART DRAWER ===== -->
 <div id="cart-overlay" onclick="toggleCart()"></div>
@@ -1569,67 +1556,55 @@ function removeItem(id) { Cart.remove(id); renderCartItems(); }
 function updateCartBadge() { const c=Cart.count(); const b=document.getElementById('cart-badge'); b.textContent=c; b.style.display=c?'flex':'none'; }
 
 // ===== CHECKOUT =====
+let _coProofFiles = []; // proof screenshots
+
 function openCheckout() {
   const user = UserAuth.current();
-  if (!user) {
-    // Not logged in — show auth modal with a note about saving products
-    openLoginModal('checkout');
-    return;
-  }
+  if (!user) { openLoginModal('checkout'); return; }
   document.getElementById('checkout-modal').classList.add('open');
+  // Pre-fill email from logged-in user
+  const emailEl = document.getElementById('co-email');
+  if (emailEl && !emailEl.value && user.email) emailEl.value = user.email;
 }
+
 function closeCheckout() {
   document.getElementById('checkout-modal').classList.remove('open');
   document.getElementById('co-form-wrap').style.display = '';
-  document.getElementById('co-success').style.display = 'none';
-  // Reset proof upload step
   const payStep = document.getElementById('co-payment-step');
   if (payStep) payStep.style.display = 'none';
+  document.getElementById('co-success').style.display = 'none';
   const form = document.querySelector('#co-form-wrap form');
   if (form) form.style.display = '';
-  // Reset proof state
   _coProofFiles = [];
-  const previews = document.getElementById('co-proof-previews');
-  if (previews) previews.innerHTML = '';
-  const errEl = document.getElementById('co-proof-error');
-  if (errEl) errEl.style.display = 'none';
-  const submitBtn = document.getElementById('co-proof-submit-btn');
-  if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order'; }
+  document.getElementById('co-proof-previews').innerHTML = '';
+  document.getElementById('co-proof-error').style.display = 'none';
 }
-// ================================================================
-// STEP 1 — validate form and show proof upload step
-// ================================================================
+
+// STEP 1: validate info form → show proof upload step
 function proceedToProofStep(e) {
   e.preventDefault();
   const currentUser = UserAuth.current();
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
-  const cartItems = Cart.get();
-  if (!cartItems.length) { closeCheckout(); return; }
-  const customerEmail = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
-  if (!customerEmail) { showCheckoutError('Please enter your email address.'); return; }
-  // Hide the form, show the proof upload step
-  const form = document.querySelector('#co-form-wrap form');
-  if (form) form.style.display = 'none';
-  // Reset proof state
-  _coProofFiles = [];
-  document.getElementById('co-proof-previews').innerHTML = '';
-  const errEl = document.getElementById('co-proof-error');
-  if (errEl) errEl.style.display = 'none';
+  if (!Cart.get().length) { closeCheckout(); return; }
+  const email = (document.getElementById('co-email')?.value || '').trim();
+  if (!email) { showCheckoutError('Please enter your email address.'); return; }
+  // Hide form, show proof step
+  document.getElementById('co-form-wrap').style.display = 'none';
   document.getElementById('co-payment-step').style.display = '';
 }
 
-// ================================================================
-// Proof file handling
-// ================================================================
-let _coProofFiles = [];
-
+// Handle proof file selection
 function coHandleProofFiles(files) {
-  for (const f of Array.from(files)) {
-    if (!f.type.startsWith('image/')) continue;
-    if (_coProofFiles.length >= 5) break;
-    _coProofFiles.push(f);
+  const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
+  for (const f of [...files]) {
+    if (!allowed.includes(f.type)) continue;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _coProofFiles.push(e.target.result);
+      renderProofPreviews();
+    };
+    reader.readAsDataURL(f);
   }
-  _coRenderProofPreviews();
 }
 
 function coHandleProofDrop(e) {
@@ -1638,27 +1613,17 @@ function coHandleProofDrop(e) {
   coHandleProofFiles(e.dataTransfer.files);
 }
 
-function _coRenderProofPreviews() {
-  const container = document.getElementById('co-proof-previews');
-  container.innerHTML = '';
-  _coProofFiles.forEach((f, i) => {
-    const url = URL.createObjectURL(f);
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border-strong);flex-shrink:0';
-    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover"/>
-      <button onclick="_coRemoveProof(${i})" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="fa-solid fa-xmark"></i></button>`;
-    container.appendChild(wrap);
-  });
+function renderProofPreviews() {
+  const wrap = document.getElementById('co-proof-previews');
+  wrap.innerHTML = _coProofFiles.map((src, i) =>
+    `<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover"/>
+      <button onclick="_coProofFiles.splice(${i},1);renderProofPreviews()" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-xmark"></i></button>
+    </div>`
+  ).join('');
 }
 
-function _coRemoveProof(idx) {
-  _coProofFiles.splice(idx, 1);
-  _coRenderProofPreviews();
-}
-
-// ================================================================
-// STEP 2 — submit order with proof images
-// ================================================================
+// STEP 2: submit order with proof images
 async function placeOrderWithProof() {
   const currentUser = UserAuth.current();
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
@@ -1666,52 +1631,36 @@ async function placeOrderWithProof() {
   if (!cartItems.length) { closeCheckout(); return; }
 
   const errEl = document.getElementById('co-proof-error');
-  const submitBtn = document.getElementById('co-proof-submit-btn');
+  errEl.style.display = 'none';
 
-  // Collect form values
-  const customerName  = (document.getElementById('co-name')?.value  || '').trim();
+  const submitBtn = document.getElementById('co-proof-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
+  const customerName  = (document.getElementById('co-name')?.value || '').trim();
   const customerEmail = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
   const customerPhone = (document.getElementById('co-phone')?.value || '').trim();
-  const customerNotes = (document.getElementById('co-notes')?.value || '').trim();
-
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…'; }
-  if (errEl) errEl.style.display = 'none';
-
-  // Convert proof images to base64 for storage
-  const proofBase64 = [];
-  for (const f of _coProofFiles) {
-    try {
-      const b64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result);
-        r.onerror = () => rej(new Error('Read failed'));
-        r.readAsDataURL(f);
-      });
-      proofBase64.push(b64);
-    } catch(e) { console.warn('Could not read proof file', e); }
-  }
-
-  const products = DB.getAll ? DB.getAll('products') : [];
+  const orderNotes    = (document.getElementById('co-notes')?.value || '').trim();
+  const products      = DB.getAll ? DB.getAll('products') : [];
   const errors = [];
 
   for (const item of cartItems) {
-    const fullProd = products.find(p => p.id === item.id) || {};
+    const fullProd = products.find(p => p.id === item.id || p.id === item.productId) || {};
     try {
       await Purchases.add(
         currentUser.id,
         customerEmail,
         {
-          id:       item.id,
+          id:       item.productId || item.id,
           name:     item.name,
           images:   fullProd.images || (item.img ? [item.img] : []),
           category: fullProd.category || ''
         },
         {
+          proofImages:   _coProofFiles,
           customerName,
           customerPhone,
-          customerNotes,
-          proofImages: proofBase64,
-          paymentMethod: 'manual',
+          orderNotes,
         }
       );
     } catch(err) {
@@ -1720,27 +1669,26 @@ async function placeOrderWithProof() {
     }
   }
 
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order';
+
   if (errors.length) {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order'; }
-    if (errEl) { errEl.textContent = 'Could not save order: ' + errors.join(', ') + ' — Make sure you are on a server (not file://) and Firestore rules allow writes.'; errEl.style.display = 'block'; }
+    errEl.textContent = '⚠️ ' + errors.join(', ');
+    errEl.style.display = 'block';
     return;
   }
 
   // Success
   Cart.clear();
-  updateCartBadge();
-  _coProofFiles = [];
   document.getElementById('co-payment-step').style.display = 'none';
-  document.getElementById('co-success').style.display = '';
-  if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order'; }
+  document.getElementById('co-success').style.display = 'block';
 }
 
-// Helper: show error inside the checkout modal
+// Helper: show error inside the checkout modal info form
 function showCheckoutError(msg) {
   const wrap = document.getElementById('co-form-wrap');
   if (!wrap) return;
-  const old = document.getElementById('co-error');
-  if (old) old.remove();
+  const old = document.getElementById('co-error'); if (old) old.remove();
   const box = document.createElement('div');
   box.id = 'co-error';
   box.style.cssText = 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.8rem 1rem;margin-bottom:.9rem;font-size:.82rem;color:#EF4444;line-height:1.6';
@@ -2223,34 +2171,29 @@ function mpOpenDetailModal(purchase) {
   const date = ts ? new Date(ts).toLocaleString('en-DZ') : '—';
   const img = purchase.productImage || generatePlaceholder(purchase.productName || 'Product', 400, 225);
 
-  // Build access section — prefer accessData (multi-field) over legacy accessLink
-  let accessSection = '';
-  const hasAccessData = purchase.accessData && typeof purchase.accessData === 'object' && Object.keys(purchase.accessData).length > 0;
+  // Build access section — support multi-field accessData and legacy accessLink
+  const hasAccessData = purchase.accessData && Object.keys(purchase.accessData).length > 0;
   const hasAccessLink = purchase.accessLink && purchase.accessLink.trim();
+  let accessHtml = '';
 
   if (hasAccessData) {
-    const rows = Object.entries(purchase.accessData).map(([key, val]) => {
-      const safeVal = String(val).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      const isUrl = String(val).startsWith('http');
-      return `
-        <div style="margin-bottom:.65rem">
-          <div style="font-size:.7rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">${key}</div>
-          <div style="display:flex;align-items:center;gap:.4rem">
-            <div style="flex:1;font-size:.87rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${val}</div>
-            <button onclick="navigator.clipboard.writeText('${safeVal}').then(()=>showToast('Copied!'))" style="padding:6px 10px;border-radius:6px;background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.25);color:var(--accent);font-size:.75rem;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="fa-regular fa-copy"></i></button>
-            ${isUrl ? `<button onclick="window.open('${safeVal}','_blank')" style="padding:6px 10px;border-radius:6px;background:var(--card);border:1px solid var(--border);color:var(--text-muted);font-size:.75rem;cursor:pointer;flex-shrink:0"><i class="fa-solid fa-external-link-alt"></i></button>` : ''}
-          </div>
-        </div>`;
+    const rows = Object.entries(purchase.accessData).map(([lbl, val]) => {
+      const safeVal = (val||'').replace(/'/g,"\'").replace(/"/g,'&quot;');
+      return `<div style="margin-bottom:.7rem">
+        <div style="font-size:.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">${lbl}</div>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <div style="flex:1;font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${val||'—'}</div>
+          ${val ? `<button class="btn btn-sm" style="flex-shrink:0;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);padding:6px 10px" onclick="navigator.clipboard.writeText('${safeVal}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i></button>` : ''}
+        </div>
+      </div>`;
     }).join('');
-    accessSection = `
-    <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
-      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem"><i class="fa-solid fa-key"></i> Access Details</div>
+    accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem"><i class="fa-solid fa-key"></i> Access Information</div>
       ${rows}
     </div>`;
   } else if (hasAccessLink) {
-    const safeLink = purchase.accessLink.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    accessSection = `
-    <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+    const safeLink = purchase.accessLink.replace(/'/g,"\'").replace(/"/g,'&quot;');
+    accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
       <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem"><i class="fa-solid fa-key"></i> Access</div>
       <div style="font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.6rem .8rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${purchase.accessLink}</div>
       <div style="display:flex;gap:.5rem;margin-top:.75rem">
@@ -2259,10 +2202,9 @@ function mpOpenDetailModal(purchase) {
       </div>
     </div>`;
   } else {
-    accessSection = `
-    <div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem">
+    accessHtml = `<div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem">
       <i class="fa-solid fa-clock" style="margin-bottom:.3rem;display:block;font-size:1.2rem;opacity:.4"></i>
-      Pending delivery — your access details will appear here once the admin delivers your order.
+      Your access information is being prepared. Check back soon!
     </div>`;
   }
 
@@ -2279,7 +2221,7 @@ function mpOpenDetailModal(purchase) {
       <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
       <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace;color:var(--text-muted)">${purchase.id}</span></div>
     </div>
-    ${accessSection}`;
+    ${accessHtml}`;
   document.getElementById('mp-detail-modal').classList.add('open');
 }
 
@@ -2318,314 +2260,5 @@ function updateWaFloat() {
   window.DIGISTORE_BACKEND_URL = 'https://digital-website.chakchak1256.workers.dev';
 </script>
 
-</body>
-</html>y sell genuine products. No fakes, no recycled accounts, no compromised credentials.</div>
-        </div>
-        <div class="warranty-card">
-          <div class="warranty-card-icon">🇩🇿</div>
-          <div class="warranty-card-title">Customer First</div>
-          <div class="warranty-card-text">We listen, we support, and we stand behind every product we sell — always.</div>
-        </div>
-      </div>
-      <div class="warranty-banner">
-        <div class="warranty-banner-icon">💬</div>
-        <div class="warranty-banner-text">
-          <h4>Something went wrong with your order?</h4>
-          <p>Contact us directly on WhatsApp or Telegram and we'll make it right — guaranteed.</p>
-        </div>
-        <button class="btn btn-primary" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">
-          <i class="fa-solid fa-headset"></i> Contact Support
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== CONTACT ===== -->
-<section id="contact">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-tag">Contact</div>
-      <h2 class="section-title">Get in Touch</h2>
-      <p class="section-sub">Have a question? We're here to help on any platform.</p>
-    </div>
-    <div class="contact-grid">
-      <div>
-        <h3 style="font-size:1.1rem;margin-bottom:.4rem">Find us on social media</h3>
-        <p style="color:var(--text-muted);font-size:.88rem">We're active on all major platforms.</p>
-        <div class="contact-socials" id="contact-socials"></div>
-      </div>
-      <div class="contact-form-box">
-        <h3 class="form-title">Send a Message</h3>
-        <form id="contact-form" onsubmit="handleContact(event)">
-          <div class="form-row">
-            <div class="form-group"><label>Full Name</label><input class="form-input" type="text" placeholder="Your name" required/></div>
-            <div class="form-group"><label>Email</label><input class="form-input" type="email" placeholder="your@email.com" required/></div>
-          </div>
-          <div class="form-group"><label>Phone</label><input class="form-input" type="tel" placeholder="+213 xxx xxx xxx"/></div>
-          <div class="form-group"><label>Message</label><textarea class="form-input" placeholder="How can we help you?"></textarea></div>
-          <button type="submit" class="form-submit"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
-        </form>
-        <div class="form-ok" id="form-ok">
-          <i class="fa-solid fa-circle-check"></i>
-          Message sent! We'll reply shortly.
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="container">
-    <div class="footer-logo store-name">DigiStore <span class="accent">DZ</span></div>
-    <div class="footer-links">
-      <a href="#hero" onclick="showMain()">Home</a>
-      <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
-      <a href="#products" onclick="closeMyProducts();closeAllProducts();">Products</a>
-      <a href="#warranty" onclick="closeMyProducts();closeAllProducts();">Warranty</a>
-      <a href="#contact" onclick="closeMyProducts();closeAllProducts();">Contact</a>
-      <a href="admin.html">Admin</a>
-    </div>
-    <p class="footer-copy" id="footer-copy">© 2025 DigiStore DZ · All rights reserved</p>
-  </div>
-</footer>
-
-<!-- ===== AUTH MODAL ===== -->
-<div id="auth-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1200;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem">
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;width:100%;max-width:400px;position:relative">
-    <button onclick="closeLoginModal()" style="position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:.8rem"><i class="fa-solid fa-xmark"></i></button>
-    <div style="display:flex;background:rgba(255,255,255,.04);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.5rem;border:1px solid var(--border)">
-      <button id="am-tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:9px;font-size:.88rem;font-weight:600;border-radius:8px;transition:all var(--transition);color:var(--text-muted);background:var(--primary);color:#fff">Sign In</button>
-      <button id="am-tab-reg" onclick="switchAuthTab('reg')" style="flex:1;padding:9px;font-size:.88rem;font-weight:600;border-radius:8px;transition:all var(--transition);color:var(--text-muted)">Register</button>
-    </div>
-    <div id="am-checkout-note" style="display:none;align-items:center;gap:.6rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#10B981;margin-bottom:1rem">
-      <i class="fa-solid fa-box-archive" style="flex-shrink:0"></i>
-      <span>Sign in so your purchase is saved to <strong>My Products</strong> forever.</span>
-    </div>
-    <div id="am-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
-    <!-- ── Sign In Tab ── -->
-    <div id="am-login">
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label>
-        <div style="position:relative">
-          <input class="form-input" id="am-l-email" type="email" placeholder="your@email.com" oninput="validateEmailField(this,'am-l-email-hint','am-l-email-icon')" style="padding-right:2.2rem"/>
-          <span id="am-l-email-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
-        </div>
-        <span id="am-l-email-hint" style="display:none;font-size:.73rem;margin-top:.3rem;display:block"></span>
-      </div>
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label>
-        <input class="form-input" id="am-l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doModalLogin()"/>
-      </div>
-      <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer"><input type="checkbox" id="am-l-rem" style="accent-color:var(--primary)"/><span style="font-size:.83rem;color:var(--text-muted)">Keep me signed in</span></label>
-      <button onclick="doModalLogin()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-lock-open"></i> Sign In</button>
-      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-      </div>
-      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Continue with Google
-      </button>
-    </div>
-
-    <!-- ── Register Tab ── -->
-    <div id="am-reg" style="display:none">
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Full Name</label>
-        <input class="form-input" id="am-r-name" type="text" placeholder="Your name"/>
-      </div>
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label>
-        <div style="position:relative">
-          <input class="form-input" id="am-r-email" type="email" placeholder="your@email.com" oninput="validateEmailField(this,'am-r-email-hint','am-r-email-icon')" style="padding-right:2.2rem"/>
-          <span id="am-r-email-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
-        </div>
-        <span id="am-r-email-hint" style="display:none;font-size:.73rem;margin-top:.3rem;display:block"></span>
-      </div>
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
-        <div style="position:relative">
-          <input class="form-input" id="am-r-phone" type="tel" placeholder="+213 xxx xxx xxx" oninput="validatePhoneField(this,'am-r-phone-hint','am-r-phone-icon')" style="padding-right:2.2rem"/>
-          <span id="am-r-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
-        </div>
-        <span id="am-r-phone-hint" style="display:none;font-size:.73rem;margin-top:.3rem;display:block"></span>
-      </div>
-      <div style="margin-bottom:1.2rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label>
-        <input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" oninput="updatePassStrength(this.value)" onkeydown="if(event.key==='Enter')doModalRegister()"/>
-        <div style="margin-top:.45rem;height:3px;border-radius:99px;background:var(--border);overflow:hidden"><div id="am-r-pass-bar" style="height:100%;width:0;border-radius:99px;transition:width .25s,background .25s"></div></div>
-        <span id="am-r-pass-hint" style="font-size:.73rem;margin-top:.25rem;display:block;color:var(--text-muted)"></span>
-      </div>
-      <button onclick="doModalRegister()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Create Account</button>
-      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-      </div>
-      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Continue with Google
-      </button>
-    </div>
-    <div id="am-reg" style="display:none">
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Name</label><input class="form-input" id="am-r-name" type="text" placeholder="Your name"/></div>
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label><input class="form-input" id="am-r-email" type="email" placeholder="your@email.com"/></div>
-      <div style="margin-bottom:1rem"><label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label><input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doModalRegister()"/></div>
-      <button onclick="doModalRegister()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Create Account</button>
-      <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0">
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">or continue with</span>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-      </div>
-      <button onclick="doGoogleSignIn()" style="width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Continue with Google
-      </button>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== CART DRAWER ===== -->
-<div id="cart-overlay" onclick="toggleCart()"></div>
-<div id="cart-drawer">
-  <div class="cart-hdr">
-    <h3><i class="fa-solid fa-bag-shopping"></i> Your Cart</h3>
-    <button class="cart-close" onclick="toggleCart()"><i class="fa-solid fa-xmark"></i></button>
-  </div>
-  <div class="cart-body" id="cart-body"></div>
-  <div class="cart-foot" id="cart-foot" style="display:none">
-    <div class="cart-total-row">
-      <span class="cart-total-lbl">Total</span>
-      <span class="cart-total-val" id="cart-total-val">0 DA</span>
-    </div>
-    <button class="btn-checkout" onclick="openCheckout()"><i class="fa-solid fa-lock"></i> Checkout</button>
-  </div>
-</div>
-
-<!-- ===== CHECKOUT MODAL ===== -->
-<!-- second checkout modal instance (mobile/other contexts) — kept in sync with primary above -->
-
-<!-- ===== ALL PRODUCTS PAGE ===== -->
-<div id="all-products-page">
-  <div class="all-products-inner">
-    <button class="back-btn" onclick="closeAllProducts()"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
-    <div class="all-hdr">
-      <h2 style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800">All Products</h2>
-      <div class="search-bar">
-        <i class="fa-solid fa-search" style="color:var(--text-muted)"></i>
-        <input type="text" id="search-input" placeholder="Search products..." oninput="renderAllProducts()"/>
-      </div>
-    </div>
-    <div class="filter-chips" id="filter-chips"></div>
-    <div class="products-grid" id="all-products-grid"></div>
-  </div>
-</div>
-
-
-<!-- ===== MY PRODUCTS PAGE ===== -->
-<div id="my-products-page">
-  <div class="mp-inner">
-    <button class="back-btn" onclick="closeMyProducts()"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
-    <div class="mp-hdr">
-      <div class="mp-hdr-left">
-        <div class="mp-badge"><i class="fa-solid fa-box-archive"></i> My Library</div>
-        <h2>My Products</h2>
-        <p id="mp-hdr-sub">Your purchased digital products</p>
-      </div>
-      <button class="btn btn-outline" onclick="closeMyProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-store"></i> Browse Store</button>
-    </div>
-    <div class="mp-stats" id="mp-stats-row"></div>
-    <div class="mp-filter" id="mp-filter-bar">
-      <button class="chip active" data-filter="all" onclick="mpSetFilter(this,'all')">All Products</button>
-      <div id="mp-type-chips"></div>
-      <div class="mp-search">
-        <i class="fa-solid fa-search" style="color:var(--text-muted);font-size:.85rem"></i>
-        <input type="text" id="mp-search-input" placeholder="Search products..." oninput="mpRenderList()"/>
-      </div>
-    </div>
-    <div class="mp-grid" id="mp-products-grid"></div>
-  </div>
-</div>
-
-<!-- My Products Detail Modal -->
-<div id="mp-detail-modal">
-  <div class="modal-box">
-    <button onclick="document.getElementById('mp-detail-modal').classList.remove('open')" style="position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:.8rem"><i class="fa-solid fa-xmark"></i></button>
-    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem;color:var(--text)"><i class="fa-solid fa-box-open" style="color:var(--accent)"></i> Product Details</h3>
-    <div id="mp-detail-content"></div>
-  </div>
-</div>
-
-<!-- ===== PRODUCT DETAIL PAGE ===== -->
-<div id="product-page">
-  <div class="product-page-inner">
-    <button class="back-btn" id="pd-back"><i class="fa-solid fa-arrow-left"></i> Back</button>
-    <div class="detail-grid">
-      <div>
-        <div class="gallery-main"><img id="gal-main" src="" alt=""/></div>
-        <div class="gallery-thumbs" id="gal-thumbs"></div>
-      </div>
-      <div>
-        <div class="pd-cat" id="pd-cat"></div>
-        <h1 class="pd-name" id="pd-name"></h1>
-        <div class="pd-prices">
-          <span class="pd-price" id="pd-price"></span>
-          <span class="pd-old" id="pd-old" style="display:none"></span>
-          <span class="pd-disc" id="pd-disc" style="display:none"></span>
-        </div>
-        <div class="pd-badges" id="pd-badges"></div>
-        <p class="pd-desc" id="pd-desc"></p>
-        <!-- Variant selector — shown only if product has variants -->
-        <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
-          <span class="pd-variant-label" id="pd-variant-label">Choose Option</span>
-          <select class="pd-variant-select" id="pd-variant-select" onchange="onVariantChange(this)">
-            <option value="">— Select an option —</option>
-          </select>
-        </div>
-        <div class="pd-actions">
-          <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
-          <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
-        </div>
-        <div class="pd-meta" id="pd-meta"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
-
-<script>
-// Apply store name + color immediately from settings cache — before Firebase loads
-(function(){
-  try {
-    var s = JSON.parse(localStorage.getItem('dz_settings') || '{}');
-    if (s.storeName) {
-      document.querySelectorAll('.store-name').forEach(function(el){ el.textContent = s.storeName; });
-      var t = document.getElementById('page-title'); if(t) t.textContent = s.storeName;
-    }
-    if (s.primary) {
-      var r = document.documentElement.style;
-      r.setProperty('--accent', s.primary);
-      r.setProperty('--primary', s.primary);
-      var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.primary);
-      if (m) {
-        var v = parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16);
-        r.setProperty('--accent-rgb', v);
-        r.setProperty('--primary-rgb', v);
-      }
-    }
-    var _ht = localStorage.getItem('dz_theme') || 'light';
-    var _al = (_ht === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
-    if (_al) {
-      document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_al; el.style.display='block'; });
-      // Keep store name visible alongside logo
-    }
-  } catch(e) {}
-})();
-</script>
 </body>
 </html>
