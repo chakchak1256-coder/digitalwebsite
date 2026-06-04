@@ -22,25 +22,26 @@ const UserAuth = {
   _current: null,
 
   init() {
-    _auth.onAuthStateChanged(async user => {
+    _auth.onAuthStateChanged(user => {
       if (user) {
-        // Always read email/name from Firestore users doc so registered email is used,
-        // not the Google account email (which may differ if the user used a different email to register)
-        let email = user.email;
-        let name = user.displayName || user.email.split('@')[0];
-        try {
-          const doc = await _db.collection('users').doc(user.uid).get();
+        // Dispatch auth:change immediately from Auth data so UI renders without waiting for Firestore
+        this._current = { id: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
+        window.dispatchEvent(new Event('auth:change'));
+        // Then fetch Firestore users doc in background to correct email/name if needed
+        // (fixes cases where Google account email differs from the registered email)
+        _db.collection('users').doc(user.uid).get().then(doc => {
           if (doc.exists) {
             const data = doc.data();
-            if (data.email) email = data.email;
-            if (data.name) name = data.name;
+            if (data.email || data.name) {
+              this._current = { id: user.uid, email: data.email || user.email, name: data.name || user.displayName || user.email.split('@')[0] };
+              window.dispatchEvent(new Event('auth:change'));
+            }
           }
-        } catch(e) { /* fallback to auth values */ }
-        this._current = { id: user.uid, email, name };
+        }).catch(() => {});
       } else {
         this._current = null;
+        window.dispatchEvent(new Event('auth:change'));
       }
-      window.dispatchEvent(new Event('auth:change'));
     });
   },
 
