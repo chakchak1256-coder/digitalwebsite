@@ -134,12 +134,16 @@ UserAuth.init();
 // PURCHASES — Firestore
 // ================================================================
 const Purchases = {
-  // Upload a single base64/File image to Firebase Storage, return download URL
+  // Store proof images: if passed as base64 data URLs, try to upload to Storage for
+  // smaller Firestore docs; fall back to storing data URL directly so order never fails.
   async _uploadProofImage(dataUrlOrFile, orderId, index) {
+    // If it's already a remote URL (http/https), return as-is
+    if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('http')) {
+      return dataUrlOrFile;
+    }
     try {
       let blob;
       if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
-        // Convert base64 data URL to Blob
         const parts = dataUrlOrFile.split(',');
         const mime  = parts[0].match(/:(.*?);/)[1];
         const binary = atob(parts[1]);
@@ -149,7 +153,7 @@ const Purchases = {
       } else if (dataUrlOrFile instanceof File || dataUrlOrFile instanceof Blob) {
         blob = dataUrlOrFile;
       } else {
-        return dataUrlOrFile; // already a URL string
+        return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
       }
       const ext  = (blob.type === 'image/png') ? 'png' : (blob.type === 'image/webp') ? 'webp' : 'jpg';
       const path = `proof/${orderId || Date.now()}_${index}.${ext}`;
@@ -157,23 +161,27 @@ const Purchases = {
       await ref.put(blob);
       return await ref.getDownloadURL();
     } catch(e) {
-      console.error('[Storage] proof upload failed:', e);
-      // Fallback: return the original (data URL) if upload fails so the order still goes through
-      return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
+      console.error('[Storage] proof upload failed, storing as data URL:', e);
+      // Always fall back to data URL so the order is NEVER lost
+      if (typeof dataUrlOrFile === 'string') return dataUrlOrFile;
+      // For File objects, read as data URL synchronously is not possible here — return empty
+      return '';
     }
   },
 
   async add(userId, userEmail, product, extra = {}) {
     const now = new Date().toISOString();
 
-    // Upload proof images to Firebase Storage, store only URLs
+    // Handle proof images: base64 strings passed from checkout are stored directly or
+    // uploaded to Storage. Either way the order always completes.
     let proofImageUrls = [];
-    const rawProofs = extra.proofImages || [];
+    const rawProofs = (extra.proofImages || []).filter(Boolean);
     if (rawProofs.length) {
       const tempId = `${userId}_${Date.now()}`;
       proofImageUrls = await Promise.all(
         rawProofs.map((img, i) => this._uploadProofImage(img, tempId, i))
       );
+      proofImageUrls = proofImageUrls.filter(Boolean);
     }
 
     const doc = {

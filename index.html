@@ -1933,9 +1933,9 @@ function buildOrderSummaryHTML() {
   const items = Cart.get();
   const s = Settings.get();
   if (!items.length) return '';
-  let rows = items.map(item => {
+  let rows = items.map((item, idx) => {
     const variant = item.variantLabel ? `<div style="font-size:.74rem;color:var(--text-muted);margin-top:.1rem">Variant: ${item.variantLabel}</div>` : '';
-    const itemId = (item.productId || item.id || '').toString().replace(/'/g, '');
+    // Use data-cartid attribute — avoids any quote/injection issues with the id string
     return `<div style="display:flex;align-items:center;gap:.6rem;padding:.55rem 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0">
         <div style="font-size:.86rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
@@ -1943,7 +1943,7 @@ function buildOrderSummaryHTML() {
         <div style="font-size:.73rem;color:var(--text-muted);margin-top:.1rem">Qty: ${item.qty || 1}</div>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;color:var(--accent);white-space:nowrap;flex-shrink:0;margin-right:.35rem">${((item.price)*(item.qty||1)).toLocaleString()} ${s.currency||'DA'}</div>
-      <button type="button" onclick="coRemoveFromSummary('${itemId}')" title="Remove item"
+      <button type="button" class="co-summary-remove" data-cartid="${idx}" title="Remove item"
         style="width:26px;height:26px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.07);color:#EF4444;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:.7rem;transition:all .15s ease"
         onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.07)'">
         <i class="fa-solid fa-trash-can"></i>
@@ -1989,6 +1989,19 @@ function _coRefreshOrderSummary() {
     if (btnRow) wrap.insertBefore(block, btnRow);
     else wrap.appendChild(block);
   }
+  // Attach remove handlers using the index to look up the actual cart id
+  block.querySelectorAll('.co-summary-remove').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const idx = parseInt(this.dataset.cartid);
+      const items = Cart.get();
+      if (isNaN(idx) || idx >= items.length) return;
+      const cartId = items[idx].id; // the real cart key (may include variant suffix)
+      Cart.remove(cartId);
+      updateCartBadge();
+      if (!Cart.get().length) { closeCheckout(); return; }
+      _coRefreshOrderSummary();
+    });
+  });
 }
 
 // Phone validation — 10 digits, starts with 05/06/07
@@ -2105,7 +2118,34 @@ function renderProofPreviews() {
   });
 }
 
-// STEP 2: submit order — uploads proof images to Firebase Storage
+// Convert a File to a compressed base64 data URL
+function _fileToBase64(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Compress via canvas to keep Firestore doc size reasonable
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = () => resolve(e.target.result); // fallback: original
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+// STEP 2: submit order
 async function placeOrderWithProof() {
   const currentUser = UserAuth.current();
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
@@ -2117,14 +2157,25 @@ async function placeOrderWithProof() {
 
   const submitBtn = document.getElementById('co-proof-submit-btn');
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading & Submitting...';
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
+  // Convert all File objects to base64 data URLs BEFORE calling Purchases.add
+  // This bypasses any Firebase Storage permission issues entirely
+  let proofBase64 = [];
+  try {
+    proofBase64 = await Promise.all(
+      _coProofFiles.map(f => f instanceof File ? _fileToBase64(f) : Promise.resolve(f))
+    );
+    proofBase64 = proofBase64.filter(Boolean);
+  } catch(convErr) {
+    console.error('[Checkout] image conversion failed:', convErr);
+  }
 
   const customerName   = (document.getElementById('co-name')?.value || '').trim();
   const customerEmail  = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
-  // Bug #16 fix: always store phone as string with prefix prepended — never convert to number
   const _coPhonePrefix = (document.getElementById('co-phone-prefix')?.value || '07');
   const _coPhoneDigits = (document.getElementById('co-phone')?.value || '').trim();
-  const customerPhone  = _coPhonePrefix + _coPhoneDigits; // e.g. "0712345678" — string, leading zero preserved
+  const customerPhone  = _coPhonePrefix + _coPhoneDigits; // full string e.g. "0712345678"
   const orderNotes     = (document.getElementById('co-notes')?.value || '').trim();
   const paymentMethod  = document.querySelector('input[name="co-payment"]:checked')?.value || '';
   const products       = DB.getAll ? DB.getAll('products') : [];
@@ -2143,7 +2194,7 @@ async function placeOrderWithProof() {
           category: fullProd.category || ''
         },
         {
-          proofImages:   _coProofFiles,   // File objects — will upload to Storage
+          proofImages:   proofBase64,  // already base64 — no Storage upload needed
           customerName,
           customerPhone,
           customerEmail,
