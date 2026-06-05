@@ -665,17 +665,40 @@ select.form-input option{background:var(--bg2)}
         <!-- Payment Settings -->
         <div class="form-section" id="payment-settings-section">
           <div class="form-section-title"><i class="fa-solid fa-credit-card"></i> Payment Settings</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem" class="payment-settings-grid">
-            <div class="form-group">
-              <label class="form-label"><span style="font-size:.95rem">📱</span> Flexy Instructions (Arabic)</label>
-              <textarea class="form-input" id="set-flexy-instructions" rows="7" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
+
+          <!-- Flexy -->
+          <div style="background:rgba(var(--accent-rgb),.04);border:1px solid rgba(var(--accent-rgb),.15);border-radius:var(--radius-sm);padding:1rem 1.1rem;margin-bottom:1rem">
+            <div style="font-size:.78rem;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.8rem">📱 Flexy</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
+              <div class="form-group">
+                <label class="form-label">Flexy Number 1</label>
+                <input class="form-input" id="set-flexy-number1" type="tel" placeholder="0540431312" style="font-family:monospace;letter-spacing:.04em"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Flexy Number 2</label>
+                <input class="form-input" id="set-flexy-number2" type="tel" placeholder="0793051230" style="font-family:monospace;letter-spacing:.04em"/>
+              </div>
             </div>
             <div class="form-group">
-              <label class="form-label"><span style="font-size:.95rem">🏦</span> BaridiMob Instructions (Arabic)</label>
-              <textarea class="form-input" id="set-baridimob-instructions" rows="7" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
+              <label class="form-label">Flexy Instructions (Arabic)</label>
+              <textarea class="form-input" id="set-flexy-instructions" rows="5" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
             </div>
           </div>
-          <p style="font-size:.76rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-circle-info" style="color:var(--accent)"></i> These texts are shown to customers at checkout when they select a payment method. Changes are saved instantly.</p>
+
+          <!-- BaridiMob -->
+          <div style="background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.15);border-radius:var(--radius-sm);padding:1rem 1.1rem;margin-bottom:.6rem">
+            <div style="font-size:.78rem;font-weight:700;color:#3B82F6;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.8rem">🏦 BaridiMob</div>
+            <div class="form-group" style="margin-bottom:.8rem">
+              <label class="form-label">BaridiMob Account Number</label>
+              <input class="form-input" id="set-baridimob-number" type="tel" placeholder="00799999004421651019" style="font-family:monospace;letter-spacing:.04em"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">BaridiMob Instructions (Arabic)</label>
+              <textarea class="form-input" id="set-baridimob-instructions" rows="5" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
+            </div>
+          </div>
+
+          <p style="font-size:.76rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-circle-info" style="color:var(--accent)"></i> Numbers appear as copyable buttons at checkout. Instructions are shown to customers when they select a payment method.</p>
         </div>
 
         <button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Save All Changes</button>
@@ -1288,12 +1311,19 @@ function loadSettings() {
   if (boxD) boxD.innerHTML = tempLogoDark  ? `<img src="${tempLogoDark}"  alt="logo"/>` : `<i class="fa-solid fa-store placeholder-icon"></i>`;
 
   // Payment Settings
-  const flexyDefault = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\n0540431312\nأو\n0793051230\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
-  const baridimobDefault = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\n00799999004421651019\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
-  const flexyEl = document.getElementById('set-flexy-instructions');
+  const flexyDefault     = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const baridimobDefault = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const flexyEl     = document.getElementById('set-flexy-instructions');
   const baridimobEl = document.getElementById('set-baridimob-instructions');
-  if (flexyEl) flexyEl.value = s.flexyInstructions || flexyDefault;
+  if (flexyEl)     flexyEl.value     = s.flexyInstructions     || flexyDefault;
   if (baridimobEl) baridimobEl.value = s.baridimobInstructions || baridimobDefault;
+  // New number fields
+  const fNum1El = document.getElementById('set-flexy-number1');
+  const fNum2El = document.getElementById('set-flexy-number2');
+  const bNumEl  = document.getElementById('set-baridimob-number');
+  if (fNum1El) fNum1El.value = s.flexyNumber1    || '0540431312';
+  if (fNum2El) fNum2El.value = s.flexyNumber2    || '0793051230';
+  if (bNumEl)  bNumEl.value  = s.baridimobNumber || '00799999004421651019';
 }
 async function handleLogoUpload(input, theme) {
   const f = input.files[0]; if (!f) return;
@@ -1342,6 +1372,9 @@ function saveSettings() {
     social,
     flexyInstructions:     flexyEl     ? flexyEl.value.trim()     : '',
     baridimobInstructions: baridimobEl ? baridimobEl.value.trim() : '',
+    flexyNumber1:    (document.getElementById('set-flexy-number1')?.value    || '').trim() || '0540431312',
+    flexyNumber2:    (document.getElementById('set-flexy-number2')?.value    || '').trim() || '0793051230',
+    baridimobNumber: (document.getElementById('set-baridimob-number')?.value || '').trim() || '00799999004421651019',
   });
   Settings.applyTheme();
   showToast('Settings saved!');
