@@ -2007,7 +2007,10 @@ async function placeOrderWithProof() {
 
   const customerName   = (document.getElementById('co-name')?.value || '').trim();
   const customerEmail  = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
-  const customerPhone  = (document.getElementById('co-phone')?.value || '').trim();
+  // Bug #16 fix: always store phone as string with prefix prepended — never convert to number
+  const _coPhonePrefix = (document.getElementById('co-phone-prefix')?.value || '07');
+  const _coPhoneDigits = (document.getElementById('co-phone')?.value || '').trim();
+  const customerPhone  = _coPhonePrefix + _coPhoneDigits; // e.g. "0712345678" — string, leading zero preserved
   const orderNotes     = (document.getElementById('co-notes')?.value || '').trim();
   const paymentMethod  = document.querySelector('input[name="co-payment"]:checked')?.value || '';
   const products       = DB.getAll ? DB.getAll('products') : [];
