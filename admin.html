@@ -351,6 +351,7 @@ select.form-input option{background:var(--bg2)}
   #menu-toggle{display:flex}
   .form-grid,.social-grid,.color-row{grid-template-columns:1fr}
   .stats-row{grid-template-columns:1fr 1fr}
+  .payment-settings-grid{grid-template-columns:1fr !important}
 }
 @media(max-width:480px){
   .stats-row{grid-template-columns:1fr}
@@ -661,6 +662,22 @@ select.form-input option{background:var(--bg2)}
             <div class="form-group"><label class="form-label"><i class="fa-brands fa-youtube" style="color:#ff0000"></i> YouTube URL</label><input class="form-input" id="soc-youtube" placeholder="https://youtube.com/@yourchannel"/></div>
           </div>
         </div>
+        <!-- Payment Settings -->
+        <div class="form-section" id="payment-settings-section">
+          <div class="form-section-title"><i class="fa-solid fa-credit-card"></i> Payment Settings</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem" class="payment-settings-grid">
+            <div class="form-group">
+              <label class="form-label"><span style="font-size:.95rem">📱</span> Flexy Instructions (Arabic)</label>
+              <textarea class="form-input" id="set-flexy-instructions" rows="7" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span style="font-size:.95rem">🏦</span> BaridiMob Instructions (Arabic)</label>
+              <textarea class="form-input" id="set-baridimob-instructions" rows="7" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
+            </div>
+          </div>
+          <p style="font-size:.76rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-circle-info" style="color:var(--accent)"></i> These texts are shown to customers at checkout when they select a payment method. Changes are saved instantly.</p>
+        </div>
+
         <button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Save All Changes</button>
       </div>
 
@@ -724,7 +741,7 @@ select.form-input option{background:var(--bg2)}
           </select>
         </div>
         <div class="table-wrap">
-          <table><thead><tr><th>User</th><th>Product</th><th>Status</th><th>Access Link</th><th>Proof</th><th>Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table>
+          <table><thead><tr><th>User / Customer</th><th>Product</th><th>Status</th><th>Payment</th><th>Access Link</th><th>Proof</th><th>Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table>
         </div>
       </div>
 
@@ -801,6 +818,7 @@ select.form-input option{background:var(--bg2)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
 'use strict';
@@ -1268,6 +1286,14 @@ function loadSettings() {
   const boxD = document.getElementById('logo-preview-dark');
   if (boxL) boxL.innerHTML = tempLogoLight ? `<img src="${tempLogoLight}" alt="logo"/>` : `<i class="fa-solid fa-store placeholder-icon"></i>`;
   if (boxD) boxD.innerHTML = tempLogoDark  ? `<img src="${tempLogoDark}"  alt="logo"/>` : `<i class="fa-solid fa-store placeholder-icon"></i>`;
+
+  // Payment Settings
+  const flexyDefault = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\n0540431312\nأو\n0793051230\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const baridimobDefault = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\n00799999004421651019\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const flexyEl = document.getElementById('set-flexy-instructions');
+  const baridimobEl = document.getElementById('set-baridimob-instructions');
+  if (flexyEl) flexyEl.value = s.flexyInstructions || flexyDefault;
+  if (baridimobEl) baridimobEl.value = s.baridimobInstructions || baridimobDefault;
 }
 async function handleLogoUpload(input, theme) {
   const f = input.files[0]; if (!f) return;
@@ -1305,7 +1331,18 @@ function applyPreset(p, s, a) {
 function saveSettings() {
   const social = {};
   ['facebook','instagram','whatsapp','telegram','tiktok','youtube'].forEach(k => { social[k] = document.getElementById('soc-'+k).value.trim(); });
-  Settings.save({ storeName: document.getElementById('set-name').value.trim()||'DigiStore DZ', logo: tempLogoLight||null, logoLight: tempLogoLight||null, logoDark: tempLogoDark||null, primary: document.getElementById('set-primary').value, secondary: document.getElementById('set-secondary').value, accent: document.getElementById('set-accent').value, social });
+  const flexyEl = document.getElementById('set-flexy-instructions');
+  const baridimobEl = document.getElementById('set-baridimob-instructions');
+  Settings.save({
+    storeName: document.getElementById('set-name').value.trim()||'DigiStore DZ',
+    logo: tempLogoLight||null, logoLight: tempLogoLight||null, logoDark: tempLogoDark||null,
+    primary: document.getElementById('set-primary').value,
+    secondary: document.getElementById('set-secondary').value,
+    accent: document.getElementById('set-accent').value,
+    social,
+    flexyInstructions:     flexyEl     ? flexyEl.value.trim()     : '',
+    baridimobInstructions: baridimobEl ? baridimobEl.value.trim() : '',
+  });
   Settings.applyTheme();
   showToast('Settings saved!');
 }
@@ -1421,7 +1458,9 @@ function _renderPurchasesTable(all) {
   }
   if (q) purchases = purchases.filter(p =>
     (p.userEmail||'').toLowerCase().includes(q) ||
-    (p.productName||'').toLowerCase().includes(q)
+    (p.productName||'').toLowerCase().includes(q) ||
+    (p.customerName||'').toLowerCase().includes(q) ||
+    (p.customerPhone||'').toLowerCase().includes(q)
   );
 
   const tbody = document.getElementById('purchases-tbody');
@@ -1468,13 +1507,21 @@ function _renderPurchasesTable(all) {
     tr.innerHTML = `
       <td>
         <div style="font-weight:600;font-size:.87rem">${p.userEmail||'Unknown'}</div>
-        <div style="font-size:.72rem;color:var(--text-muted)">${p.productType||'Digital'}</div>
+        ${p.customerName ? `<div style="font-size:.76rem;color:var(--text-muted)"><i class="fa-solid fa-user" style="font-size:.65rem"></i> ${p.customerName}</div>` : ''}
+        ${p.customerPhone ? `<div style="font-size:.76rem;color:var(--text-muted)"><i class="fa-solid fa-phone" style="font-size:.65rem"></i> ${p.customerPhone}</div>` : ''}
+        <div style="font-size:.7rem;color:var(--text-muted);opacity:.7">${p.productType||'Digital'}</div>
       </td>
       <td>
         <div style="font-weight:600;font-size:.87rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.productName||'—'}</div>
         <div style="font-size:.72rem;color:var(--text-muted)">${date}</div>
       </td>
       <td>${statusBadge}</td>
+      <td>
+        ${p.paymentMethod
+          ? `<span class="status-badge" style="background:rgba(59,130,246,.08);color:#60A5FA;border:1px solid rgba(59,130,246,.2);font-size:.7rem">${p.paymentMethod === 'flexy' ? '📱 Flexy' : p.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : p.paymentMethod}</span>`
+          : `<span style="color:var(--text-muted);font-size:.75rem">—</span>`
+        }
+      </td>
       <td>
         ${isCompleted
           ? `<div style="font-size:.76rem;font-family:monospace;color:var(--secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.accessLink}">${shortLink}</div>
@@ -1944,7 +1991,6 @@ function closeDeliverModal() {
 // ===== PROOF IMAGES VIEWER =====
 function viewProofImages(images) {
   if (!images || !images.length) return;
-  // Create a simple lightbox modal
   const overlay = document.createElement('div');
   overlay.id = 'proof-viewer-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;gap:1rem';
@@ -1968,11 +2014,20 @@ function viewProofImages(images) {
     img.src = src;
     img.alt = 'Proof ' + (i+1);
     img.style.cssText = 'max-width:min(420px,85vw);max-height:60vh;border-radius:10px;border:1px solid rgba(255,255,255,.15);display:block;object-fit:contain;background:#111';
+    img.onerror = () => { img.style.display = 'none'; wrap.innerHTML += `<div style="color:rgba(255,255,255,.4);font-size:.82rem;padding:2rem;text-align:center">Image failed to load</div>`; };
     const label = document.createElement('div');
     label.textContent = 'Screenshot ' + (i+1);
     label.style.cssText = 'text-align:center;color:rgba(255,255,255,.5);font-size:.72rem;margin-top:.3rem';
-    wrap.appendChild(img);
-    wrap.appendChild(label);
+    // Add download link for Firebase Storage URLs
+    if (src.startsWith('http')) {
+      const dl = document.createElement('a');
+      dl.href = src; dl.target = '_blank'; dl.rel = 'noopener noreferrer';
+      dl.style.cssText = 'display:block;text-align:center;color:rgba(59,130,246,.8);font-size:.72rem;margin-top:.15rem';
+      dl.textContent = '⬇ Open full size';
+      wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
+    } else {
+      wrap.appendChild(img); wrap.appendChild(label);
+    }
     grid.appendChild(wrap);
   });
 

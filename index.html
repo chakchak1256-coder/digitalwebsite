@@ -456,6 +456,18 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .co-success h3{font-size:1.1rem;margin-bottom:.4rem;color:var(--text)}
 .co-success p{color:var(--text-muted);font-size:.85rem}
 
+/* ── Payment method radio cards ────────────────────────────── */
+.co-method-card {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.4rem;padding:.9rem .6rem;border-radius:var(--radius-sm);cursor:pointer;
+  background:var(--card);border:2px solid var(--border-strong);
+  transition:all var(--transition);text-align:center;
+}
+.co-method-card:hover { border-color:rgba(var(--accent-rgb),.5); }
+.co-method-card.selected { border-color:var(--accent); background:rgba(var(--accent-rgb),.08); }
+.co-method-icon { font-size:1.5rem; }
+.co-method-name { font-size:.8rem;font-weight:700;color:var(--text); }
+
 /* ── Payment method selector ───────────────────────────── */
 .co-pay-method-btn {
   display:flex;align-items:center;gap:1rem;
@@ -1102,19 +1114,77 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 <!-- ===== CHECKOUT MODAL ===== -->
 <div id="checkout-modal">
   <div class="checkout-box">
-    <div id="co-form-wrap">
+
+    <!-- STEP 0: Use account info? -->
+    <div id="co-step-account">
       <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
-      <form onsubmit="proceedToProofStep(event)">
-        <div class="form-group"><label>Full Name</label><input class="form-input" id="co-name" type="text" required placeholder="Your name"/></div>
-        <div class="form-group"><label>Email</label><input class="form-input" id="co-email" type="email" required placeholder="your@email.com"/></div>
-        <div class="form-group"><label>Phone/WhatsApp</label><input class="form-input" id="co-phone" type="tel" placeholder="+213..."/></div>
-        <div class="form-group"><label>Notes</label><textarea class="form-input" id="co-notes" rows="2" placeholder="Special requests..."></textarea></div>
-        <div style="display:flex;gap:.7rem;margin-top:1rem">
-          <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="co-submit-btn" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next: Payment Proof</button>
-        </div>
-      </form>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.6rem;text-align:center">Would you like to use your account information for this order?</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(true)">
+          <div class="co-pay-icon" style="background:rgba(var(--accent-rgb),.12);color:var(--accent)"><i class="fa-solid fa-user-check"></i></div>
+          <div class="co-pay-info"><strong>Yes, use my account info</strong><span>Auto-fill name, email & phone</span></div>
+          <i class="fa-solid fa-chevron-right co-pay-arrow"></i>
+        </button>
+        <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(false)">
+          <div class="co-pay-icon" style="background:rgba(255,255,255,.06);color:var(--text-muted)"><i class="fa-solid fa-pen-to-square"></i></div>
+          <div class="co-pay-info"><strong>No, enter manually</strong><span>Fill in your details by hand</span></div>
+          <i class="fa-solid fa-chevron-right co-pay-arrow"></i>
+        </button>
+      </div>
+      <div style="display:flex;gap:.7rem;margin-top:1.2rem">
+        <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1">Cancel</button>
+      </div>
     </div>
+
+    <!-- STEP 1: Customer info form -->
+    <div id="co-form-wrap" style="display:none">
+      <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
+      <div id="co-form-err" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
+      <div class="form-group" id="co-name-group"><label>Full Name</label><input class="form-input" id="co-name" type="text" required placeholder="Your name"/></div>
+      <div class="form-group" id="co-email-group"><label>Email <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label><input class="form-input" id="co-email" type="email" placeholder="your@email.com"/></div>
+      <div class="form-group">
+        <label>Phone / WhatsApp <span style="font-size:.74rem;color:var(--text-muted)">(*required — 05/06/07XXXXXXXX)</span></label>
+        <div style="position:relative">
+          <input class="form-input" id="co-phone" type="tel" placeholder="05XXXXXXXX or 06XXXXXXXX or 07XXXXXXXX" maxlength="10" oninput="coValidatePhone(this)" style="padding-right:2.2rem"/>
+          <span id="co-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+        </div>
+        <span id="co-phone-hint" style="font-size:.73rem;color:#EF4444;margin-top:.25rem;display:none"></span>
+      </div>
+
+      <!-- Payment Method Selection -->
+      <div class="form-group">
+        <label style="margin-bottom:.6rem;display:block">Payment Method</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="co-pay-method-wrap">
+          <label class="co-method-card" id="co-method-flexy">
+            <input type="radio" name="co-payment" value="flexy" onchange="coShowPaymentInstructions('flexy')" style="display:none"/>
+            <div class="co-method-icon">📱</div>
+            <div class="co-method-name">Flexy</div>
+          </label>
+          <label class="co-method-card" id="co-method-baridimob">
+            <input type="radio" name="co-payment" value="baridimob" onchange="coShowPaymentInstructions('baridimob')" style="display:none"/>
+            <div class="co-method-icon">🏦</div>
+            <div class="co-method-name">BaridiMob</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Payment instructions box -->
+      <div id="co-payment-instructions" style="display:none;margin-bottom:.9rem;border-radius:var(--radius-sm);padding:1rem 1.1rem;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2)">
+        <div style="font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem"><i class="fa-solid fa-circle-info"></i> <span id="co-instr-title">Payment Instructions</span></div>
+        <p id="co-instr-text" style="font-size:.85rem;color:var(--text-muted);line-height:1.75;direction:rtl;text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif;white-space:pre-line"></p>
+      </div>
+
+      <div class="form-group">
+        <label>Notes <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label>
+        <textarea class="form-input" id="co-notes" rows="2" placeholder="Special requests..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:.7rem;margin-top:1rem">
+        <button type="button" class="btn btn-outline" onclick="coBackToAccountStep()" style="flex:1"><i class="fa-solid fa-arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coProceedToProofStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next: Payment Proof</button>
+      </div>
+    </div>
+
     <!-- Proof of payment upload step -->
     <div id="co-payment-step" style="display:none">
       <h3 class="co-title"><i class="fa-solid fa-camera"></i> Upload Payment Proof</h3>
@@ -1130,10 +1200,11 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
       <div id="co-proof-previews" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.9rem"></div>
       <div id="co-proof-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.8rem"></div>
       <div style="display:flex;gap:.6rem">
-        <button type="button" class="btn btn-outline" style="flex:1" onclick="document.getElementById('co-payment-step').style.display='none';document.getElementById('co-form-wrap').style.display='';"><i class="fa-solid fa-arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-outline" style="flex:1" onclick="coBackToInfoStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
         <button type="button" class="btn btn-primary" style="flex:2" id="co-proof-submit-btn" onclick="placeOrderWithProof()"><i class="fa-solid fa-paper-plane"></i> Submit Order</button>
       </div>
     </div>
+
     <div class="co-success" id="co-success">
       <i class="fa-solid fa-circle-check"></i>
       <h3>Order Placed!</h3>
@@ -1265,6 +1336,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
 // ===== STATE =====
@@ -1619,54 +1691,171 @@ function removeItem(id) { Cart.remove(id); renderCartItems(); }
 function updateCartBadge() { const c=Cart.count(); const b=document.getElementById('cart-badge'); b.textContent=c; b.style.display=c?'flex':'none'; }
 
 // ===== CHECKOUT =====
-let _coProofFiles = []; // proof screenshots
+let _coProofFiles = []; // proof screenshots (File objects or data URLs)
+let _coUseAccount = false;
 
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
   document.getElementById('checkout-modal').classList.add('open');
-  // Pre-fill email from logged-in user
-  const emailEl = document.getElementById('co-email');
-  if (emailEl && !emailEl.value && user.email) emailEl.value = user.email;
+  // Show step 0 (account question)
+  _showCoStep('account');
+}
+
+function _showCoStep(step) {
+  // step: 'account' | 'form' | 'proof' | 'success'
+  document.getElementById('co-step-account').style.display  = step === 'account'  ? '' : 'none';
+  document.getElementById('co-form-wrap').style.display     = step === 'form'     ? '' : 'none';
+  document.getElementById('co-payment-step').style.display  = step === 'proof'    ? '' : 'none';
+  document.getElementById('co-success').style.display       = step === 'success'  ? 'block' : 'none';
+}
+
+function coChooseAccount(useAccount) {
+  _coUseAccount = useAccount;
+  const user = UserAuth.current();
+  if (useAccount && user) {
+    // Pre-fill from account
+    const nameEl = document.getElementById('co-name');
+    const emailEl = document.getElementById('co-email');
+    const phoneEl = document.getElementById('co-phone');
+    if (nameEl)  nameEl.value  = user.name  || '';
+    if (emailEl) emailEl.value = user.email || '';
+    // Phone is not stored in UserAuth._current by default, try to fetch
+    if (phoneEl && user.phone) phoneEl.value = user.phone;
+    // Show email field
+    document.getElementById('co-email-group').style.display = '';
+  } else {
+    // Manual mode — hide email (optional)
+    const emailEl = document.getElementById('co-email');
+    if (emailEl) emailEl.value = '';
+  }
+  // Load payment instructions from settings
+  coLoadPaymentInstructions();
+  _showCoStep('form');
+}
+
+function coBackToAccountStep() {
+  _showCoStep('account');
+}
+
+function coBackToInfoStep() {
+  _showCoStep('form');
+}
+
+function coLoadPaymentInstructions() {
+  const s = Settings.get();
+  // Will be used when a payment method is selected
+}
+
+function coShowPaymentInstructions(method) {
+  const s = Settings.get();
+  const instrEl = document.getElementById('co-payment-instructions');
+  const textEl  = document.getElementById('co-instr-text');
+  const titleEl = document.getElementById('co-instr-title');
+
+  // Mark selected card
+  document.querySelectorAll('.co-method-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('co-method-' + method);
+  if (card) card.classList.add('selected');
+
+  const defaults = {
+    flexy: `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\n0540431312\nأو\n0793051230\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`,
+    baridimob: `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\n00799999004421651019\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`
+  };
+
+  const text = (method === 'flexy')
+    ? (s.flexyInstructions || defaults.flexy)
+    : (s.baridimobInstructions || defaults.baridimob);
+
+  titleEl.textContent = method === 'flexy' ? '📱 تعليمات الدفع عبر فليكسي' : '🏦 تعليمات الدفع عبر بريدي موب';
+  textEl.textContent  = text;
+  instrEl.style.display = '';
+}
+
+// Phone validation — 10 digits, starts with 05/06/07
+function isValidAlgerianPhone(val) {
+  return /^(05|06|07)\d{8}$/.test(val);
+}
+
+function coValidatePhone(input) {
+  // Remove non-digits
+  input.value = input.value.replace(/\D/g, '').slice(0, 10);
+  const val   = input.value;
+  const hint  = document.getElementById('co-phone-hint');
+  const icon  = document.getElementById('co-phone-icon');
+
+  if (!val) {
+    hint.style.display = 'none';
+    input.style.borderColor = '';
+    icon.textContent = '';
+    return;
+  }
+  if (isValidAlgerianPhone(val)) {
+    hint.style.display = 'none';
+    input.style.borderColor = 'rgba(16,185,129,.6)';
+    icon.textContent = '✓'; icon.style.color = '#10B981';
+  } else {
+    let msg = '';
+    if (val.length < 10) msg = `${val.length}/10 digits entered`;
+    else if (val.length === 10 && !/^(05|06|07)/.test(val)) msg = 'Phone must start with 05, 06, or 07';
+    else msg = 'Enter exactly 10 digits starting with 05, 06, or 07';
+    hint.textContent = msg;
+    hint.style.display = 'block'; hint.style.color = '#EF4444';
+    input.style.borderColor = 'rgba(239,68,68,.5)';
+    icon.textContent = '✗'; icon.style.color = '#EF4444';
+  }
+}
+
+// STEP 1 → STEP 2: validate info, then show proof upload
+function coProceedToProofStep() {
+  const currentUser = UserAuth.current();
+  if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
+  if (!Cart.get().length) { closeCheckout(); return; }
+
+  // Clear previous error
+  const errEl = document.getElementById('co-form-err');
+  errEl.style.display = 'none';
+
+  const name  = (document.getElementById('co-name')?.value || '').trim();
+  const phone = (document.getElementById('co-phone')?.value || '').trim();
+  const method = document.querySelector('input[name="co-payment"]:checked')?.value || '';
+
+  if (!name) { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
+  if (!phone) { errEl.textContent = '⚠️ Phone number is required.'; errEl.style.display = 'block'; return; }
+  if (!isValidAlgerianPhone(phone)) { errEl.textContent = '⚠️ Phone must be exactly 10 digits and start with 05, 06, or 07.'; errEl.style.display = 'block'; return; }
+  if (!method) { errEl.textContent = '⚠️ Please select a payment method (Flexy or BaridiMob).'; errEl.style.display = 'block'; return; }
+
+  _showCoStep('proof');
 }
 
 function closeCheckout() {
   document.getElementById('checkout-modal').classList.remove('open');
-  document.getElementById('co-form-wrap').style.display = '';
-  const payStep = document.getElementById('co-payment-step');
-  if (payStep) payStep.style.display = 'none';
+  _showCoStep('account');
   document.getElementById('co-success').style.display = 'none';
-  const form = document.querySelector('#co-form-wrap form');
-  if (form) form.style.display = '';
   _coProofFiles = [];
-  document.getElementById('co-proof-previews').innerHTML = '';
-  document.getElementById('co-proof-error').style.display = 'none';
+  const prev = document.getElementById('co-proof-previews');
+  if (prev) prev.innerHTML = '';
+  const errEl = document.getElementById('co-proof-error');
+  if (errEl) errEl.style.display = 'none';
+  // Reset payment method
+  document.querySelectorAll('input[name="co-payment"]').forEach(r => r.checked = false);
+  document.querySelectorAll('.co-method-card').forEach(c => c.classList.remove('selected'));
+  const instrEl = document.getElementById('co-payment-instructions');
+  if (instrEl) instrEl.style.display = 'none';
+  // Reset phone hint
+  const phoneHint = document.getElementById('co-phone-hint');
+  if (phoneHint) phoneHint.style.display = 'none';
+  const phoneInput = document.getElementById('co-phone');
+  if (phoneInput) { phoneInput.style.borderColor = ''; }
 }
 
-// STEP 1: validate info form → show proof upload step
-function proceedToProofStep(e) {
-  e.preventDefault();
-  const currentUser = UserAuth.current();
-  if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
-  if (!Cart.get().length) { closeCheckout(); return; }
-  const email = (document.getElementById('co-email')?.value || '').trim();
-  if (!email) { showCheckoutError('Please enter your email address.'); return; }
-  // Hide form, show proof step
-  document.getElementById('co-form-wrap').style.display = 'none';
-  document.getElementById('co-payment-step').style.display = '';
-}
-
-// Handle proof file selection
+// Handle proof file selection — store File objects (not base64) so upload goes to Storage
 function coHandleProofFiles(files) {
   const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
   for (const f of [...files]) {
     if (!allowed.includes(f.type)) continue;
-    const reader = new FileReader();
-    reader.onload = e => {
-      _coProofFiles.push(e.target.result);
-      renderProofPreviews();
-    };
-    reader.readAsDataURL(f);
+    _coProofFiles.push(f);
+    renderProofPreviews();
   }
 }
 
@@ -1678,15 +1867,28 @@ function coHandleProofDrop(e) {
 
 function renderProofPreviews() {
   const wrap = document.getElementById('co-proof-previews');
-  wrap.innerHTML = _coProofFiles.map((src, i) =>
-    `<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">
-      <img src="${src}" style="width:100%;height:100%;object-fit:cover"/>
-      <button onclick="_coProofFiles.splice(${i},1);renderProofPreviews()" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-xmark"></i></button>
-    </div>`
-  ).join('');
+  wrap.innerHTML = '';
+  _coProofFiles.forEach((file, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    if (file instanceof File) {
+      const url = URL.createObjectURL(file);
+      img.src = url;
+    } else {
+      img.src = file; // data URL fallback
+    }
+    const btn = document.createElement('button');
+    btn.style.cssText = 'position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center';
+    btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    btn.onclick = () => { _coProofFiles.splice(i, 1); renderProofPreviews(); };
+    div.appendChild(img); div.appendChild(btn);
+    wrap.appendChild(div);
+  });
 }
 
-// STEP 2: submit order with proof images
+// STEP 2: submit order — uploads proof images to Firebase Storage
 async function placeOrderWithProof() {
   const currentUser = UserAuth.current();
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
@@ -1698,13 +1900,14 @@ async function placeOrderWithProof() {
 
   const submitBtn = document.getElementById('co-proof-submit-btn');
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading & Submitting...';
 
-  const customerName  = (document.getElementById('co-name')?.value || '').trim();
-  const customerEmail = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
-  const customerPhone = (document.getElementById('co-phone')?.value || '').trim();
-  const orderNotes    = (document.getElementById('co-notes')?.value || '').trim();
-  const products      = DB.getAll ? DB.getAll('products') : [];
+  const customerName   = (document.getElementById('co-name')?.value || '').trim();
+  const customerEmail  = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
+  const customerPhone  = (document.getElementById('co-phone')?.value || '').trim();
+  const orderNotes     = (document.getElementById('co-notes')?.value || '').trim();
+  const paymentMethod  = document.querySelector('input[name="co-payment"]:checked')?.value || '';
+  const products       = DB.getAll ? DB.getAll('products') : [];
   const errors = [];
 
   for (const item of cartItems) {
@@ -1720,9 +1923,11 @@ async function placeOrderWithProof() {
           category: fullProd.category || ''
         },
         {
-          proofImages:   _coProofFiles,
+          proofImages:   _coProofFiles,   // File objects — will upload to Storage
           customerName,
           customerPhone,
+          customerEmail,
+          paymentMethod,
           orderNotes,
         }
       );
@@ -1743,20 +1948,20 @@ async function placeOrderWithProof() {
 
   // Success
   Cart.clear();
-  document.getElementById('co-payment-step').style.display = 'none';
+  _showCoStep('success');
   document.getElementById('co-success').style.display = 'block';
 }
 
-// Helper: show error inside the checkout modal info form
+// Helper: show error inside checkout info form (legacy, now using co-form-err)
 function showCheckoutError(msg) {
-  const wrap = document.getElementById('co-form-wrap');
-  if (!wrap) return;
-  const old = document.getElementById('co-error'); if (old) old.remove();
-  const box = document.createElement('div');
-  box.id = 'co-error';
-  box.style.cssText = 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.8rem 1rem;margin-bottom:.9rem;font-size:.82rem;color:#EF4444;line-height:1.6';
-  box.innerHTML = '<strong>⚠️ ' + msg + '</strong>';
-  wrap.insertBefore(box, wrap.firstChild);
+  const errEl = document.getElementById('co-form-err');
+  if (errEl) { errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block'; }
+}
+
+// Old proceedToProofStep kept for compatibility
+function proceedToProofStep(e) {
+  if (e) e.preventDefault();
+  coProceedToProofStep();
 }
 
 // ===== CONTACT SOCIALS =====
@@ -2074,8 +2279,12 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 function isValidPhone(digits8) {
-  // Only 8 digits allowed (prefix is separate)
+  // Only 8 digits allowed (prefix is separate) — for signup form with prefix dropdown
   return /^\d{8}$/.test(digits8);
+}
+// Full Algerian phone (10 digits, starts with 05/06/07) — used in checkout
+function isValidAlgerianPhoneFull(val) {
+  return /^(05|06|07)\d{8}$/.test(val);
 }
 
 function validateEmailField(input, hintId, iconId) {

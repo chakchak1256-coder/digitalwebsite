@@ -12,8 +12,9 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const _auth = firebase.auth();
-const _db   = firebase.firestore();
+const _auth    = firebase.auth();
+const _db      = firebase.firestore();
+const _storage = firebase.storage();
 
 // ================================================================
 // USER AUTH — Firebase Authentication
@@ -133,22 +134,64 @@ UserAuth.init();
 // PURCHASES — Firestore
 // ================================================================
 const Purchases = {
+  // Upload a single base64/File image to Firebase Storage, return download URL
+  async _uploadProofImage(dataUrlOrFile, orderId, index) {
+    try {
+      let blob;
+      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
+        // Convert base64 data URL to Blob
+        const parts = dataUrlOrFile.split(',');
+        const mime  = parts[0].match(/:(.*?);/)[1];
+        const binary = atob(parts[1]);
+        const arr = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+        blob = new Blob([arr], { type: mime });
+      } else if (dataUrlOrFile instanceof File || dataUrlOrFile instanceof Blob) {
+        blob = dataUrlOrFile;
+      } else {
+        return dataUrlOrFile; // already a URL string
+      }
+      const ext  = (blob.type === 'image/png') ? 'png' : (blob.type === 'image/webp') ? 'webp' : 'jpg';
+      const path = `proof/${orderId || Date.now()}_${index}.${ext}`;
+      const ref  = _storage.ref(path);
+      await ref.put(blob);
+      return await ref.getDownloadURL();
+    } catch(e) {
+      console.error('[Storage] proof upload failed:', e);
+      // Fallback: return the original (data URL) if upload fails so the order still goes through
+      return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
+    }
+  },
+
   async add(userId, userEmail, product, extra = {}) {
     const now = new Date().toISOString();
+
+    // Upload proof images to Firebase Storage, store only URLs
+    let proofImageUrls = [];
+    const rawProofs = extra.proofImages || [];
+    if (rawProofs.length) {
+      const tempId = `${userId}_${Date.now()}`;
+      proofImageUrls = await Promise.all(
+        rawProofs.map((img, i) => this._uploadProofImage(img, tempId, i))
+      );
+    }
+
     const doc = {
       userId, userEmail,
-      productId:    product.id    || '',
-      productName:  product.name  || '',
-      productImage: (product.images||[])[0] || product.productImage || '',
-      productType:  product.category || extra.productType || 'Digital',
-      accessLink:   extra.accessLink  || '',
-      proofImages:  extra.proofImages || [],
-      customerName: extra.customerName || '',
-      customerPhone:extra.customerPhone || '',
-      orderNotes:   extra.orderNotes || '',
-      status:       'pending',
-      purchaseDate: now,
-      createdAt:    now,
+      productId:     product.id    || '',
+      productName:   product.name  || '',
+      productImage:  (product.images||[])[0] || product.productImage || '',
+      productType:   product.category || extra.productType || 'Digital',
+      accessLink:    extra.accessLink  || '',
+      proofImages:   proofImageUrls,
+      customerName:  extra.customerName  || '',
+      customerPhone: extra.customerPhone || '',
+      customerEmail: extra.customerEmail || userEmail || '',
+      paymentMethod: extra.paymentMethod || '',
+      orderNotes:    extra.orderNotes || '',
+      status:        'pending',
+      purchaseDate:  now,
+      createdAt:     now,
     };
     const ref = await _db.collection('purchases').add(doc);
     return { ...doc, id: ref.id };
