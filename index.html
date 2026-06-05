@@ -1057,6 +1057,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         </div>
         <div id="am-phone-verified-badge" style="display:none;margin-top:.45rem;align-items:center;gap:.4rem;color:#10B981;font-size:.78rem;font-weight:700"><i class="fa-solid fa-circle-check"></i> Phone verified</div>
       </div>
+      <!-- Invisible reCAPTCHA anchor for Firebase Phone Auth -->
+      <div id="recaptcha-container"></div>
       <div style="margin-bottom:1.2rem">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label>
         <input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" oninput="updatePassStrength(this.value)" onkeydown="if(event.key==='Enter')doModalRegister()"/>
@@ -1833,7 +1835,8 @@ function closeLoginModal() {
   if (tabs) tabs.style.display = '';
   // Reset phone verification state
   _phoneVerified = false;
-  _generatedOTP = null;
+  _phoneConfirmation = null;
+  if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
   const badge = document.getElementById('am-phone-verified-badge');
   if (badge) badge.style.display = 'none';
   const otpRow = document.getElementById('am-phone-otp-row');
@@ -1868,68 +1871,113 @@ async function doModalLogin() {
   showToast('Welcome back, ' + r.user.name + '! 👋');
   if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
 }
-// Phone OTP state
-let _phoneVerified = false;
-let _generatedOTP  = null;
-let _otpExpiry     = null;
+// ── Firebase Phone Auth state ─────────────────────────────────
+let _phoneVerified    = false;
+let _phoneConfirmation = null; // Firebase ConfirmationResult
+let _recaptchaVerifier = null;
 
 function getFullPhone() {
   const prefix = document.getElementById('am-r-phone-prefix').value;
   const digits  = document.getElementById('am-r-phone').value.trim();
-  return prefix + digits; // e.g. "0712345678"
+  // Convert Algerian local number to E.164: 07XXXXXXXX → +2137XXXXXXXX
+  return '+213' + prefix.slice(1) + digits; // e.g. +213712345678
+}
+
+function _ensureRecaptcha() {
+  if (_recaptchaVerifier) return;
+  _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    size: 'invisible',
+    callback: () => {}, // auto-solved
+  });
 }
 
 async function sendPhoneOTP() {
   const digits = document.getElementById('am-r-phone').value.trim();
   if (!isValidPhone(digits)) return;
   const fullPhone = getFullPhone();
-  const btn = document.getElementById('am-r-send-otp');
+  const btn      = document.getElementById('am-r-send-otp');
   const statusEl = document.getElementById('am-otp-status');
+
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending SMS…';
+  statusEl.style.display = 'none';
 
-  // Generate a 6-digit OTP locally (in a real app, the backend sends it via SMS)
-  _generatedOTP = String(Math.floor(100000 + Math.random() * 900000));
-  _otpExpiry    = Date.now() + 5 * 60 * 1000; // 5 min
-
-  // Try to send via backend (worker); silently fall back if unavailable
   try {
-    const backendUrl = window.DIGISTORE_BACKEND_URL;
-    if (backendUrl) {
-      await fetch(`${backendUrl}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: fullPhone, otp: _generatedOTP }),
-      });
-    }
-  } catch(e) { /* backend optional */ }
+    _ensureRecaptcha();
+    _phoneConfirmation = await firebase.auth().signInWithPhoneNumber(fullPhone, _recaptchaVerifier);
 
-  // Show OTP input
-  const inputRow = document.getElementById('am-otp-input-row');
-  inputRow.style.display = 'flex';
-  statusEl.style.display = 'block';
-  statusEl.style.color = '#10B981';
-  statusEl.textContent = `Code sent to ${fullPhone} (valid 5 min). For demo, code is: ${_generatedOTP}`;
+    // Show OTP input row
+    const inputRow = document.getElementById('am-otp-input-row');
+    inputRow.style.display = 'flex';
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#10B981';
+    statusEl.textContent = `Code sent to ${fullPhone}. Check your SMS.`;
 
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend code';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend code';
+    setTimeout(() => { const el = document.getElementById('am-r-otp'); if (el) el.focus(); }, 100);
 
-  // Auto-focus OTP input
-  setTimeout(() => { const el = document.getElementById('am-r-otp'); if (el) el.focus(); }, 100);
+  } catch(err) {
+    console.error('[PhoneAuth]', err);
+    // Reset reCAPTCHA so it can be retried
+    if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#EF4444';
+    const msgs = {
+      'auth/invalid-phone-number': 'Invalid phone number. Check the number and try again.',
+      'auth/too-many-requests': 'Too many attempts. Please wait a few minutes.',
+      'auth/captcha-check-failed': 'CAPTCHA failed. Please refresh the page and try again.',
+      'auth/quota-exceeded': 'SMS quota exceeded. Try again later.',
+      'auth/missing-phone-number': 'Please enter a phone number.',
+    };
+    statusEl.textContent = msgs[err.code] || ('Error: ' + (err.message || err.code));
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i> Send verification code';
+  }
 }
 
-function verifyPhoneOTP() {
-  const entered = (document.getElementById('am-r-otp').value || '').trim();
+async function verifyPhoneOTP() {
+  const entered  = (document.getElementById('am-r-otp').value || '').trim();
   const statusEl = document.getElementById('am-otp-status');
-  if (!_generatedOTP) { statusEl.style.display='block'; statusEl.style.color='#EF4444'; statusEl.textContent='Please request a code first.'; return; }
-  if (Date.now() > _otpExpiry) { statusEl.style.display='block'; statusEl.style.color='#EF4444'; statusEl.textContent='Code expired. Please request a new one.'; _generatedOTP=null; return; }
-  if (entered !== _generatedOTP) { statusEl.style.display='block'; statusEl.style.color='#EF4444'; statusEl.textContent='Incorrect code. Try again.'; return; }
-  // Verified!
-  _phoneVerified = true;
-  document.getElementById('am-phone-otp-row').style.display = 'none';
-  const badge = document.getElementById('am-phone-verified-badge');
-  badge.style.display = 'flex';
+  const verifyBtn = document.querySelector('[onclick="verifyPhoneOTP()"]');
+
+  if (!_phoneConfirmation) {
+    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
+    statusEl.textContent = 'Please request a code first.'; return;
+  }
+  if (!entered) {
+    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
+    statusEl.textContent = 'Enter the 6-digit code from your SMS.'; return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   statusEl.style.display = 'none';
+
+  try {
+    await _phoneConfirmation.confirm(entered);
+    // Firebase signs the user in temporarily to verify — we'll sign out and re-register with email/pass
+    // Just capture verification success; actual account creation uses email/password
+    await firebase.auth().signOut();
+
+    _phoneVerified = true;
+    document.getElementById('am-phone-otp-row').style.display = 'none';
+    const badge = document.getElementById('am-phone-verified-badge');
+    badge.style.display = 'flex';
+    statusEl.style.display = 'none';
+
+  } catch(err) {
+    console.error('[PhoneAuth confirm]', err);
+    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
+    const msgs = {
+      'auth/invalid-verification-code': 'Incorrect code. Please check and try again.',
+      'auth/code-expired': 'Code expired. Please request a new one.',
+      'auth/session-expired': 'Session expired. Please request a new code.',
+    };
+    statusEl.textContent = msgs[err.code] || 'Verification failed. Try again.';
+    verifyBtn.disabled = false;
+    verifyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Verify';
+  }
 }
 
 async function doModalRegister() {
@@ -2059,6 +2107,8 @@ function validatePhoneField(input, hintId, iconId) {
   if (verified && verified.style.display !== 'none') {
     verified.style.display = 'none';
     _phoneVerified = false;
+    _phoneConfirmation = null;
+    if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
     if (otpRow) { otpRow.style.display = 'none'; otpRow.style.flexDirection = 'column'; }
     const inputRow = document.getElementById('am-otp-input-row');
     if (inputRow) inputRow.style.display = 'none';
