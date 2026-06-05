@@ -440,33 +440,112 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 /* ===== CHECKOUT MODAL ===== */
 #checkout-modal{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;
-  display:flex;align-items:center;justify-content:center;padding:1rem;
+  display:flex;align-items:center;justify-content:center;
+  padding:1rem;
   opacity:0;pointer-events:none;transition:opacity var(--transition);
+  backdrop-filter:blur(4px);
 }
 #checkout-modal.open{opacity:1;pointer-events:all}
 .checkout-box{
   background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:2rem;width:100%;max-width:440px;
+  width:100%;max-width:460px;
+  max-height:calc(100dvh - 2rem);
+  display:flex;flex-direction:column;
   transform:scale(.97);transition:transform .18s ease;
+  overflow:hidden;
 }
 #checkout-modal.open .checkout-box{transform:scale(1)}
-.co-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.6rem;color:var(--text)}
+.checkout-box-inner{
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:1.8rem 2rem;
+  flex:1;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:var(--accent) var(--bg3);
+}
+.checkout-box-inner::-webkit-scrollbar{width:3px}
+.checkout-box-inner::-webkit-scrollbar-thumb{background:var(--accent);border-radius:99px}
+.co-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.4rem;color:var(--text)}
 .co-success{display:none;text-align:center;padding:1.5rem 0}
 .co-success i{font-size:2rem;color:var(--accent);margin-bottom:.7rem;display:block}
 .co-success h3{font-size:1.1rem;margin-bottom:.4rem;color:var(--text)}
 .co-success p{color:var(--text-muted);font-size:.85rem}
+
+/* ── Checkout phone prefix (matches signup) ─────────────────── */
+.co-phone-wrap{display:flex;gap:.4rem;align-items:center}
+.co-phone-prefix{
+  padding:10px 8px;border-radius:var(--radius-sm);
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);font-size:.875rem;outline:none;
+  cursor:pointer;flex-shrink:0;font-weight:700;
+  transition:border-color var(--transition);
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;padding-right:22px;
+}
+.co-phone-prefix:focus{border-color:var(--accent)}
+.co-phone-prefix option{background:var(--bg2);color:var(--text)}
+.co-phone-digits-wrap{position:relative;flex:1}
 
 /* ── Payment method radio cards ────────────────────────────── */
 .co-method-card {
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:.4rem;padding:.9rem .6rem;border-radius:var(--radius-sm);cursor:pointer;
   background:var(--card);border:2px solid var(--border-strong);
-  transition:all var(--transition);text-align:center;
+  transition:all var(--transition);text-align:center;user-select:none;
 }
-.co-method-card:hover { border-color:rgba(var(--accent-rgb),.5); }
-.co-method-card.selected { border-color:var(--accent); background:rgba(var(--accent-rgb),.08); }
-.co-method-icon { font-size:1.5rem; }
-.co-method-name { font-size:.8rem;font-weight:700;color:var(--text); }
+.co-method-card:hover { border-color:rgba(var(--accent-rgb),.5); background:rgba(var(--accent-rgb),.04); }
+.co-method-card.selected { border-color:var(--accent); background:rgba(var(--accent-rgb),.08); box-shadow:0 0 0 3px rgba(var(--accent-rgb),.12); }
+.co-method-icon { font-size:1.5rem; line-height:1; }
+.co-method-name { font-size:.82rem;font-weight:700;color:var(--text); }
+
+/* ── Premium payment instruction card ─────────────────────── */
+.co-pay-instr-card{
+  margin-bottom:.9rem;border-radius:var(--radius-sm);
+  background:rgba(var(--accent-rgb),.05);
+  border:1px solid rgba(var(--accent-rgb),.2);
+  overflow:hidden;
+}
+.co-pay-instr-header{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.65rem 1rem;
+  background:rgba(var(--accent-rgb),.09);
+  border-bottom:1px solid rgba(var(--accent-rgb),.15);
+}
+.co-pay-instr-header-icon{font-size:1.1rem;flex-shrink:0}
+.co-pay-instr-header-title{
+  font-size:.75rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent);flex:1;
+}
+.co-pay-instr-body{padding:.85rem 1rem}
+.co-pay-instr-text{
+  font-size:.84rem;color:var(--text-muted);line-height:1.8;
+  direction:rtl;text-align:right;
+  font-family:'Segoe UI',Tahoma,Arial,sans-serif;
+  margin-bottom:.85rem;
+}
+/* Copy number rows */
+.co-copy-numbers{display:flex;flex-direction:column;gap:.4rem;margin-top:.1rem}
+.co-copy-row{
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  background:var(--bg3);border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);padding:.45rem .75rem;
+}
+.co-copy-number{
+  font-family:monospace;font-size:.92rem;font-weight:700;
+  color:var(--text);letter-spacing:.04em;flex:1;
+  user-select:all;cursor:text;
+}
+.co-copy-btn{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;
+  background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.25);
+  color:var(--accent);cursor:pointer;transition:all var(--transition);flex-shrink:0;
+  white-space:nowrap;
+}
+.co-copy-btn:hover{background:rgba(var(--accent-rgb),.18);transform:translateY(-1px)}
+.co-copy-btn.copied{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:#10B981}
 
 /* ── Payment method selector ───────────────────────────── */
 .co-pay-method-btn {
@@ -1114,6 +1193,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 <!-- ===== CHECKOUT MODAL ===== -->
 <div id="checkout-modal">
   <div class="checkout-box">
+    <div class="checkout-box-inner">
 
     <!-- STEP 0: Use account info? -->
     <div id="co-step-account">
@@ -1122,7 +1202,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
       <div style="display:flex;flex-direction:column;gap:.75rem">
         <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(true)">
           <div class="co-pay-icon" style="background:rgba(var(--accent-rgb),.12);color:var(--accent)"><i class="fa-solid fa-user-check"></i></div>
-          <div class="co-pay-info"><strong>Yes, use my account info</strong><span>Auto-fill name, email & phone</span></div>
+          <div class="co-pay-info"><strong>Yes, use my account info</strong><span>Auto-fill name, email &amp; phone</span></div>
           <i class="fa-solid fa-chevron-right co-pay-arrow"></i>
         </button>
         <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(false)">
@@ -1140,20 +1220,37 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
     <div id="co-form-wrap" style="display:none">
       <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
       <div id="co-form-err" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
-      <div class="form-group" id="co-name-group"><label>Full Name</label><input class="form-input" id="co-name" type="text" required placeholder="Your name"/></div>
-      <div class="form-group" id="co-email-group"><label>Email <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label><input class="form-input" id="co-email" type="email" placeholder="your@email.com"/></div>
+
+      <div class="form-group" id="co-name-group">
+        <label>Full Name</label>
+        <input class="form-input" id="co-name" type="text" required placeholder="Your name"/>
+      </div>
+
+      <div class="form-group" id="co-email-group">
+        <label>Email <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label>
+        <input class="form-input" id="co-email" type="email" placeholder="your@email.com"/>
+      </div>
+
+      <!-- Phone field — same design as signup -->
       <div class="form-group">
-        <label>Phone / WhatsApp <span style="font-size:.74rem;color:var(--text-muted)">(*required — 05/06/07XXXXXXXX)</span></label>
-        <div style="position:relative">
-          <input class="form-input" id="co-phone" type="tel" placeholder="05XXXXXXXX or 06XXXXXXXX or 07XXXXXXXX" maxlength="10" oninput="coValidatePhone(this)" style="padding-right:2.2rem"/>
-          <span id="co-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
+        <div class="co-phone-wrap">
+          <select id="co-phone-prefix" class="co-phone-prefix">
+            <option value="07">07</option>
+            <option value="06">06</option>
+            <option value="05">05</option>
+          </select>
+          <div class="co-phone-digits-wrap">
+            <input class="form-input" id="co-phone" type="tel" placeholder="XXXXXXXX" maxlength="8" oninput="coValidatePhone(this)" style="padding-right:2.2rem;letter-spacing:.04em"/>
+            <span id="co-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+          </div>
         </div>
-        <span id="co-phone-hint" style="font-size:.73rem;color:#EF4444;margin-top:.25rem;display:none"></span>
+        <span id="co-phone-hint" style="font-size:.73rem;margin-top:.3rem;display:block;color:var(--text-muted)">Enter 8 digits after the prefix (e.g. 07 12345678)</span>
       </div>
 
       <!-- Payment Method Selection -->
       <div class="form-group">
-        <label style="margin-bottom:.6rem;display:block">Payment Method</label>
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Payment Method</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="co-pay-method-wrap">
           <label class="co-method-card" id="co-method-flexy">
             <input type="radio" name="co-payment" value="flexy" onchange="coShowPaymentInstructions('flexy')" style="display:none"/>
@@ -1168,10 +1265,16 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         </div>
       </div>
 
-      <!-- Payment instructions box -->
-      <div id="co-payment-instructions" style="display:none;margin-bottom:.9rem;border-radius:var(--radius-sm);padding:1rem 1.1rem;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2)">
-        <div style="font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem"><i class="fa-solid fa-circle-info"></i> <span id="co-instr-title">Payment Instructions</span></div>
-        <p id="co-instr-text" style="font-size:.85rem;color:var(--text-muted);line-height:1.75;direction:rtl;text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif;white-space:pre-line"></p>
+      <!-- Premium payment instruction card -->
+      <div id="co-payment-instructions" style="display:none" class="co-pay-instr-card">
+        <div class="co-pay-instr-header">
+          <span class="co-pay-instr-header-icon" id="co-instr-icon">📱</span>
+          <span class="co-pay-instr-header-title" id="co-instr-title">Payment Instructions</span>
+        </div>
+        <div class="co-pay-instr-body">
+          <p id="co-instr-text" class="co-pay-instr-text"></p>
+          <div id="co-copy-numbers" class="co-copy-numbers"></div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1189,14 +1292,12 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
     <div id="co-payment-step" style="display:none">
       <h3 class="co-title"><i class="fa-solid fa-camera"></i> Upload Payment Proof</h3>
       <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1.1rem;text-align:center">Send your payment, then upload screenshot(s) as proof. The admin will verify and deliver your product.</p>
-      <!-- Proof upload zone -->
       <div id="co-proof-zone" style="border:2px dashed var(--border-strong);border-radius:var(--radius);padding:1.4rem;text-align:center;cursor:pointer;transition:border-color .18s;position:relative;margin-bottom:.9rem" onclick="document.getElementById('co-proof-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="coHandleProofDrop(event)">
         <input type="file" id="co-proof-input" accept="image/*" multiple style="display:none" onchange="coHandleProofFiles(this.files)"/>
         <i class="fa-solid fa-images" style="font-size:1.8rem;color:var(--text-muted);margin-bottom:.5rem;display:block"></i>
         <div style="font-size:.88rem;color:var(--text-muted)"><strong style="color:var(--accent)">Click to upload</strong> or drag &amp; drop</div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem">JPG, PNG, WEBP — multiple screenshots allowed</div>
       </div>
-      <!-- Preview grid -->
       <div id="co-proof-previews" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.9rem"></div>
       <div id="co-proof-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.8rem"></div>
       <div style="display:flex;gap:.6rem">
@@ -1214,6 +1315,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         <button class="btn btn-outline" onclick="closeCheckout()">Continue Shopping</button>
       </div>
     </div>
+
+    </div><!-- /checkout-box-inner -->
   </div>
 </div>
 
