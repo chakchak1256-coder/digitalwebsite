@@ -177,18 +177,11 @@ const Purchases = {
     let proofImageUrls = [];
     const rawProofs = (extra.proofImages || []).filter(Boolean);
     if (rawProofs.length) {
-      // If all proofs are already base64 data URLs, store them directly in Firestore
-      // to avoid Firebase Storage CORS issues when hosted on external origins.
-      const allBase64 = rawProofs.every(img => typeof img === 'string' && img.startsWith('data:'));
-      if (allBase64) {
-        proofImageUrls = rawProofs;
-      } else {
-        const tempId = `${userId}_${Date.now()}`;
-        proofImageUrls = await Promise.all(
-          rawProofs.map((img, i) => this._uploadProofImage(img, tempId, i))
-        );
-        proofImageUrls = proofImageUrls.filter(Boolean);
-      }
+      const tempId = `${userId}_${Date.now()}`;
+      proofImageUrls = await Promise.all(
+        rawProofs.map((img, i) => this._uploadProofImage(img, tempId, i))
+      );
+      proofImageUrls = proofImageUrls.filter(Boolean);
     }
 
     const doc = {
@@ -207,6 +200,8 @@ const Purchases = {
       status:        'pending',
       purchaseDate:  now,
       createdAt:     now,
+      orderId:       extra.orderId || '',
+      variantLabel:  extra.variantLabel || '',
     };
     const ref = await _db.collection('purchases').add(doc);
     return { ...doc, id: ref.id };

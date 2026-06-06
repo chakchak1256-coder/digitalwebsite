@@ -2181,6 +2181,9 @@ async function placeOrderWithProof() {
   const products       = DB.getAll ? DB.getAll('products') : [];
   const errors = [];
 
+  // One shared orderId ties all items in this checkout together
+  const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).slice(2,7).toUpperCase();
+
   for (const item of cartItems) {
     const fullProd = products.find(p => p.id === item.id || p.id === item.productId) || {};
     try {
@@ -2194,12 +2197,14 @@ async function placeOrderWithProof() {
           category: fullProd.category || ''
         },
         {
-          proofImages:   proofBase64,  // already base64 — no Storage upload needed
+          proofImages:   proofBase64,
           customerName,
           customerPhone,
           customerEmail,
           paymentMethod,
           orderNotes,
+          orderId,
+          variantLabel:  item.variantLabel || null,
         }
       );
     } catch(err) {
