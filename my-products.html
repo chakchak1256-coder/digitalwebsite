@@ -552,14 +552,17 @@ function renderGuestState() {
     </div>`;
 }
 
-function loadPurchases() {
-  renderStats();
-  renderTypeChips();
+let _cachedPurchases = null;
+
+async function loadPurchases() {
+  _cachedPurchases = await Purchases.forUser(currentUser.id);
+  renderStats(_cachedPurchases);
+  renderTypeChips(_cachedPurchases);
   renderPurchases();
 }
 
-async function renderStats() {
-  const purchases = await Purchases.forUser(currentUser.id);
+async function renderStats(purchases) {
+  if (!purchases) purchases = await Purchases.forUser(currentUser.id);
   const types = [...new Set(purchases.map(p => p.productType))];
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card">
@@ -576,8 +579,8 @@ async function renderStats() {
     </div>`;
 }
 
-async function renderTypeChips() {
-  const purchases = await Purchases.forUser(currentUser.id);
+async function renderTypeChips(purchases) {
+  if (!purchases) purchases = await Purchases.forUser(currentUser.id);
   const types = [...new Set(purchases.map(p => p.productType).filter(Boolean))];
   const container = document.getElementById('type-chips');
   container.innerHTML = '';
@@ -596,9 +599,19 @@ function setFilter(el, val) {
   renderPurchases();
 }
 
+// Call this after any write operation to force a fresh fetch
+async function refreshPurchases() {
+  _cachedPurchases = await Purchases.forUser(currentUser.id);
+  renderStats(_cachedPurchases);
+  renderTypeChips(_cachedPurchases);
+  renderPurchases();
+}
+
 async function renderPurchases() {
   const q = (document.getElementById('search-input').value || '').toLowerCase();
-  let purchases = await Purchases.forUser(currentUser.id);
+  // Refresh cache if needed, otherwise use cached list
+  if (!_cachedPurchases) _cachedPurchases = await Purchases.forUser(currentUser.id);
+  let purchases = _cachedPurchases;
   if (currentFilter !== 'all') purchases = purchases.filter(p => p.productType === currentFilter);
   if (q) purchases = purchases.filter(p => (p.productName + ' ' + p.productType).toLowerCase().includes(q));
 
@@ -651,28 +664,51 @@ function makePurchaseCard(purchase) {
        </div>`
     : '';
 
+  const statusPill = isCanceled
+    ? `<span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;color:#EF4444;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:2px 8px"><i class="fa-solid fa-ban" style="font-size:.6rem"></i>${effStatus==='canceled_by_admin'?'Canceled by admin':'Canceled'}</span>`
+    : effStatus === 'picked_up'
+    ? `<span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;color:#818CF8;background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.2);border-radius:4px;padding:2px 8px"><i class="fa-solid fa-box-open" style="font-size:.6rem"></i>Received</span>`
+    : hasAccess
+    ? `<span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);border-radius:4px;padding:2px 8px"><i class="fa-solid fa-circle-check" style="font-size:.6rem"></i>Ready</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;color:#F59E0B;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:4px;padding:2px 8px"><i class="fa-solid fa-clock" style="font-size:.6rem"></i>Pending</span>`;
+
   card.innerHTML = `
-    <div class="pc-image">
+    <div class="pc-image" style="cursor:pointer" onclick="_openCard(event,this)">
       <img src="${img}" alt="${purchase.productName}" loading="lazy"/>
       <span class="pc-type-badge">${typeIcon} ${purchase.productType || 'Digital'}</span>
+      <div style="position:absolute;top:8px;right:8px">${statusPill}</div>
     </div>
     <div class="pc-body">
-      <div class="pc-name">${purchase.productName}</div>
+      <div class="pc-name" style="white-space:normal;overflow:visible;text-overflow:unset">${purchase.productName || '—'}</div>
+      ${purchase.variantLabel ? `<div style="margin-bottom:.3rem"><span style="display:inline-flex;align-items:center;gap:.25rem;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);border-radius:4px;font-size:.68rem;font-weight:700;padding:2px 8px"><i class="fa-solid fa-tag" style="font-size:.58rem"></i>${purchase.variantLabel}</span></div>` : ''}
       <div class="pc-date"><i class="fa-regular fa-calendar"></i> Purchased ${date}</div>
-      ${statusBar}
-      <div class="pc-actions">
+      <div class="pc-actions" style="margin-top:.7rem">
         ${isCanceled
           ? `<div class="pc-no-link" style="color:#EF4444;opacity:.7"><i class="fa-solid fa-ban"></i> Order canceled</div>`
           : hasAccess
-          ? `<button class="pc-access-btn" onclick="openDetailModal(JSON.parse(this.dataset.p))" data-p="${escapeAttr(JSON.stringify(purchase))}">
+          ? `<button class="pc-access-btn" onclick="_openCard(event,this)">
               <i class="fa-solid fa-key"></i> View Credentials
+             </button>
+             <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--text-muted);padding:8px 11px;border-radius:var(--radius-sm);flex-shrink:0" onclick="_openCard(event,this)" title="Order info">
+              <i class="fa-solid fa-circle-info"></i>
              </button>`
-          : `<div class="pc-no-link"><i class="fa-solid fa-clock"></i> Credentials coming soon</div>`
+          : `<button class="btn" style="flex:1;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:#F59E0B;font-size:.8rem;font-weight:600;padding:8px 12px;border-radius:var(--radius-sm)" onclick="_openCard(event,this)">
+              <i class="fa-solid fa-clock"></i> Order Details
+             </button>`
         }
       </div>
     </div>`;
-  if (!isCanceled) card.querySelector('.pc-name').onclick = () => openDetailModal(purchase);
+  // store purchase data on card for _openCard
+  card._purchaseData = purchase;
   return card;
+}
+
+function _openCard(e, el) {
+  e.stopPropagation();
+  // Walk up to find the purchase-card element and get its stored data
+  let card = el;
+  while (card && !card._purchaseData) card = card.parentElement;
+  if (card && card._purchaseData) openDetailModal(card._purchaseData);
 }
 
 function getTypeIcon(type) {
@@ -759,18 +795,52 @@ async function openDetailModal(purchase) {
   const ts = purchase.purchaseDate?.toDate?.() || purchase.purchaseDate || purchase.createdAt;
   const date = ts ? new Date(ts).toLocaleString('en-DZ') : '—';
   const img = purchase.productImage || generatePlaceholder(purchase.productName || 'Product', 400, 225);
+  const effStatus = getPurchaseStatus(purchase);
+  const statusColors = {
+    pending: { bg:'rgba(245,158,11,.1)', color:'#F59E0B', border:'rgba(245,158,11,.25)', icon:'fa-clock', label:'Pending — Awaiting delivery' },
+    completed: { bg:'rgba(16,185,129,.08)', color:'var(--accent)', border:'rgba(16,185,129,.2)', icon:'fa-circle-check', label:'Delivered — Ready to use' },
+    picked_up: { bg:'rgba(129,140,248,.1)', color:'#818CF8', border:'rgba(129,140,248,.2)', icon:'fa-box-open', label:'Received' },
+    canceled_by_client: { bg:'rgba(239,68,68,.08)', color:'#EF4444', border:'rgba(239,68,68,.2)', icon:'fa-ban', label:'Canceled by you' },
+    canceled_by_admin: { bg:'rgba(239,68,68,.08)', color:'#EF4444', border:'rgba(239,68,68,.2)', icon:'fa-ban', label:'Canceled by admin' },
+  };
+  const sc = statusColors[effStatus] || statusColors.pending;
+  const pmLabel = purchase.paymentMethod === 'flexy' ? '📱 Flexy' : purchase.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (purchase.paymentMethod || null);
+
   document.getElementById('detail-content').innerHTML = `
-    <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.2rem">
-      <img src="${img}" alt="" style="width:90px;height:68px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--bg3)"/>
-      <div>
-        <div style="font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.2rem">${purchase.productType || 'Digital'}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;line-height:1.3">${purchase.productName || '—'}</div>
+    <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1rem">
+      <img src="${img}" alt="" style="width:76px;height:76px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border)"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.68rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.15rem">${purchase.productType || 'Digital'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1.3;word-break:break-word">${purchase.productName || '—'}</div>
+        ${purchase.variantLabel ? `<div style="margin-top:.35rem"><span style="display:inline-flex;align-items:center;gap:.25rem;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);border-radius:4px;font-size:.7rem;font-weight:700;padding:2px 8px"><i class="fa-solid fa-tag" style="font-size:.6rem"></i>${purchase.variantLabel}</span></div>` : ''}
+        <div style="margin-top:.5rem;display:inline-flex;align-items:center;gap:.3rem;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border}">
+          <i class="fa-solid ${sc.icon}" style="font-size:.6rem"></i>${sc.label}
+        </div>
       </div>
     </div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem">
-      <div style="font-size:.75rem;color:var(--text-muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Purchase Info</div>
-      <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace;color:var(--text-muted)">${purchase.id}</span></div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.9rem 1rem;margin-bottom:.9rem">
+      <div style="font-size:.68rem;color:var(--text-muted);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:.55rem">Order Info</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.28rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.82rem;color:var(--text-muted)">Date</span>
+        <span style="font-size:.82rem;font-weight:600">${date}</span>
+      </div>
+      ${purchase.customerPhone ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:.28rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.82rem;color:var(--text-muted)">Phone</span>
+        <span style="font-size:.82rem;font-weight:600">${purchase.customerPhone}</span>
+      </div>` : ''}
+      ${pmLabel ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:.28rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.82rem;color:var(--text-muted)">Payment</span>
+        <span style="font-size:.82rem;font-weight:600">${pmLabel}</span>
+      </div>` : ''}
+      ${purchase.orderNotes ? `<div style="padding:.28rem 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.15rem">Notes</div>
+        <div style="font-size:.82rem;color:var(--text)">${purchase.orderNotes}</div>
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.28rem 0">
+        <span style="font-size:.82rem;color:var(--text-muted)">Order ID</span>
+        <span style="font-size:.72rem;font-family:monospace;color:var(--text-muted);word-break:break-all;text-align:right;max-width:60%">${purchase.id}</span>
+      </div>
     </div>
     ${_buildAccessSection(purchase)}
   `;

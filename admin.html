@@ -1545,8 +1545,14 @@ function _renderPurchasesTable(all) {
         <div style="font-size:.7rem;color:var(--text-muted);opacity:.7">${p.productType||'Digital'}</div>
       </td>
       <td>
-        <div style="font-weight:600;font-size:.87rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.productName||'—'}</div>
-        <div style="font-size:.72rem;color:var(--text-muted)">${date}</div>
+        <div style="display:flex;align-items:flex-start;gap:.6rem;min-width:0">
+          ${p.productImage ? `<img src="${p.productImage}" alt="" style="width:40px;height:40px;border-radius:7px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">` : `<div style="width:40px;height:40px;border-radius:7px;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)"><i class=\"fa-solid fa-box\" style=\"color:var(--text-muted);font-size:.8rem\"></i></div>`}
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:700;font-size:.87rem;line-height:1.35;word-break:break-word;white-space:normal">${p.productName||'—'}</div>
+            ${p.variantLabel ? `<span style="display:inline-flex;align-items:center;gap:.25rem;margin-top:.25rem;background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.25);border-radius:4px;font-size:.68rem;font-weight:700;padding:2px 7px"><i class=\"fa-solid fa-tag\" style=\"font-size:.58rem\"></i>${p.variantLabel}</span>` : ''}
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:.25rem">${date}</div>
+          </div>
+        </div>
       </td>
       <td>${statusBadge}</td>
       <td>
@@ -1564,9 +1570,10 @@ function _renderPurchasesTable(all) {
       </td>
       <td>
         ${(p.proofImages && p.proofImages.length)
-          ? `<button class="btn btn-sm" style="font-size:.72rem;padding:3px 9px;background:rgba(59,130,246,.08);color:#3B82F6;border:1px solid rgba(59,130,246,.2)" onclick="viewProofImages(${JSON.stringify(p.proofImages).replace(/"/g,'&quot;')})">
-              <i class="fa-solid fa-images"></i> ${p.proofImages.length} proof${p.proofImages.length>1?'s':''}
-             </button>`
+          ? `<div style="display:flex;flex-wrap:wrap;gap:.3rem;align-items:center">
+              ${p.proofImages.slice(0,3).map((src,i) => `<img src="${src}" alt="Proof ${i+1}" onclick="viewProofImages(${JSON.stringify(p.proofImages).replace(/"/g,'&quot;')},${i})" style="width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid rgba(59,130,246,.3);cursor:zoom-in;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='scale(1.12)';this.style.borderColor='#3B82F6'" onmouseout="this.style.transform='';this.style.borderColor='rgba(59,130,246,.3)'">`).join('')}
+              ${p.proofImages.length > 3 ? `<span onclick="viewProofImages(${JSON.stringify(p.proofImages).replace(/"/g,'&quot;')},3)" style="width:38px;height:38px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#3B82F6;cursor:pointer">+${p.proofImages.length-3}</span>` : ''}
+             </div>`
           : `<span style="color:var(--text-muted);font-size:.75rem">No proof</span>`
         }
       </td>
@@ -1906,8 +1913,13 @@ function openDeliverModal(purchaseId) {
   if (!purchase) { showToast('Purchase not found'); return; }
 
   document.getElementById('deliver-purchase-id').value = purchaseId;
-  document.getElementById('deliver-product-name').textContent = purchase.productName || '—';
-  document.getElementById('deliver-user-email').textContent = '👤 ' + (purchase.userEmail || 'Unknown user');
+  const delivNameEl = document.getElementById('deliver-product-name');
+  delivNameEl.innerHTML = (purchase.productName || '—') +
+    (purchase.variantLabel ? ` <span style="display:inline-flex;align-items:center;gap:.22rem;background:rgba(16,185,129,.12);color:var(--accent);border:1px solid rgba(16,185,129,.25);border-radius:4px;font-size:.68rem;font-weight:700;padding:2px 7px;vertical-align:middle;margin-left:.35rem"><i class="fa-solid fa-tag" style="font-size:.58rem"></i>${purchase.variantLabel}</span>` : '');
+  document.getElementById('deliver-user-email').innerHTML =
+    '👤 ' + (purchase.userEmail || 'Unknown user') +
+    (purchase.customerName ? ` <span style="opacity:.65">· ${purchase.customerName}</span>` : '') +
+    (purchase.customerPhone ? ` · <span style="opacity:.65">${purchase.customerPhone}</span>` : '');
   document.getElementById('deliver-error').style.display = 'none';
 
   // Build fields from existing accessData, or fall back to legacy accessLink
@@ -2021,53 +2033,142 @@ function closeDeliverModal() {
 }
 
 
-// ===== PROOF IMAGES VIEWER =====
-function viewProofImages(images) {
+// ===== PROOF IMAGES VIEWER — Lightbox with navigation & zoom =====
+function viewProofImages(images, startIndex = 0) {
   if (!images || !images.length) return;
+  let current = Math.max(0, Math.min(startIndex, images.length - 1));
+  let zoomed = false;
+
+  // Remove any existing viewer
+  document.getElementById('proof-viewer-overlay')?.remove();
+
   const overlay = document.createElement('div');
   overlay.id = 'proof-viewer-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;gap:1rem';
-  overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:99999;display:flex;flex-direction:column;overflow:hidden';
+
+  // ── Top bar ──
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.2rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07)';
+
+  const titleEl = document.createElement('div');
+  titleEl.style.cssText = 'color:#fff;font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.6rem';
+  titleEl.innerHTML = '<i class="fa-solid fa-images" style="color:#3B82F6"></i> Payment Proof';
+
+  const counterEl = document.createElement('span');
+  counterEl.style.cssText = 'font-size:.8rem;font-weight:400;color:rgba(255,255,255,.45);margin-left:.3rem';
+  titleEl.appendChild(counterEl);
+
+  const topRight = document.createElement('div');
+  topRight.style.cssText = 'display:flex;align-items:center;gap:.5rem';
+
+  const zoomBtn = document.createElement('button');
+  zoomBtn.style.cssText = 'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;padding:6px 13px;border-radius:7px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:background .15s';
+  zoomBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i> Zoom';
+  zoomBtn.onclick = () => toggleZoom();
+
+  const dlBtn = document.createElement('button');
+  dlBtn.style.cssText = 'background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:#60A5FA;padding:6px 13px;border-radius:7px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:background .15s';
+  dlBtn.innerHTML = '<i class="fa-solid fa-download"></i> Save';
+  dlBtn.onclick = () => {
+    const src = images[current];
+    const a = document.createElement('a');
+    a.href = src; a.download = 'proof_' + (current+1) + '.jpg';
+    if (src.startsWith('http')) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.click();
+  };
 
   const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#F87171;padding:6px 13px;border-radius:7px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.4rem';
   closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Close';
-  closeBtn.style.cssText = 'position:absolute;top:1.2rem;right:1.5rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;display:flex;align-items:center;gap:.4rem';
-  closeBtn.onclick = () => overlay.remove();
+  closeBtn.onclick = () => close();
 
-  const title = document.createElement('div');
-  title.style.cssText = 'color:#fff;font-size:.88rem;font-weight:600;margin-bottom:.3rem;opacity:.7';
-  title.textContent = `Payment Proof — ${images.length} screenshot${images.length > 1 ? 's' : ''}`;
+  topRight.appendChild(zoomBtn); topRight.appendChild(dlBtn); topRight.appendChild(closeBtn);
+  topBar.appendChild(titleEl); topBar.appendChild(topRight);
 
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center;max-height:75vh;overflow-y:auto;padding:.5rem';
-  images.forEach((src, i) => {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;flex-shrink:0';
-    const img = document.createElement('img');
-    img.src = src;
-    img.alt = 'Proof ' + (i+1);
-    img.style.cssText = 'max-width:min(420px,85vw);max-height:60vh;border-radius:10px;border:1px solid rgba(255,255,255,.15);display:block;object-fit:contain;background:#111';
-    img.onerror = () => { img.style.display = 'none'; wrap.innerHTML += `<div style="color:rgba(255,255,255,.4);font-size:.82rem;padding:2rem;text-align:center">Image failed to load</div>`; };
-    const label = document.createElement('div');
-    label.textContent = 'Screenshot ' + (i+1);
-    label.style.cssText = 'text-align:center;color:rgba(255,255,255,.5);font-size:.72rem;margin-top:.3rem';
-    // Add download link for Firebase Storage URLs
-    if (src.startsWith('http')) {
-      const dl = document.createElement('a');
-      dl.href = src; dl.target = '_blank'; dl.rel = 'noopener noreferrer';
-      dl.style.cssText = 'display:block;text-align:center;color:rgba(59,130,246,.8);font-size:.72rem;margin-top:.15rem';
-      dl.textContent = '⬇ Open full size';
-      wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
-    } else {
-      wrap.appendChild(img); wrap.appendChild(label);
-    }
-    grid.appendChild(wrap);
+  // ── Main image area ──
+  const imgArea = document.createElement('div');
+  imgArea.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:0';
+
+  // Prev/Next buttons
+  function navBtn(dir) {
+    const b = document.createElement('button');
+    b.style.cssText = `position:absolute;${dir==='prev'?'left:1rem':'right:1rem'};top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;width:44px;height:44px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s;${images.length<2?'display:none':''}`;
+    b.innerHTML = dir==='prev' ? '<i class="fa-solid fa-chevron-left"></i>' : '<i class="fa-solid fa-chevron-right"></i>';
+    b.onmouseover = () => b.style.background = 'rgba(255,255,255,.2)';
+    b.onmouseout = () => b.style.background = 'rgba(255,255,255,.1)';
+    b.onclick = (e) => { e.stopPropagation(); navigate(dir==='prev' ? -1 : 1); };
+    return b;
+  }
+  const prevBtn = navBtn('prev');
+  const nextBtn = navBtn('next');
+
+  const imgWrap = document.createElement('div');
+  imgWrap.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;max-width:90vw;max-height:100%;transition:transform .2s';
+
+  const imgEl = document.createElement('img');
+  imgEl.style.cssText = 'max-width:min(860px,88vw);max-height:calc(100vh - 160px);border-radius:10px;border:1px solid rgba(255,255,255,.1);object-fit:contain;background:#0a0a0a;display:block;cursor:zoom-in;transition:transform .25s ease,max-width .25s,max-height .25s';
+  imgEl.onclick = () => toggleZoom();
+  imgEl.onerror = () => { imgEl.style.display='none'; imgWrap.innerHTML += '<div style="color:rgba(255,255,255,.35);font-size:.85rem;padding:3rem;text-align:center"><i class="fa-solid fa-circle-exclamation" style="font-size:2rem;display:block;margin-bottom:.6rem;opacity:.4"></i>Image could not be loaded</div>'; };
+
+  imgWrap.appendChild(imgEl);
+  imgArea.appendChild(prevBtn); imgArea.appendChild(imgWrap); imgArea.appendChild(nextBtn);
+
+  // ── Thumbnails strip ──
+  const strip = document.createElement('div');
+  strip.style.cssText = `display:${images.length>1?'flex':'none'};gap:.45rem;padding:.65rem 1.2rem;flex-shrink:0;overflow-x:auto;border-top:1px solid rgba(255,255,255,.07);justify-content:center`;
+
+  const thumbEls = images.map((src, i) => {
+    const th = document.createElement('img');
+    th.src = src; th.alt = 'Proof '+(i+1);
+    th.style.cssText = 'width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s;flex-shrink:0';
+    th.onclick = () => goTo(i);
+    return th;
   });
+  thumbEls.forEach(t => strip.appendChild(t));
 
-  overlay.appendChild(closeBtn);
-  overlay.appendChild(title);
-  overlay.appendChild(grid);
+  overlay.appendChild(topBar);
+  overlay.appendChild(imgArea);
+  overlay.appendChild(strip);
   document.body.appendChild(overlay);
+
+  // ── Logic ──
+  function updateView() {
+    imgEl.style.display = 'block';
+    imgEl.src = images[current];
+    counterEl.textContent = images.length > 1 ? `${current+1} / ${images.length}` : '';
+    thumbEls.forEach((t,i) => {
+      t.style.borderColor = i===current ? '#3B82F6' : 'transparent';
+      t.style.transform = i===current ? 'scale(1.08)' : '';
+    });
+    prevBtn.style.opacity = images.length < 2 ? '0' : (current===0 ? '0.3' : '1');
+    prevBtn.style.pointerEvents = current===0 ? 'none' : '';
+    nextBtn.style.opacity = images.length < 2 ? '0' : (current===images.length-1 ? '0.3' : '1');
+    nextBtn.style.pointerEvents = current===images.length-1 ? 'none' : '';
+    if (zoomed) { zoomed = false; imgEl.style.maxWidth='min(860px,88vw)'; imgEl.style.maxHeight='calc(100vh - 160px)'; imgEl.style.cursor='zoom-in'; zoomBtn.innerHTML='<i class="fa-solid fa-magnifying-glass-plus"></i> Zoom'; }
+  }
+  function navigate(dir) { goTo(current + dir); }
+  function goTo(i) { current = Math.max(0, Math.min(i, images.length-1)); updateView(); }
+  function toggleZoom() {
+    zoomed = !zoomed;
+    imgEl.style.maxWidth = zoomed ? 'min(1400px,96vw)' : 'min(860px,88vw)';
+    imgEl.style.maxHeight = zoomed ? 'calc(100vh - 130px)' : 'calc(100vh - 160px)';
+    imgEl.style.cursor = zoomed ? 'zoom-out' : 'zoom-in';
+    zoomBtn.innerHTML = zoomed ? '<i class="fa-solid fa-magnifying-glass-minus"></i> Unzoom' : '<i class="fa-solid fa-magnifying-glass-plus"></i> Zoom';
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  function onKey(e) {
+    if (e.key==='Escape') close();
+    if (e.key==='ArrowLeft') navigate(-1);
+    if (e.key==='ArrowRight') navigate(1);
+    if (e.key==='z' || e.key==='Z') toggleZoom();
+  }
+
+  overlay.addEventListener('click', e => { if (e.target === overlay || e.target === imgArea) close(); });
+  document.addEventListener('keydown', onKey);
+  updateView();
 }
 
 // ===== ADMIN THEME =====
