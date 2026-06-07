@@ -1886,12 +1886,25 @@ function coShowPaymentInstructions(method) {
   const defaultFlexyText     = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
   const defaultBaridiText    = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
 
-  const text = (method === 'flexy')
-    ? (s.flexyInstructions || defaultFlexyText)
+  const isFlexy = method === 'flexy';
+  const baseTotal = Cart.total();
+  const flexyFee  = isFlexy ? Math.round(baseTotal * 0.20) : 0;
+  const finalTotal = baseTotal + flexyFee;
+  const currency = s.currency || 'DA';
+
+  const flexyNote = isFlexy
+    ? `\n\n⚠️ ملاحظة: يُضاف رسم خدمة 20% عند الدفع عبر فليكسي.\nالمبلغ الأصلي: ${baseTotal.toLocaleString()} ${currency} + رسوم: ${flexyFee.toLocaleString()} ${currency} = المجموع: ${finalTotal.toLocaleString()} ${currency}`
+    : '';
+
+  const text = isFlexy
+    ? (s.flexyInstructions || defaultFlexyText) + flexyNote
     : (s.baridimobInstructions || defaultBaridiText);
 
-  titleEl.textContent = method === 'flexy' ? '📱 تعليمات الدفع عبر فليكسي' : '🏦 تعليمات الدفع عبر بريدي موب';
+  titleEl.textContent = isFlexy ? '📱 تعليمات الدفع عبر فليكسي' : '🏦 تعليمات الدفع عبر بريدي موب';
   textEl.textContent  = text;
+
+  // Update the order summary total to reflect flexy surcharge
+  _coRefreshOrderSummary(isFlexy ? 0.20 : 0);
 
   // Build copy-number rows
   const numbers = method === 'flexy' ? flexyNumbers : baridimobNumbers;
@@ -1929,10 +1942,11 @@ function coShowPaymentInstructions(method) {
 }
 
 // ── Build order summary HTML ───────────────────────────────────
-function buildOrderSummaryHTML() {
+function buildOrderSummaryHTML(surchargeRate) {
   const items = Cart.get();
   const s = Settings.get();
   if (!items.length) return '';
+  const rate = surchargeRate != null ? surchargeRate : (_coSurchargeRate || 0);
   let rows = items.map((item, idx) => {
     const variant = item.variantLabel ? `<div style="font-size:.74rem;color:var(--text-muted);margin-top:.1rem">Variant: ${item.variantLabel}</div>` : '';
     // Use data-cartid attribute — avoids any quote/injection issues with the id string
@@ -1950,13 +1964,21 @@ function buildOrderSummaryHTML() {
       </button>
     </div>`;
   }).join('');
-  const total = Cart.total();
+  const baseTotal = Cart.total();
+  const feeAmount = rate > 0 ? Math.round(baseTotal * rate) : 0;
+  const finalTotal = baseTotal + feeAmount;
+  const feeRow = rate > 0 ? `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.45rem">
+      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> Flexy fee (+${Math.round(rate*100)}%)</span>
+      <span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#F59E0B">+${feeAmount.toLocaleString()} ${s.currency||'DA'}</span>
+    </div>` : '';
   return `<div style="border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);padding:.85rem 1rem;margin-bottom:1rem">
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem"><i class="fa-solid fa-receipt" style="color:var(--accent)"></i> Order Summary</div>
     ${rows}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem">
+    ${feeRow}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem;${rate>0?'border-top:1px solid var(--border);':''}">
       <span style="font-size:.88rem;font-weight:700;color:var(--text)">Total</span>
-      <span style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent)">${total.toLocaleString()} ${s.currency||'DA'}</span>
+      <span style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent)">${finalTotal.toLocaleString()} ${s.currency||'DA'}</span>
     </div>
   </div>`;
 }
@@ -1970,12 +1992,15 @@ function coRemoveFromSummary(itemId) {
 }
 
 // Inject/refresh order summary into co-form-wrap
-function _coRefreshOrderSummary() {
+let _coSurchargeRate = 0; // 0 = none, 0.20 = flexy +20%
+
+function _coRefreshOrderSummary(surchargeRate) {
+  if (surchargeRate !== undefined) _coSurchargeRate = surchargeRate;
   const wrap = document.getElementById('co-form-wrap');
   if (!wrap) return;
   const old = document.getElementById('co-order-summary-block');
   if (old) old.remove();
-  const html = buildOrderSummaryHTML();
+  const html = buildOrderSummaryHTML(_coSurchargeRate);
   if (!html) return;
   const block = document.createElement('div');
   block.id = 'co-order-summary-block';
@@ -2072,6 +2097,7 @@ function closeCheckout() {
   document.querySelectorAll('.co-method-card').forEach(c => c.classList.remove('selected'));
   const instrEl = document.getElementById('co-payment-instructions');
   if (instrEl) instrEl.style.display = 'none';
+  _coSurchargeRate = 0;
   // Reset phone hint
   const phoneHint = document.getElementById('co-phone-hint');
   if (phoneHint) phoneHint.style.display = 'none';
