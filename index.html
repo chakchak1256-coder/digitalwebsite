@@ -838,7 +838,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
     <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">About</a>
-    <a href="#products" data-section="products" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Products</a>
+    <a href="#" data-section="products" onclick="openAllProducts();return false;">Products</a>
     <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Warranty</a>
     <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Contact</a>
     <a href="#" id="my-products-link" onclick="openMyProducts();return false;">My Products</a>
@@ -1195,8 +1195,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   <div class="checkout-box">
     <div class="checkout-box-inner">
 
-    <!-- STEP 0: Use account info? -->
-    <div id="co-step-account">
+    <!-- STEP 0: Use account info? (hidden — skipped automatically) -->
+    <div id="co-step-account" style="display:none">
       <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
       <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.6rem;text-align:center">Would you like to use your account information for this order?</p>
       <div style="display:flex;flex-direction:column;gap:.75rem">
@@ -1283,7 +1283,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
       </div>
 
       <div style="display:flex;gap:.7rem;margin-top:1rem">
-        <button type="button" class="btn btn-outline" onclick="coBackToAccountStep()" style="flex:1"><i class="fa-solid fa-arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
         <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coProceedToProofStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next: Payment Proof</button>
       </div>
     </div>
@@ -1801,8 +1801,8 @@ function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
   document.getElementById('checkout-modal').classList.add('open');
-  // Show step 0 (account question)
-  _showCoStep('account');
+  // Skip step 0 — go straight to form, auto-fill from account if available
+  coChooseAccount(!!user);
 }
 
 function _showCoStep(step) {
@@ -2060,7 +2060,7 @@ function coProceedToProofStep() {
 
 function closeCheckout() {
   document.getElementById('checkout-modal').classList.remove('open');
-  _showCoStep('account');
+  _showCoStep('form');
   document.getElementById('co-success').style.display = 'none';
   _coProofFiles = [];
   const prev = document.getElementById('co-proof-previews');
@@ -2079,13 +2079,13 @@ function closeCheckout() {
   if (phoneInput) { phoneInput.style.borderColor = ''; }
 }
 
-// Handle proof file selection — store File objects (not base64) so upload goes to Storage
-function coHandleProofFiles(files) {
+// Handle proof file selection — convert to base64 immediately to avoid CORS/Storage issues
+async function coHandleProofFiles(files) {
   const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
   for (const f of [...files]) {
     if (!allowed.includes(f.type)) continue;
-    _coProofFiles.push(f);
-    renderProofPreviews();
+    const b64 = await _fileToBase64(f);
+    if (b64) { _coProofFiles.push(b64); renderProofPreviews(); }
   }
 }
 
@@ -2103,12 +2103,8 @@ function renderProofPreviews() {
     div.style.cssText = 'position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0';
     const img = document.createElement('img');
     img.style.cssText = 'width:100%;height:100%;object-fit:cover';
-    if (file instanceof File) {
-      const url = URL.createObjectURL(file);
-      img.src = url;
-    } else {
-      img.src = file; // data URL fallback
-    }
+    // All entries in _coProofFiles are base64 data URLs
+    img.src = file;
     const btn = document.createElement('button');
     btn.style.cssText = 'position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center';
     btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
@@ -2159,17 +2155,8 @@ async function placeOrderWithProof() {
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
-  // Convert all File objects to base64 data URLs BEFORE calling Purchases.add
-  // This bypasses any Firebase Storage permission issues entirely
-  let proofBase64 = [];
-  try {
-    proofBase64 = await Promise.all(
-      _coProofFiles.map(f => f instanceof File ? _fileToBase64(f) : Promise.resolve(f))
-    );
-    proofBase64 = proofBase64.filter(Boolean);
-  } catch(convErr) {
-    console.error('[Checkout] image conversion failed:', convErr);
-  }
+  // Files are already base64 strings (converted on upload to avoid CORS/Storage issues)
+  const proofBase64 = _coProofFiles.filter(Boolean);
 
   const customerName   = (document.getElementById('co-name')?.value || '').trim();
   const customerEmail  = (document.getElementById('co-email')?.value || currentUser.email || '').trim();

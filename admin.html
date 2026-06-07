@@ -1569,10 +1569,13 @@ function _renderPurchasesTable(all) {
 
     // Proof images (shared — same proof for all items in the order)
     const proofImages = first.proofImages || [];
+    // Store proof arrays indexed by orderId key so onclick can retrieve them safely
+    _adminProofMap[key] = proofImages;
+    const safeKey = key.replace(/[^a-z0-9]/gi,'_');
     const proofCell = proofImages.length
       ? `<div style="display:flex;flex-wrap:wrap;gap:.3rem;align-items:center">
-          ${proofImages.slice(0,3).map((src,i) => `<img src="${src}" alt="Proof ${i+1}" onclick="viewProofImages(${JSON.stringify(proofImages).replace(/"/g,'&quot;')},${i})" style="width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid rgba(59,130,246,.3);cursor:zoom-in;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='scale(1.12)';this.style.borderColor='#3B82F6'" onmouseout="this.style.transform='';this.style.borderColor='rgba(59,130,246,.3)'">`).join('')}
-          ${proofImages.length > 3 ? `<span onclick="viewProofImages(${JSON.stringify(proofImages).replace(/"/g,'&quot;')},3)" style="width:38px;height:38px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#3B82F6;cursor:pointer">+${proofImages.length-3}</span>` : ''}
+          ${proofImages.slice(0,3).map((src,i) => `<img src="${src}" alt="Proof ${i+1}" onclick="_viewProofByKey('${safeKey}',${i})" style="width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid rgba(59,130,246,.3);cursor:zoom-in;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='scale(1.12)';this.style.borderColor='#3B82F6'" onmouseout="this.style.transform='';this.style.borderColor='rgba(59,130,246,.3)'">`).join('')}
+          ${proofImages.length > 3 ? `<span onclick="_viewProofByKey('${safeKey}',3)" style="width:38px;height:38px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#3B82F6;cursor:pointer">+${proofImages.length-3}</span>` : ''}
          </div>`
       : `<span style="color:var(--text-muted);font-size:.75rem">No proof</span>`;
 
@@ -2123,8 +2126,18 @@ function closeDeliverModal() {
 
 
 // ===== PROOF IMAGES VIEWER =====
-function viewProofImages(images) {
+// Map of safeKey → proofImages array, populated during table render
+const _adminProofMap = {};
+
+// Lookup by key and call viewProofImages so base64 data never passes through HTML attributes
+function _viewProofByKey(safeKey, startIndex) {
+  const images = _adminProofMap[safeKey] || _adminProofMap[Object.keys(_adminProofMap).find(k => k.replace(/[^a-z0-9]/gi,'_') === safeKey)] || [];
+  viewProofImages(images, startIndex);
+}
+
+function viewProofImages(images, startIndex) {
   if (!images || !images.length) return;
+  startIndex = startIndex || 0;
   const overlay = document.createElement('div');
   overlay.id = 'proof-viewer-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;gap:1rem';
@@ -2152,16 +2165,18 @@ function viewProofImages(images) {
     const label = document.createElement('div');
     label.textContent = 'Screenshot ' + (i+1);
     label.style.cssText = 'text-align:center;color:rgba(255,255,255,.5);font-size:.72rem;margin-top:.3rem';
-    // Add download link for Firebase Storage URLs
+    // Add download link for any image (base64 or URL)
+    const dl = document.createElement('a');
     if (src.startsWith('http')) {
-      const dl = document.createElement('a');
       dl.href = src; dl.target = '_blank'; dl.rel = 'noopener noreferrer';
-      dl.style.cssText = 'display:block;text-align:center;color:rgba(59,130,246,.8);font-size:.72rem;margin-top:.15rem';
       dl.textContent = '⬇ Open full size';
-      wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
     } else {
-      wrap.appendChild(img); wrap.appendChild(label);
+      // base64 — trigger download
+      dl.href = src; dl.download = 'proof-' + (i+1) + '.jpg';
+      dl.textContent = '⬇ Download';
     }
+    dl.style.cssText = 'display:block;text-align:center;color:rgba(59,130,246,.8);font-size:.72rem;margin-top:.15rem';
+    wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
     grid.appendChild(wrap);
   });
 
