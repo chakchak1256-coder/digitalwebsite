@@ -324,6 +324,104 @@ select.form-input option{background:var(--bg2)}
 .order-detail-row.open{display:table-row}
 .order-detail-cell{padding:.9rem 1.3rem;background:var(--bg3)}
 
+/* ── PURCHASE CARDS ─────────────────────────────────────────── */
+.pur-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.6rem}
+@media(max-width:900px){.pur-stats-row{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.pur-stats-row{grid-template-columns:1fr 1fr}}
+.pur-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem 1.15rem;display:flex;align-items:center;gap:.85rem;transition:border-color var(--transition)}
+.pur-stat:hover{border-color:rgba(var(--accent-rgb),.3)}
+.pur-stat-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:1rem;flex-shrink:0}
+.pur-stat-val{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;line-height:1}
+.pur-stat-lbl{font-size:.7rem;color:var(--text-muted);margin-top:.2rem}
+
+.pur-filters-bar{display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center}
+.pur-filters-bar .form-input{padding:8px 12px}
+
+.pur-cards-list{display:flex;flex-direction:column;gap:.75rem}
+
+.pur-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;transition:border-color var(--transition),box-shadow var(--transition)}
+.pur-card:hover{border-color:rgba(var(--accent-rgb),.25);box-shadow:0 2px 16px rgba(0,0,0,.12)}
+
+.pur-card-header{display:flex;align-items:center;gap:1rem;padding:1rem 1.2rem;cursor:pointer;user-select:none;position:relative}
+.pur-card-header:hover{background:rgba(255,255,255,.01)}
+[data-theme="light"] .pur-card-header:hover{background:rgba(0,0,0,.012)}
+
+.pur-card-avatar{width:40px;height:40px;border-radius:10px;background:rgba(var(--accent-rgb),.1);
+  border:1px solid rgba(var(--accent-rgb),.2);display:flex;align-items:center;
+  justify-content:center;font-size:1rem;font-weight:800;color:var(--accent);flex-shrink:0;font-family:'Syne',sans-serif}
+
+.pur-card-meta{flex:1;min-width:0}
+.pur-card-name{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pur-card-email{font-size:.75rem;color:var(--text-muted);font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pur-card-date{font-size:.7rem;color:var(--text-muted);margin-top:.1rem}
+
+.pur-card-badges{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex-shrink:0}
+
+.pur-card-chevron{width:28px;height:28px;border-radius:6px;background:var(--card);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:transform .22s ease,background var(--transition);color:var(--text-muted);font-size:.65rem}
+.pur-card.open .pur-card-chevron{transform:rotate(180deg);background:rgba(var(--accent-rgb),.08);border-color:rgba(var(--accent-rgb),.2);color:var(--accent)}
+
+.pur-card-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s ease;
+  opacity:0;
+}
+.pur-card.open .pur-card-body{max-height:3000px;opacity:1}
+
+.pur-card-inner{padding:0 1.2rem 1.2rem;border-top:1px solid var(--border)}
+
+.pur-section{margin-top:1rem}
+.pur-section-title{font-size:.67rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.pur-section-title i{color:var(--accent);font-size:.6rem}
+
+.pur-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .9rem}
+@media(max-width:600px){.pur-info-grid{grid-template-columns:1fr}}
+.pur-info-item{}
+.pur-info-lbl{font-size:.68rem;color:var(--text-muted);font-weight:600;margin-bottom:.1rem}
+.pur-info-val{font-size:.82rem;color:var(--text);font-weight:500}
+
+.pur-notes-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:.7rem .9rem;margin-top:.6rem;font-size:.82rem;line-height:1.65;color:var(--text);
+  white-space:pre-wrap;word-break:break-word}
+.pur-notes-truncated{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pur-read-more{display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;color:var(--accent);
+  cursor:pointer;margin-top:.3rem;font-weight:600;background:none;border:none;padding:0;font-family:inherit}
+.pur-read-more:hover{opacity:.75}
+
+.pur-proof-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+.pur-proof-thumb{width:80px;height:80px;border-radius:8px;object-fit:cover;
+  border:2px solid rgba(59,130,246,.3);cursor:zoom-in;transition:transform .15s,border-color .15s;background:var(--bg3)}
+.pur-proof-thumb:hover{transform:scale(1.06);border-color:#3B82F6}
+.pur-proof-more{width:80px;height:80px;border-radius:8px;background:rgba(59,130,246,.1);
+  border:2px solid rgba(59,130,246,.25);display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;font-weight:800;color:#3B82F6;cursor:pointer;transition:background var(--transition)}
+.pur-proof-more:hover{background:rgba(59,130,246,.2)}
+
+.pur-items-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem}
+.pur-item-row{display:flex;align-items:flex-start;gap:.7rem;padding:.7rem .8rem;border-radius:9px;
+  background:var(--card);border:1px solid var(--border)}
+.pur-item-img{width:38px;height:38px;border-radius:7px;object-fit:cover;flex-shrink:0;
+  border:1px solid var(--border);background:var(--bg3)}
+.pur-item-img-ph{width:38px;height:38px;border-radius:7px;flex-shrink:0;background:var(--bg3);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.65rem}
+.pur-item-info{flex:1;min-width:0}
+.pur-item-name{font-size:.84rem;font-weight:700;line-height:1.3}
+.pur-item-variant{display:inline-block;font-size:.64rem;color:var(--accent);
+  background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);
+  border-radius:3px;padding:1px 6px;font-weight:700;margin-top:.2rem}
+.pur-item-access{font-size:.68rem;font-family:monospace;color:var(--accent);margin-top:.2rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.pur-item-actions{display:flex;gap:.3rem;flex-shrink:0;align-items:center}
+
+.pur-empty{text-align:center;padding:3.5rem 2rem;color:var(--text-muted);
+  border:1px dashed var(--border);border-radius:var(--radius)}
+.pur-empty i{font-size:2.2rem;opacity:.18;margin-bottom:.8rem;display:block}
+
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;
   display:flex;align-items:center;justify-content:center;padding:1rem;
@@ -751,9 +849,31 @@ select.form-input option{background:var(--bg2)}
           <span class="sec-title">Manage Purchases <span id="pur-count" style="font-size:.8rem;color:var(--text-muted)"></span></span>
           <button class="btn btn-primary" onclick="openAddPurchaseModal()"><i class="fa-solid fa-plus"></i> Add Purchase</button>
         </div>
-        <div style="display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap">
-          <input class="form-input" id="pur-search" style="max-width:260px;padding:8px 12px" placeholder="Search by user or product..." oninput="renderPurchasesAdmin()"/>
-          <select class="form-input" id="pur-filter" style="max-width:220px;padding:8px 12px" onchange="renderPurchasesAdmin()">
+
+        <!-- Stats Cards -->
+        <div class="pur-stats-row" id="pur-stats-row">
+          <div class="pur-stat">
+            <div class="pur-stat-icon" style="background:rgba(99,102,241,.1);color:#818CF8"><i class="fa-solid fa-bag-shopping"></i></div>
+            <div><div class="pur-stat-val" id="pur-stat-total">—</div><div class="pur-stat-lbl">Total Orders</div></div>
+          </div>
+          <div class="pur-stat">
+            <div class="pur-stat-icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fa-solid fa-clock"></i></div>
+            <div><div class="pur-stat-val" id="pur-stat-pending">—</div><div class="pur-stat-lbl">Pending</div></div>
+          </div>
+          <div class="pur-stat">
+            <div class="pur-stat-icon" style="background:rgba(var(--accent-rgb),.1);color:var(--accent)"><i class="fa-solid fa-circle-check"></i></div>
+            <div><div class="pur-stat-val" id="pur-stat-delivered">—</div><div class="pur-stat-lbl">Delivered</div></div>
+          </div>
+          <div class="pur-stat">
+            <div class="pur-stat-icon" style="background:rgba(59,130,246,.1);color:#60A5FA"><i class="fa-solid fa-coins"></i></div>
+            <div><div class="pur-stat-val" id="pur-stat-items">—</div><div class="pur-stat-lbl">Total Items</div></div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="pur-filters-bar">
+          <input class="form-input" id="pur-search" style="flex:1;min-width:180px;max-width:300px;padding:8px 12px" placeholder="Search by user or product..." oninput="renderPurchasesAdmin()"/>
+          <select class="form-input" id="pur-filter" style="min-width:180px;max-width:240px;padding:8px 12px" onchange="renderPurchasesAdmin()">
             <option value="all">All Orders</option>
             <option value="pending">⏳ Pending</option>
             <option value="completed">✅ Completed</option>
@@ -763,9 +883,11 @@ select.form-input option{background:var(--bg2)}
             <option value="not_picked_up">🕐 Not Picked Up</option>
           </select>
         </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>User / Customer</th><th>Status</th><th>Payment</th><th>Proof</th><th>Products &amp; Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table>
-        </div>
+
+        <!-- Cards List -->
+        <div class="pur-cards-list" id="purchases-cards"></div>
+        <!-- Legacy tbody kept for any code that writes to it directly -->
+        <table style="display:none"><tbody id="purchases-tbody"></tbody></table>
       </div>
 
       <!-- USERS -->
@@ -1487,7 +1609,7 @@ function _renderPurchasesTable(all) {
   const groups = [];
   const grouped = {};
   all.forEach(p => {
-    const key = p.orderId || p.id; // solo purchases use their own id as key
+    const key = p.orderId || p.id;
     if (!grouped[key]) { grouped[key] = []; groups.push(key); }
     grouped[key].push(p);
   });
@@ -1522,30 +1644,45 @@ function _renderPurchasesTable(all) {
     });
   });
 
-  const tbody = document.getElementById('purchases-tbody');
+  const container = document.getElementById('purchases-cards');
   const count = document.getElementById('pur-count');
   if (count) count.textContent = `(${filteredGroups.length} order${filteredGroups.length!==1?'s':''} of ${groups.length})`;
 
+  // Update stats cards
+  const totalOrders = groups.length;
+  const pendingOrders = groups.filter(key => grouped[key].some(p => getEffectiveStatus(p) === 'pending')).length;
+  const deliveredOrders = groups.filter(key => grouped[key].every(p => { const s = getEffectiveStatus(p); return s === 'completed' || s === 'picked_up'; })).length;
+  const totalItems = all.length;
+  const setS = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  setS('pur-stat-total', totalOrders);
+  setS('pur-stat-pending', pendingOrders);
+  setS('pur-stat-delivered', deliveredOrders);
+  setS('pur-stat-items', totalItems);
+
   const badge = document.getElementById('purchases-badge');
-  const pendingCount = groups.filter(key => grouped[key].some(p => getEffectiveStatus(p) === 'pending')).length;
-  if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount ? 'inline-flex' : 'none'; }
+  if (badge) { badge.textContent = pendingOrders; badge.style.display = pendingOrders ? 'inline-flex' : 'none'; }
+
+  if (!container) return;
 
   if (!filteredGroups.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-bag-shopping" style="font-size:2rem;opacity:.2;margin-bottom:.5rem;display:block"></i><p>No purchases found.</p></div></td></tr>`;
+    container.innerHTML = `<div class="pur-empty"><i class="fa-solid fa-bag-shopping"></i><p>No purchases found.</p></div>`;
     return;
   }
 
-  tbody.innerHTML = '';
+  // Remember which cards were open before re-render
+  const openKeys = new Set();
+  container.querySelectorAll('.pur-card.open').forEach(el => openKeys.add(el.dataset.key));
+
+  container.innerHTML = '';
 
   filteredGroups.forEach(key => {
     const items = grouped[key];
     const first = items[0];
     const _ts = first.purchaseDate?.toDate?.() || (first.purchaseDate ? new Date(first.purchaseDate) : null) || (first.createdAt ? new Date(first.createdAt) : null);
-    const date = _ts && !isNaN(_ts) ? _ts.toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'}) : '—';
-    const isMulti = items.length > 1;
+    const date = _ts && !isNaN(_ts) ? _ts.toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     const safeKey = key.replace(/[^a-z0-9]/gi,'_');
 
-    // Order-level status = worst status (pending > completed > picked_up)
+    // Order-level status
     const allStatuses = items.map(getEffectiveStatus);
     const orderStatus = allStatuses.includes('pending') ? 'pending'
       : allStatuses.includes('canceled_by_admin') ? 'canceled_by_admin'
@@ -1553,105 +1690,168 @@ function _renderPurchasesTable(all) {
       : allStatuses.includes('completed') ? 'completed'
       : 'picked_up';
 
-    const statusBadgeMap = {
-      pending:           `<span class="status-badge status-pending"><i class="fa-solid fa-clock" style="font-size:.65rem"></i> Pending</span>`,
-      completed:         `<span class="status-badge status-done"><i class="fa-solid fa-circle-check" style="font-size:.65rem"></i> Completed</span>`,
-      canceled_by_client:`<span class="status-badge status-cancel"><i class="fa-solid fa-circle-xmark" style="font-size:.65rem"></i> By Client</span>`,
-      canceled_by_admin: `<span class="status-badge status-cancel"><i class="fa-solid fa-ban" style="font-size:.65rem"></i> By Admin</span>`,
-      picked_up:         `<span class="status-badge" style="background:rgba(99,102,241,.1);color:#818CF8;border:1px solid rgba(99,102,241,.2)"><i class="fa-solid fa-box-open" style="font-size:.65rem"></i> Picked Up</span>`,
+    const statusCfg = {
+      pending:            { cls:'status-pending', icon:'fa-clock',        label:'Pending' },
+      completed:          { cls:'status-done',    icon:'fa-circle-check', label:'Delivered' },
+      canceled_by_client: { cls:'status-cancel',  icon:'fa-circle-xmark', label:'By Client' },
+      canceled_by_admin:  { cls:'status-cancel',  icon:'fa-ban',          label:'By Admin' },
+      picked_up:          { cls:'',               icon:'fa-box-open',     label:'Picked Up',
+                            extra:'background:rgba(99,102,241,.1);color:#818CF8;border:1px solid rgba(99,102,241,.2)' },
     };
-    const statusBadge = statusBadgeMap[orderStatus] || statusBadgeMap.pending;
+    const sc = statusCfg[orderStatus] || statusCfg.pending;
+    const statusBadge = `<span class="status-badge ${sc.cls}" ${sc.extra?`style="${sc.extra}"`:''}><i class="fa-solid ${sc.icon}" style="font-size:.63rem"></i> ${sc.label}</span>`;
 
-    // Payment method badge
-    const pmBadge = first.paymentMethod
-      ? `<span class="status-badge" style="background:rgba(59,130,246,.08);color:#60A5FA;border:1px solid rgba(59,130,246,.2)">${first.paymentMethod === 'flexy' ? '📱 Flexy' : first.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : first.paymentMethod}</span>`
-      : `<span style="color:var(--text-muted);font-size:.75rem">—</span>`;
+    // Payment badge
+    const pmLabel = first.paymentMethod === 'flexy' ? '📱 Flexy' : first.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (first.paymentMethod||'');
+    const pmBadge = pmLabel ? `<span class="status-badge" style="background:rgba(59,130,246,.08);color:#60A5FA;border:1px solid rgba(59,130,246,.2)">${pmLabel}</span>` : '';
 
-    // Proof thumbnails — stored in a lookup map so onclick never inlines base64 in HTML
+    // Items count badge for multi-item
+    const itemsCountBadge = items.length > 1
+      ? `<span class="status-badge" style="background:rgba(var(--accent-rgb),.08);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2)">${items.length} items</span>`
+      : '';
+
+    // Avatar initials
+    const displayName = first.customerName || first.userEmail || 'Unknown';
+    const initials = displayName.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
+
+    // Proof images
     const proofImages = first.proofImages || [];
     _adminProofMap[safeKey] = proofImages;
-    const proofCell = proofImages.length
-      ? `<div style="display:flex;flex-wrap:wrap;gap:.3rem;align-items:center">
-          ${proofImages.slice(0,3).map((src,i) => `<img src="${src}" alt="Proof" onclick="_viewProofByKey('${safeKey}',${i})" style="width:44px;height:44px;object-fit:cover;border-radius:7px;border:2px solid rgba(59,130,246,.35);cursor:zoom-in;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='scale(1.1)';this.style.borderColor='#3B82F6'" onmouseout="this.style.transform='';this.style.borderColor='rgba(59,130,246,.35)'">`).join('')}
-          ${proofImages.length > 3 ? `<span onclick="_viewProofByKey('${safeKey}',3)" style="width:44px;height:44px;background:rgba(59,130,246,.12);border:2px solid rgba(59,130,246,.3);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#3B82F6;cursor:pointer">+${proofImages.length-3}</span>` : ''}
-         </div>`
-      : `<span style="color:var(--text-muted);font-size:.75rem">None</span>`;
+    const proofHtml = proofImages.length
+      ? `<div class="pur-section">
+          <div class="pur-section-title"><i class="fa-solid fa-image"></i> Payment Proof (${proofImages.length})</div>
+          <div class="pur-proof-grid">
+            ${proofImages.slice(0,6).map((src,i) => `<img class="pur-proof-thumb" src="${src}" alt="Proof ${i+1}" onclick="_viewProofByKey('${safeKey}',${i})">`).join('')}
+            ${proofImages.length > 6 ? `<div class="pur-proof-more" onclick="_viewProofByKey('${safeKey}',6)">+${proofImages.length-6}</div>` : ''}
+          </div>
+        </div>` : '';
 
-    // Per-item rows — product info + individual action buttons (Deliver / Cancel / Delete)
-    const itemRowsHtml = items.map(p => {
+    // Notes
+    const notes = first.orderNotes || '';
+    const notesHtml = notes ? `<div class="pur-section">
+      <div class="pur-section-title"><i class="fa-solid fa-note-sticky"></i> Customer Notes</div>
+      <div class="pur-notes-box">
+        <div class="pur-notes-truncated" id="notes-txt-${safeKey}">${notes.replace(/</g,'&lt;')}</div>
+        ${notes.length > 180 ? `<button class="pur-read-more" id="notes-btn-${safeKey}" onclick="_toggleNotes('${safeKey}')"><i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i> Read More</button>` : ''}
+      </div>
+    </div>` : '';
+
+    // Per-item rows
+    const itemsHtml = items.map(p => {
       const effStatus = getEffectiveStatus(p);
       const isCanceled = effStatus === 'canceled_by_admin' || effStatus === 'canceled_by_client';
       const isCompleted = effStatus === 'completed' || effStatus === 'picked_up';
-      const safeProductName = (p.productName||'').replace(/'/g,"\\'");
+      const safePN = (p.productName||'').replace(/'/g,"\\'");
 
       const accessSnippet = isCompleted
         ? (p.accessLink
-            ? `<div style="margin-top:.25rem;font-size:.68rem;font-family:monospace;color:var(--accent);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.accessLink}">✓ ${p.accessLink}</div>`
-            : `<div style="margin-top:.2rem;font-size:.68rem;color:var(--accent)">✓ Access fields set</div>`)
+          ? `<div class="pur-item-access" title="${p.accessLink}">✓ ${p.accessLink}</div>`
+          : `<div style="font-size:.68rem;color:var(--accent);margin-top:.2rem">✓ Access fields set</div>`)
         : '';
+
+      const imgEl = p.productImage
+        ? `<img class="pur-item-img" src="${p.productImage}" alt="">`
+        : `<div class="pur-item-img-ph"><i class="fa-solid fa-box"></i></div>`;
 
       const deliverBtn = `<button class="btn btn-sm btn-primary" onclick="openDeliverModal('${p.id}')"><i class="fa-solid fa-paper-plane"></i> Deliver</button>`;
       const cancelRestoreBtn = !isCanceled
-        ? `<button class="btn btn-sm" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444" onclick="cancelOrderAdmin('${p.id}','${safeProductName}')" title="Cancel"><i class="fa-solid fa-ban"></i></button>`
+        ? `<button class="btn btn-sm" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444" onclick="cancelOrderAdmin('${p.id}','${safePN}')" title="Cancel"><i class="fa-solid fa-ban"></i></button>`
         : `<button class="btn btn-sm btn-outline" onclick="restoreOrder('${p.id}')" title="Restore"><i class="fa-solid fa-rotate-left"></i></button>`;
-      const deleteBtn = `<button class="btn btn-sm btn-danger" onclick="deletePurchase('${p.id}','${safeProductName}')" title="Delete"><i class="fa-solid fa-trash"></i></button>`;
+      const deleteBtn = `<button class="btn btn-sm btn-danger" onclick="deletePurchase('${p.id}','${safePN}')" title="Delete"><i class="fa-solid fa-trash"></i></button>`;
 
-      return `<div style="display:flex;align-items:flex-start;gap:.7rem;padding:.6rem .7rem;border-radius:8px;background:var(--card);border:1px solid var(--border);margin-bottom:.4rem">
-        ${p.productImage
-          ? `<img src="${p.productImage}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`
-          : `<div style="width:36px;height:36px;border-radius:6px;background:var(--bg3);flex-shrink:0;border:1px solid var(--border);display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-box" style="font-size:.65rem;color:var(--text-muted)"></i></div>`}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.82rem;font-weight:700;line-height:1.3">${p.productName||'—'}</div>
-          ${p.variantLabel ? `<span style="font-size:.65rem;color:var(--accent);background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);border-radius:3px;padding:1px 5px;font-weight:700">${p.variantLabel}</span>` : ''}
+      return `<div class="pur-item-row">
+        ${imgEl}
+        <div class="pur-item-info">
+          <div class="pur-item-name">${p.productName||'—'}</div>
+          ${p.variantLabel ? `<span class="pur-item-variant">${p.variantLabel}</span>` : ''}
+          ${p.productType ? `<div style="font-size:.68rem;color:var(--text-muted);margin-top:.1rem">${p.productType}</div>` : ''}
           ${accessSnippet}
         </div>
-        <div style="display:flex;gap:.3rem;flex-shrink:0;align-items:center">
-          ${deliverBtn}${cancelRestoreBtn}${deleteBtn}
-        </div>
+        <div class="pur-item-actions">${deliverBtn}${cancelRestoreBtn}${deleteBtn}</div>
       </div>`;
     }).join('');
 
-    // For multi-item orders: a collapsible toggle header
-    const productsCellId = 'items-' + safeKey;
-    const collapseHeader = isMulti
-      ? `<div style="display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.25rem 0;margin-bottom:.4rem" onclick="_toggleOrderItems('${productsCellId}')">
-          <div style="display:flex;gap:.2rem">${items.slice(0,4).map(p => p.productImage ? `<img src="${p.productImage}" style="width:24px;height:24px;border-radius:4px;object-fit:cover;border:1px solid var(--border)">` : `<div style="width:24px;height:24px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-box" style="font-size:.5rem;color:var(--text-muted)"></i></div>`).join('')}</div>
-          <span style="font-size:.82rem;font-weight:700">${items.length} items</span>
-          <i class="fa-solid fa-chevron-down" id="chev-${productsCellId}" style="font-size:.62rem;color:var(--text-muted);transition:transform .18s;margin-left:auto"></i>
-        </div>`
-      : '';
+    // Build the card
+    const card = document.createElement('div');
+    card.className = 'pur-card' + (openKeys.has(safeKey) ? ' open' : '');
+    card.dataset.key = safeKey;
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="min-width:180px;vertical-align:top">
-        <div style="font-weight:700;font-size:.88rem;margin-bottom:.2rem">${first.customerName || first.userEmail || 'Unknown'}</div>
-        <div style="font-size:.76rem;color:var(--text-muted);font-family:monospace">${first.userEmail||''}</div>
-        ${first.customerPhone ? `<div style="font-size:.76rem;color:var(--text-muted);margin-top:.15rem"><i class="fa-solid fa-phone" style="font-size:.6rem;margin-right:.2rem"></i>${first.customerPhone}</div>` : ''}
-        <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem;opacity:.7">${date}</div>
-        ${first.paymentMethod && first.orderNotes ? `<div style="font-size:.7rem;color:var(--text-muted);margin-top:.2rem;font-style:italic" title="${first.orderNotes}">📝 ${first.orderNotes.length>30?first.orderNotes.slice(0,30)+'…':first.orderNotes}</div>` : ''}
-      </td>
-      <td style="vertical-align:top">${statusBadge}</td>
-      <td style="vertical-align:top">${pmBadge}</td>
-      <td style="vertical-align:top;min-width:48px">${proofCell}</td>
-      <td style="vertical-align:top;min-width:320px">
-        ${collapseHeader}
-        <div id="${productsCellId}" ${isMulti ? 'style="display:none"' : ''}>
-          ${itemRowsHtml}
+    card.innerHTML = `
+      <div class="pur-card-header" onclick="_togglePurCard(this.closest('.pur-card'))">
+        <div class="pur-card-avatar">${initials}</div>
+        <div class="pur-card-meta">
+          <div class="pur-card-name">${displayName}</div>
+          <div class="pur-card-email">${first.userEmail||''}</div>
+          <div class="pur-card-date">${date}${first.customerPhone ? ' · ' + first.customerPhone : ''}</div>
         </div>
-        ${first.orderId ? `<div style="font-size:.6rem;font-family:monospace;color:var(--text-muted);margin-top:.3rem;opacity:.5">${first.orderId}</div>` : ''}
-      </td>`;
-    tbody.appendChild(tr);
+        <div class="pur-card-badges">
+          ${statusBadge}
+          ${pmBadge}
+          ${itemsCountBadge}
+        </div>
+        <div class="pur-card-chevron"><i class="fa-solid fa-chevron-down"></i></div>
+      </div>
+      <div class="pur-card-body">
+        <div class="pur-card-inner">
+
+          <!-- Customer Info -->
+          <div class="pur-section">
+            <div class="pur-section-title"><i class="fa-solid fa-user"></i> Customer Info</div>
+            <div class="pur-info-grid">
+              <div class="pur-info-item">
+                <div class="pur-info-lbl">Name</div>
+                <div class="pur-info-val">${first.customerName || '—'}</div>
+              </div>
+              <div class="pur-info-item">
+                <div class="pur-info-lbl">Email</div>
+                <div class="pur-info-val" style="font-family:monospace;font-size:.78rem">${first.userEmail || '—'}</div>
+              </div>
+              ${first.customerPhone ? `<div class="pur-info-item">
+                <div class="pur-info-lbl">Phone</div>
+                <div class="pur-info-val">${first.customerPhone}</div>
+              </div>` : ''}
+              ${first.orderId ? `<div class="pur-info-item">
+                <div class="pur-info-lbl">Order ID</div>
+                <div class="pur-info-val" style="font-family:monospace;font-size:.72rem;opacity:.7">${first.orderId}</div>
+              </div>` : ''}
+            </div>
+          </div>
+
+          <!-- Notes -->
+          ${notesHtml}
+
+          <!-- Proof -->
+          ${proofHtml}
+
+          <!-- Products -->
+          <div class="pur-section">
+            <div class="pur-section-title"><i class="fa-solid fa-box"></i> Products & Actions</div>
+            <div class="pur-items-list">${itemsHtml}</div>
+          </div>
+
+        </div>
+      </div>`;
+
+    container.appendChild(card);
   });
 }
 
-function _toggleOrderItems(id) {
-  const el = document.getElementById(id);
-  const chev = document.getElementById('chev-' + id);
-  if (!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+function _togglePurCard(card) {
+  card.classList.toggle('open');
 }
+
+function _toggleNotes(safeKey) {
+  const txt = document.getElementById('notes-txt-' + safeKey);
+  const btn = document.getElementById('notes-btn-' + safeKey);
+  if (!txt || !btn) return;
+  const expanded = !txt.classList.contains('pur-notes-truncated');
+  txt.classList.toggle('pur-notes-truncated', expanded);
+  btn.innerHTML = expanded
+    ? '<i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i> Read More'
+    : '<i class="fa-solid fa-chevron-up" style="font-size:.6rem"></i> Read Less';
+}
+
+// _toggleOrderItems removed — replaced by _togglePurCard for card layout
 function openAddPurchaseModal() {
   document.getElementById('pur-edit-id').value = '';
   document.getElementById('pur-modal-title').textContent = 'Add Purchase';
