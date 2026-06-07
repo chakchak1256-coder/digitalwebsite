@@ -134,55 +134,15 @@ UserAuth.init();
 // PURCHASES — Firestore
 // ================================================================
 const Purchases = {
-  // Store proof images: if passed as base64 data URLs, try to upload to Storage for
-  // smaller Firestore docs; fall back to storing data URL directly so order never fails.
-  async _uploadProofImage(dataUrlOrFile, orderId, index) {
-    // If it's already a remote URL (http/https), return as-is
-    if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('http')) {
-      return dataUrlOrFile;
-    }
-    try {
-      let blob;
-      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
-        const parts = dataUrlOrFile.split(',');
-        const mime  = parts[0].match(/:(.*?);/)[1];
-        const binary = atob(parts[1]);
-        const arr = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-        blob = new Blob([arr], { type: mime });
-      } else if (dataUrlOrFile instanceof File || dataUrlOrFile instanceof Blob) {
-        blob = dataUrlOrFile;
-      } else {
-        return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
-      }
-      const ext  = (blob.type === 'image/png') ? 'png' : (blob.type === 'image/webp') ? 'webp' : 'jpg';
-      const path = `proof/${orderId || Date.now()}_${index}.${ext}`;
-      const ref  = _storage.ref(path);
-      await ref.put(blob);
-      return await ref.getDownloadURL();
-    } catch(e) {
-      console.error('[Storage] proof upload failed, storing as data URL:', e);
-      // Always fall back to data URL so the order is NEVER lost
-      if (typeof dataUrlOrFile === 'string') return dataUrlOrFile;
-      // For File objects, read as data URL synchronously is not possible here — return empty
-      return '';
-    }
-  },
-
   async add(userId, userEmail, product, extra = {}) {
     const now = new Date().toISOString();
 
-    // Handle proof images: base64 strings passed from checkout are stored directly or
-    // uploaded to Storage. Either way the order always completes.
-    let proofImageUrls = [];
-    const rawProofs = (extra.proofImages || []).filter(Boolean);
-    if (rawProofs.length) {
-      const tempId = `${userId}_${Date.now()}`;
-      proofImageUrls = await Promise.all(
-        rawProofs.map((img, i) => this._uploadProofImage(img, tempId, i))
-      );
-      proofImageUrls = proofImageUrls.filter(Boolean);
-    }
+    // Proof images are already compressed base64 data URLs (converted in the browser
+    // before this call). Store them directly in Firestore — no Firebase Storage involved,
+    // which avoids CORS errors on workers.dev origins entirely.
+    const proofImageUrls = (extra.proofImages || []).filter(
+      s => typeof s === 'string' && s.length > 0
+    );
 
     const doc = {
       userId, userEmail,
