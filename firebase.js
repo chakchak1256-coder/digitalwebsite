@@ -126,9 +126,16 @@ const UserAuth = {
     }
   },
 
-  // Called after Google user completes username + phone OTP step
+  // Called after Google user completes username + phone step
   async completeGoogleRegistration(googleProfile, username, phone) {
     try {
+      // Duplicate username check
+      if (username) {
+        const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
+        if (!nameSnap.empty) {
+          return { error: 'This username is already taken. Please choose another one.' };
+        }
+      }
       // Duplicate phone check
       if (phone) {
         const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
@@ -148,7 +155,6 @@ const UserAuth = {
         email: user.email,
         name: displayName,
         phone: phone || '',
-        phoneVerified: !!phone,
         photoURL: googleProfile.photoURL || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
