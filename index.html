@@ -2424,6 +2424,9 @@ function getFullPhone() {
 
 function _ensureRecaptcha() {
   if (_recaptchaVerifier) return;
+  // Clear the container first to prevent "reCAPTCHA already rendered" error on retry
+  const container = document.getElementById('recaptcha-container');
+  if (container) container.innerHTML = '';
   _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
     size: 'invisible',
     callback: () => {}, // auto-solved
@@ -2468,6 +2471,8 @@ async function sendPhoneOTP() {
       'auth/captcha-check-failed': 'CAPTCHA failed. Please refresh the page and try again.',
       'auth/quota-exceeded': 'SMS quota exceeded. Try again later.',
       'auth/missing-phone-number': 'Please enter a phone number.',
+      'auth/billing-not-enabled': 'Phone verification is temporarily unavailable. Please contact support or use Google sign-in.',
+      'auth/network-request-failed': 'Network error. Please check your connection and try again.',
     };
     statusEl.textContent = msgs[err.code] || ('Error: ' + (err.message || err.code));
     btn.disabled = false;
@@ -2639,6 +2644,9 @@ let _gsRecaptchaVerifier = null;
 
 function _ensureGsRecaptcha() {
   if (_gsRecaptchaVerifier) return;
+  // Clear the container first to prevent "reCAPTCHA already rendered" error on retry
+  const container = document.getElementById('recaptcha-container-gs');
+  if (container) container.innerHTML = '';
   _gsRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container-gs', {
     size: 'invisible',
     callback: () => {},
