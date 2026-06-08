@@ -50,12 +50,20 @@ const UserAuth = {
 
   async register(email, password, name, phone) {
     try {
+      // ── Duplicate phone check ─────────────────────────────────
+      if (phone) {
+        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
+        if (!phoneSnap.empty) {
+          return { error: 'This phone number is already linked to another account.' };
+        }
+      }
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       const displayName = name || email.split('@')[0];
       await cred.user.updateProfile({ displayName });
       await _db.collection('users').doc(cred.user.uid).set({
         id: cred.user.uid, email: email.toLowerCase(), name: displayName,
         phone: phone || '',
+        phoneVerified: !!phone,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       this._current = { id: cred.user.uid, email: cred.user.email, name: displayName, phone: phone || '' };
@@ -83,20 +91,73 @@ const UserAuth = {
       provider.setCustomParameters({ prompt: 'select_account' });
       const cred = await _auth.signInWithPopup(provider);
       const user = cred.user;
-      // Upsert user doc in Firestore (merge so existing data is kept)
+      const isNew = cred.additionalUserInfo && cred.additionalUserInfo.isNewUser;
+
+      // Check if user doc already exists with a phone (returning Google user)
+      const existing = await _db.collection('users').doc(user.uid).get();
+      if (existing.exists && existing.data().phone) {
+        // Returning user — just update timestamp and return
+        await _db.collection('users').doc(user.uid).set({
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        const data = existing.data();
+        this._current = { id: user.uid, email: user.email, name: data.name || user.displayName, phone: data.phone };
+        window.dispatchEvent(new Event('auth:change'));
+        return { user: this._current, isNewUser: false };
+      }
+
+      // New Google user (or existing without phone) — sign them out temporarily
+      // so they can complete the username+phone+OTP step before being fully registered
+      await _auth.signOut();
+      return {
+        isNewUser: true,
+        googleProfile: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+        }
+      };
+    } catch(e) {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        return { error: null };
+      }
+      return { error: this._msg(e.code) };
+    }
+  },
+
+  // Called after Google user completes username + phone OTP step
+  async completeGoogleRegistration(googleProfile, username, phone) {
+    try {
+      // Duplicate phone check
+      if (phone) {
+        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
+        if (!phoneSnap.empty) {
+          return { error: 'This phone number is already linked to another account.' };
+        }
+      }
+      // Re-authenticate with Google to get credentials back
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
+      const cred = await _auth.signInWithPopup(provider);
+      const user = cred.user;
+      const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
+      await user.updateProfile({ displayName });
       await _db.collection('users').doc(user.uid).set({
         id: user.uid,
         email: user.email,
-        name: user.displayName || user.email.split('@')[0],
-        photoURL: user.photoURL || '',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        name: displayName,
+        phone: phone || '',
+        phoneVerified: !!phone,
+        photoURL: googleProfile.photoURL || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
-      this._current = { id: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
+      this._current = { id: user.uid, email: user.email, name: displayName, phone: phone || '' };
       window.dispatchEvent(new Event('auth:change'));
       return { user: this._current };
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        return { error: null }; // user just closed the popup — not an error
+        return { error: 'Google sign-in was cancelled. Please try again.' };
       }
       return { error: this._msg(e.code) };
     }
