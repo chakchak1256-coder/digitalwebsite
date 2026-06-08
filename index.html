@@ -1112,8 +1112,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
     <!-- ── Register Tab ── -->
     <div id="am-reg" style="display:none">
       <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Full Name</label>
-        <input class="form-input" id="am-r-name" type="text" placeholder="Your name"/>
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Username</label>
+        <input class="form-input" id="am-r-name" type="text" placeholder="Choose a username"/>
       </div>
       <div style="margin-bottom:1rem">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Email</label>
@@ -1167,7 +1167,52 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         Continue with Google
       </button>
     </div>
-    
+
+    <!-- ── Google Post-Signup Step: username + phone + OTP ── -->
+    <div id="am-google-step" style="display:none">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.3rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(var(--accent-rgb),.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">G</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text)">Almost there!</div>
+          <div id="am-gs-email-display" style="font-size:.78rem;color:var(--text-muted)"></div>
+        </div>
+      </div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.6">Choose a username and verify your phone number to complete your account.</p>
+      <div id="am-gs-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
+      <div style="margin-bottom:1rem">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Username</label>
+        <input class="form-input" id="am-gs-username" type="text" placeholder="Choose a username"/>
+      </div>
+      <div style="margin-bottom:1rem">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <select id="am-gs-phone-prefix" style="padding:10px 8px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:.875rem;outline:none;cursor:pointer;flex-shrink:0;font-weight:700;transition:border-color var(--transition)">
+            <option value="07">07</option>
+            <option value="06">06</option>
+            <option value="05">05</option>
+          </select>
+          <div style="position:relative;flex:1">
+            <input class="form-input" id="am-gs-phone" type="tel" placeholder="XXXXXXXX" maxlength="8" oninput="gsValidatePhone(this)" style="padding-right:2.2rem;letter-spacing:.04em"/>
+            <span id="am-gs-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+          </div>
+        </div>
+        <span id="am-gs-phone-hint" style="font-size:.73rem;margin-top:.3rem;display:block;color:var(--text-muted)">Enter 8 digits after the prefix</span>
+        <!-- OTP row -->
+        <div id="am-gs-otp-row" style="display:none;margin-top:.55rem;gap:.4rem;flex-direction:column">
+          <button type="button" id="am-gs-send-otp" onclick="gsSendOTP()" style="width:100%;padding:9px;border-radius:var(--radius-sm);background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent);font-weight:700;font-size:.83rem;transition:all var(--transition);cursor:pointer"><i class="fa-solid fa-mobile-screen"></i> Send verification code</button>
+          <div id="am-gs-otp-input-row" style="display:none;gap:.4rem">
+            <input class="form-input" id="am-gs-otp" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" style="flex:1;letter-spacing:.15em;text-align:center;font-weight:700"/>
+            <button type="button" onclick="gsVerifyOTP()" style="padding:9px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:.83rem;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="fa-solid fa-check"></i> Verify</button>
+          </div>
+          <div id="am-gs-otp-status" style="font-size:.73rem;display:none"></div>
+        </div>
+        <div id="am-gs-phone-verified-badge" style="display:none;margin-top:.45rem;align-items:center;gap:.4rem;color:#10B981;font-size:.78rem;font-weight:700"><i class="fa-solid fa-circle-check"></i> Phone verified</div>
+      </div>
+      <!-- Invisible reCAPTCHA anchor for Google step -->
+      <div id="recaptcha-container-gs"></div>
+      <button onclick="doCompleteGoogleSignup()" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Complete Sign Up</button>
+    </div>
+
     </div>
   </div>
 </div>
@@ -2555,11 +2600,176 @@ async function resendVerificationEmail() {
 }
 
 async function doGoogleSignIn() {
+  document.getElementById('am-error').style.display = 'none';
   const r = await UserAuth.loginWithGoogle();
   if (r.error) { showAuthModalError(r.error); return; }
+  if (r.error === null) return; // popup closed
+
+  if (r.isNewUser) {
+    // New Google user — show username + phone + OTP step
+    _googleProfile = r.googleProfile;
+    _gsPhoneVerified = false;
+    _gsPhoneConfirmation = null;
+    // Hide tabs + other panels, show Google step
+    document.getElementById('am-tab-login').closest('div').style.display = 'none';
+    document.getElementById('am-login').style.display = 'none';
+    document.getElementById('am-reg').style.display = 'none';
+    document.getElementById('am-google-step').style.display = 'block';
+    document.getElementById('am-gs-email-display').textContent = r.googleProfile.email;
+    document.getElementById('am-gs-username').value = r.googleProfile.displayName || '';
+    document.getElementById('am-gs-error').style.display = 'none';
+    document.getElementById('am-gs-phone-verified-badge').style.display = 'none';
+    document.getElementById('am-gs-otp-row').style.display = 'none';
+    document.getElementById('am-gs-otp-input-row').style.display = 'none';
+    return;
+  }
+
+  // Returning Google user — fully logged in
   const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
   closeLoginModal(); initUserAuth();
-  showToast('Welcome, ' + r.user.name + '! 👋');
+  showToast('Welcome back, ' + r.user.name + '! 👋');
+  if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
+}
+
+// ── Google post-signup state ───────────────────────────────────────
+let _googleProfile = null;
+let _gsPhoneVerified = false;
+let _gsPhoneConfirmation = null;
+let _gsRecaptchaVerifier = null;
+
+function _ensureGsRecaptcha() {
+  if (_gsRecaptchaVerifier) return;
+  _gsRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container-gs', {
+    size: 'invisible',
+    callback: () => {},
+  });
+}
+
+function gsValidatePhone(input) {
+  input.value = input.value.replace(/\D/g, '').slice(0, 8);
+  const val = input.value;
+  const hint = document.getElementById('am-gs-phone-hint');
+  const icon = document.getElementById('am-gs-phone-icon');
+  const otpRow = document.getElementById('am-gs-otp-row');
+  const badge = document.getElementById('am-gs-phone-verified-badge');
+  // Reset verification if number changes
+  if (badge && badge.style.display !== 'none') {
+    badge.style.display = 'none';
+    _gsPhoneVerified = false;
+    _gsPhoneConfirmation = null;
+    if (_gsRecaptchaVerifier) { try { _gsRecaptchaVerifier.clear(); } catch(e) {} _gsRecaptchaVerifier = null; }
+    document.getElementById('am-gs-otp-input-row').style.display = 'none';
+  }
+  if (!val) { hint.textContent = 'Enter 8 digits after the prefix'; hint.style.color = 'var(--text-muted)'; icon.textContent = ''; input.style.borderColor = ''; if (otpRow) otpRow.style.display = 'none'; return; }
+  if (/^\d{8}$/.test(val)) {
+    hint.style.display = 'none'; input.style.borderColor = 'rgba(16,185,129,.6)'; icon.textContent = '✓'; icon.style.color = '#10B981';
+    if (otpRow) otpRow.style.display = 'flex';
+  } else {
+    hint.textContent = 'Enter exactly 8 digits'; hint.style.display = 'block'; hint.style.color = '#F59E0B';
+    input.style.borderColor = 'rgba(245,158,11,.5)'; icon.textContent = ''; if (otpRow) otpRow.style.display = 'none';
+  }
+}
+
+function gsGetFullPhone() {
+  const prefix = document.getElementById('am-gs-phone-prefix').value;
+  const digits  = document.getElementById('am-gs-phone').value.trim();
+  return '+213' + prefix.slice(1) + digits;
+}
+
+async function gsSendOTP() {
+  const digits = document.getElementById('am-gs-phone').value.trim();
+  if (!/^\d{8}$/.test(digits)) return;
+  const fullPhone = gsGetFullPhone();
+  const btn = document.getElementById('am-gs-send-otp');
+  const statusEl = document.getElementById('am-gs-otp-status');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending SMS…';
+  statusEl.style.display = 'none';
+  try {
+    _ensureGsRecaptcha();
+    _gsPhoneConfirmation = await firebase.auth().signInWithPhoneNumber(fullPhone, _gsRecaptchaVerifier);
+    document.getElementById('am-gs-otp-input-row').style.display = 'flex';
+    statusEl.style.display = 'block'; statusEl.style.color = '#10B981';
+    statusEl.textContent = 'Code sent to ' + fullPhone + '. Check your SMS.';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend code';
+    setTimeout(() => { const el = document.getElementById('am-gs-otp'); if (el) el.focus(); }, 100);
+  } catch(err) {
+    console.error('[GS PhoneAuth]', err);
+    if (_gsRecaptchaVerifier) { try { _gsRecaptchaVerifier.clear(); } catch(e) {} _gsRecaptchaVerifier = null; }
+    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
+    const msgs = {
+      'auth/invalid-phone-number': 'Invalid phone number. Check and try again.',
+      'auth/too-many-requests': 'Too many attempts. Please wait a few minutes.',
+      'auth/captcha-check-failed': 'CAPTCHA failed. Please refresh and try again.',
+      'auth/quota-exceeded': 'SMS quota exceeded. Try again later.',
+    };
+    statusEl.textContent = msgs[err.code] || ('Error: ' + (err.message || err.code));
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i> Send verification code';
+  }
+}
+
+async function gsVerifyOTP() {
+  const entered = (document.getElementById('am-gs-otp').value || '').trim();
+  const statusEl = document.getElementById('am-gs-otp-status');
+  const verifyBtn = document.querySelector('[onclick="gsVerifyOTP()"]');
+  if (!_gsPhoneConfirmation) { statusEl.style.display='block'; statusEl.style.color='#EF4444'; statusEl.textContent='Please request a code first.'; return; }
+  if (!entered) { statusEl.style.display='block'; statusEl.style.color='#EF4444'; statusEl.textContent='Enter the 6-digit code from your SMS.'; return; }
+  verifyBtn.disabled = true;
+  verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  statusEl.style.display = 'none';
+  try {
+    await _gsPhoneConfirmation.confirm(entered);
+    // Sign out Firebase Phone Auth temp session — real account created in completeGoogleRegistration
+    await firebase.auth().signOut();
+    _gsPhoneVerified = true;
+    document.getElementById('am-gs-otp-row').style.display = 'none';
+    document.getElementById('am-gs-phone-verified-badge').style.display = 'flex';
+    statusEl.style.display = 'none';
+  } catch(err) {
+    console.error('[GS OTP confirm]', err);
+    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
+    const msgs = {
+      'auth/invalid-verification-code': 'Incorrect code. Please check and try again.',
+      'auth/code-expired': 'Code expired. Please request a new one.',
+      'auth/session-expired': 'Session expired. Please request a new code.',
+      'auth/missing-verification-code': 'Please enter the verification code.',
+    };
+    statusEl.textContent = msgs[err.code] || 'Verification failed. Try again.';
+    verifyBtn.disabled = false;
+    verifyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Verify';
+  }
+}
+
+async function doCompleteGoogleSignup() {
+  const username = document.getElementById('am-gs-username').value.trim();
+  const phone = gsGetFullPhone();
+  const errEl = document.getElementById('am-gs-error');
+  errEl.style.display = 'none';
+
+  if (!username) { errEl.textContent = 'Please enter a username.'; errEl.style.display = 'block'; return; }
+  const digits = document.getElementById('am-gs-phone').value.trim();
+  if (!digits || !/^\d{8}$/.test(digits)) { errEl.textContent = 'Please enter a valid 8-digit phone number.'; errEl.style.display = 'block'; return; }
+  if (!_gsPhoneVerified) { errEl.textContent = 'Please verify your phone number first.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.querySelector('[onclick="doCompleteGoogleSignup()"]');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…';
+
+  const r = await UserAuth.completeGoogleRegistration(_googleProfile, username, phone);
+  if (r.error) {
+    errEl.textContent = r.error; errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Complete Sign Up';
+    return;
+  }
+
+  const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
+  // Restore tabs
+  document.getElementById('am-tab-login').closest('div').style.display = '';
+  closeLoginModal(); initUserAuth();
+  showToast('Welcome, ' + r.user.name + '! 🎉');
   if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
 }
 
