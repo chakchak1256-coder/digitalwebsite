@@ -1123,33 +1123,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
         </div>
         <span id="am-r-email-hint" style="display:none;font-size:.73rem;margin-top:.3rem;display:block"></span>
       </div>
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
-        <div style="display:flex;gap:.4rem;align-items:center">
-          <select id="am-r-phone-prefix" style="padding:10px 8px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:.875rem;outline:none;cursor:pointer;flex-shrink:0;font-weight:700;transition:border-color var(--transition)">
-            <option value="07">07</option>
-            <option value="06">06</option>
-            <option value="05">05</option>
-          </select>
-          <div style="position:relative;flex:1">
-            <input class="form-input" id="am-r-phone" type="tel" placeholder="XXXXXXXX" maxlength="8" oninput="validatePhoneField(this,'am-r-phone-hint','am-r-phone-icon')" style="padding-right:2.2rem;letter-spacing:.04em"/>
-            <span id="am-r-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
-          </div>
-        </div>
-        <span id="am-r-phone-hint" style="font-size:.73rem;margin-top:.3rem;display:block;color:var(--text-muted)">Enter 8 digits after the prefix (e.g. 07 12345678)</span>
-        <!-- Phone OTP verification -->
-        <div id="am-phone-otp-row" style="display:none;margin-top:.55rem;gap:.4rem;flex-direction:column">
-          <button type="button" id="am-r-send-otp" onclick="sendPhoneOTP()" style="width:100%;padding:9px;border-radius:var(--radius-sm);background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent);font-weight:700;font-size:.83rem;transition:all var(--transition);cursor:pointer"><i class="fa-solid fa-mobile-screen"></i> Send verification code</button>
-          <div id="am-otp-input-row" style="display:none;gap:.4rem">
-            <input class="form-input" id="am-r-otp" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" style="flex:1;letter-spacing:.15em;text-align:center;font-weight:700"/>
-            <button type="button" onclick="verifyPhoneOTP()" style="padding:9px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:.83rem;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="fa-solid fa-check"></i> Verify</button>
-          </div>
-          <div id="am-otp-status" style="font-size:.73rem;display:none"></div>
-        </div>
-        <div id="am-phone-verified-badge" style="display:none;margin-top:.45rem;align-items:center;gap:.4rem;color:#10B981;font-size:.78rem;font-weight:700"><i class="fa-solid fa-circle-check"></i> Phone verified</div>
-      </div>
-      <!-- Invisible reCAPTCHA anchor for Firebase Phone Auth -->
-      <div id="recaptcha-container"></div>
+
       <div style="margin-bottom:1.2rem">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Password</label>
         <input class="form-input" id="am-r-pass" type="password" placeholder="Min 6 characters" oninput="updatePassStrength(this.value)" onkeydown="if(event.key==='Enter')doModalRegister()"/>
@@ -2372,18 +2346,7 @@ function closeLoginModal() {
   // Restore tab bar
   const tabs = document.querySelector('[onclick="switchAuthTab(\'login\')"]')?.closest('div');
   if (tabs) tabs.style.display = '';
-  // Reset phone verification state
-  _phoneVerified = false;
-  _phoneConfirmation = null;
-  if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
-  const badge = document.getElementById('am-phone-verified-badge');
-  if (badge) badge.style.display = 'none';
-  const otpRow = document.getElementById('am-phone-otp-row');
-  if (otpRow) otpRow.style.display = 'none';
-  const otpInputRow = document.getElementById('am-otp-input-row');
-  if (otpInputRow) otpInputRow.style.display = 'none';
-  const otpStatus = document.getElementById('am-otp-status');
-  if (otpStatus) otpStatus.style.display = 'none';
+
 }
 function switchAuthTab(tab) {
   const isLogin = tab === 'login';
@@ -2410,141 +2373,20 @@ async function doModalLogin() {
   showToast('Welcome back, ' + r.user.name + '! 👋');
   if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
 }
-// ── Firebase Phone Auth state ─────────────────────────────────
-let _phoneVerified    = false;
-let _phoneConfirmation = null; // Firebase ConfirmationResult
-let _recaptchaVerifier = null;
-
-function getFullPhone() {
-  const prefix = document.getElementById('am-r-phone-prefix').value;
-  const digits  = document.getElementById('am-r-phone').value.trim();
-  // Convert Algerian local number to E.164: 07XXXXXXXX → +2137XXXXXXXX
-  return '+213' + prefix.slice(1) + digits; // e.g. +213712345678
-}
-
-function _ensureRecaptcha() {
-  if (_recaptchaVerifier) return;
-  // Clear the container first to prevent "reCAPTCHA already rendered" error on retry
-  const container = document.getElementById('recaptcha-container');
-  if (container) container.innerHTML = '';
-  _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    size: 'invisible',
-    callback: () => {}, // auto-solved
-  });
-}
-
-async function sendPhoneOTP() {
-  const digits = document.getElementById('am-r-phone').value.trim();
-  if (!isValidPhone(digits)) return;
-  const fullPhone = getFullPhone();
-  const btn      = document.getElementById('am-r-send-otp');
-  const statusEl = document.getElementById('am-otp-status');
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending SMS…';
-  statusEl.style.display = 'none';
-
-  try {
-    _ensureRecaptcha();
-    _phoneConfirmation = await firebase.auth().signInWithPhoneNumber(fullPhone, _recaptchaVerifier);
-
-    // Show OTP input row
-    const inputRow = document.getElementById('am-otp-input-row');
-    inputRow.style.display = 'flex';
-    statusEl.style.display = 'block';
-    statusEl.style.color = '#10B981';
-    statusEl.textContent = `Code sent to ${fullPhone}. Check your SMS.`;
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend code';
-    setTimeout(() => { const el = document.getElementById('am-r-otp'); if (el) el.focus(); }, 100);
-
-  } catch(err) {
-    console.error('[PhoneAuth]', err);
-    // Reset reCAPTCHA so it can be retried
-    if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
-    statusEl.style.display = 'block';
-    statusEl.style.color = '#EF4444';
-    const msgs = {
-      'auth/invalid-phone-number': 'Invalid phone number. Check the number and try again.',
-      'auth/too-many-requests': 'Too many attempts. Please wait a few minutes.',
-      'auth/captcha-check-failed': 'CAPTCHA failed. Please refresh the page and try again.',
-      'auth/quota-exceeded': 'SMS quota exceeded. Try again later.',
-      'auth/missing-phone-number': 'Please enter a phone number.',
-      'auth/billing-not-enabled': 'Phone verification is temporarily unavailable. Please contact support or use Google sign-in.',
-      'auth/network-request-failed': 'Network error. Please check your connection and try again.',
-    };
-    statusEl.textContent = msgs[err.code] || ('Error: ' + (err.message || err.code));
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i> Send verification code';
-  }
-}
-
-async function verifyPhoneOTP() {
-  const entered  = (document.getElementById('am-r-otp').value || '').trim();
-  const statusEl = document.getElementById('am-otp-status');
-  const verifyBtn = document.querySelector('[onclick="verifyPhoneOTP()"]');
-
-  if (!_phoneConfirmation) {
-    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
-    statusEl.textContent = 'Please request a code first.'; return;
-  }
-  if (!entered) {
-    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
-    statusEl.textContent = 'Enter the 6-digit code from your SMS.'; return;
-  }
-
-  verifyBtn.disabled = true;
-  verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-  statusEl.style.display = 'none';
-
-  try {
-    await _phoneConfirmation.confirm(entered);
-    // Firebase signs the user in temporarily to verify — we'll sign out and re-register with email/pass
-    // Just capture verification success; actual account creation uses email/password
-    await firebase.auth().signOut();
-
-    _phoneVerified = true;
-    document.getElementById('am-phone-otp-row').style.display = 'none';
-    const badge = document.getElementById('am-phone-verified-badge');
-    badge.style.display = 'flex';
-    statusEl.style.display = 'none';
-
-  } catch(err) {
-    console.error('[PhoneAuth confirm]', err);
-    statusEl.style.display = 'block'; statusEl.style.color = '#EF4444';
-    const msgs = {
-      'auth/invalid-verification-code': 'Incorrect code. Please check and try again.',
-      'auth/code-expired': 'Code expired. Please request a new one.',
-      'auth/session-expired': 'Session expired. Please request a new code.',
-    };
-    statusEl.textContent = msgs[err.code] || 'Verification failed. Try again.';
-    verifyBtn.disabled = false;
-    verifyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Verify';
-  }
-}
-
 async function doModalRegister() {
   const name  = document.getElementById('am-r-name').value.trim();
   const email = document.getElementById('am-r-email').value.trim();
-  const digits= document.getElementById('am-r-phone').value.trim();
   const pass  = document.getElementById('am-r-pass').value;
 
   // ── Validate email ────────────────────────────────────────────
   if (!email) { showAuthModalError('Email is required.'); return; }
   if (!isValidEmail(email)) { showAuthModalError('Please enter a valid email address.'); return; }
 
-  // ── Validate phone ────────────────────────────────────────────
-  if (!digits) { showAuthModalError('Phone number is required.'); return; }
-  if (!isValidPhone(digits)) { showAuthModalError('Phone must be exactly 8 digits.'); return; }
-  if (!_phoneVerified) { showAuthModalError('Please verify your phone number first.'); return; }
-
   // ── Validate password ─────────────────────────────────────────
   if (!pass) { showAuthModalError('Password is required.'); return; }
   if (pass.length < 6) { showAuthModalError('Password must be at least 6 characters.'); return; }
 
-  const phone = getFullPhone();
-  const r = await UserAuth.register(email, pass, name, phone);
+  const r = await UserAuth.register(email, pass, name, '');
   if (r.error) { showAuthModalError(r.error); return; }
 
   // ── Send Firebase email verification ─────────────────────────
@@ -2644,9 +2486,6 @@ let _gsRecaptchaVerifier = null;
 
 function _ensureGsRecaptcha() {
   if (_gsRecaptchaVerifier) return;
-  // Clear the container first to prevent "reCAPTCHA already rendered" error on retry
-  const container = document.getElementById('recaptcha-container-gs');
-  if (container) container.innerHTML = '';
   _gsRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container-gs', {
     size: 'invisible',
     callback: () => {},
@@ -2817,31 +2656,17 @@ function validatePhoneField(input, hintId, iconId) {
   const val  = input.value;
   const hint = document.getElementById(hintId);
   const icon = iconId ? document.getElementById(iconId) : null;
-  const otpRow  = document.getElementById('am-phone-otp-row');
-  const verified = document.getElementById('am-phone-verified-badge');
-  // Reset verification if number changes
-  if (verified && verified.style.display !== 'none') {
-    verified.style.display = 'none';
-    _phoneVerified = false;
-    _phoneConfirmation = null;
-    if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
-    if (otpRow) { otpRow.style.display = 'none'; otpRow.style.flexDirection = 'column'; }
-    const inputRow = document.getElementById('am-otp-input-row');
-    if (inputRow) inputRow.style.display = 'none';
-  }
   if (!val) {
     hint.textContent = 'Enter 8 digits after the prefix (e.g. 07 12345678)';
     hint.style.color = 'var(--text-muted)';
     if (icon) icon.textContent = '';
     input.style.borderColor = '';
-    if (otpRow) otpRow.style.display = 'none';
     return;
   }
   if (isValidPhone(val)) {
     hint.style.display = 'none';
     input.style.borderColor = 'rgba(16,185,129,.6)';
     if (icon) { icon.textContent = '✓'; icon.style.color = '#10B981'; }
-    if (otpRow) { otpRow.style.display = 'flex'; }
   } else {
     hint.style.display = 'none'; // no inline counter hint
     hint.style.display = 'block'; hint.style.color = '#F59E0B';
