@@ -284,32 +284,6 @@ select.form-input option{background:var(--bg2)}
   font-size:.6rem;cursor:pointer;transition:background var(--transition);border:none}
 .img-preview-remove:hover{background:#EF4444}
 
-/* SETTINGS COLORS */
-.color-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
-.color-field{display:flex;flex-direction:column;gap:.4rem}
-.color-label{font-size:.78rem;font-weight:600;color:var(--text-muted)}
-.color-input-wrap{display:flex;align-items:center;gap:.65rem;padding:7px 10px;
-  border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border)}
-.color-input-wrap input[type=color]{width:28px;height:28px;border:none;padding:0;background:none;cursor:pointer;border-radius:5px;outline:none}
-.color-val{font-size:.82rem;font-family:monospace;color:var(--text-muted)}
-.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-
-/* LOGO */
-.logo-preview-box{width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:repeating-conic-gradient(#e0e0e0 0% 25%,#fff 0% 50%) 0 0/16px 16px;
-  background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
-.logo-preview-box img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
-[data-theme="dark"] .logo-preview-box img{mix-blend-mode:screen}
-[data-theme="dark"] .logo-preview-box{background:repeating-conic-gradient(#2a2a2a 0% 25%,#1a1a1a 0% 50%) 0 0/16px 16px;}
-.logo-preview-box .placeholder-icon{font-size:1.5rem;opacity:.25}
-.logo-upload-row{display:flex;align-items:center;gap:1.1rem}
-.logo-upload-right{flex:1}
-.logo-upload-label{display:inline-flex;align-items:center;gap:.45rem;padding:8px 16px;border-radius:var(--radius-sm);
-  background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.2);
-  color:var(--accent);font-size:.83rem;font-weight:600;cursor:pointer;transition:background var(--transition)}
-.logo-upload-label:hover{background:rgba(var(--accent-rgb),.15)}
-.logo-upload-note{font-size:.75rem;color:var(--text-muted);margin-top:.35rem}
-
-
 /* FULFILL MODAL */
 #fulfill-modal .modal-box{max-width:540px;max-height:88vh;overflow-y:auto}
 .fulfill-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:.6rem}
@@ -508,9 +482,9 @@ select.form-input option{background:var(--bg2)}
       </div>
       <div class="nav-group">
         <div class="nav-group-label">Settings</div>
-        <div class="nav-item" onclick="showPanel('settings')"><i class="fa-solid fa-sliders"></i> Store Settings</div>
-        <div class="nav-item" onclick="showPanel('settings');setTimeout(()=>document.getElementById('social-section').scrollIntoView({behavior:'smooth'}),200)"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
-        <div class="nav-item" onclick="showPanel('storage')"><i class="fa-solid fa-hard-drive"></i> Storage Manager</div>
+        <div class="nav-item" onclick="location.href='settings.html?panel=store-settings'"><i class="fa-solid fa-sliders"></i> Store Settings</div>
+        <div class="nav-item" onclick="location.href='settings.html?panel=social-links'"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
+        <div class="nav-item" onclick="location.href='settings.html?panel=storage-manager'"><i class="fa-solid fa-hard-drive"></i> Storage Manager</div>
       </div>
       <div class="nav-group">
         <div class="nav-group-label">Users</div>
@@ -544,7 +518,7 @@ select.form-input option{background:var(--bg2)}
     <div id="storage-banner">
       <i class="fa-solid fa-triangle-exclamation" style="color:#ff4d6d;font-size:1.1rem"></i>
       <span style="font-size:.88rem;flex:1"><strong style="color:#ff4d6d">Browser storage is full.</strong> Some data may not be saved. Go to Storage Manager to free space.</span>
-      <button class="btn btn-sm btn-danger" onclick="showPanel('storage')"><i class="fa-solid fa-hard-drive"></i> Fix Now</button>
+      <button class="btn btn-sm btn-danger" onclick="location.href='settings.html?panel=storage-manager'"><i class="fa-solid fa-hard-drive"></i> Fix Now</button>
       <button onclick="document.getElementById('storage-banner').classList.remove('show')" style="color:var(--text-muted);font-size:1rem;padding:4px"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -676,166 +650,6 @@ select.form-input option{background:var(--bg2)}
         </form>
       </div>
 
-      <!-- SETTINGS -->
-      <div class="panel" id="panel-settings">
-        <div class="sec-header"><span class="sec-title">Store Settings</span><button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Save All Changes</button></div>
-        <!-- Identity -->
-        <div class="form-section">
-          <div class="form-section-title"><i class="fa-solid fa-store"></i> Store Identity</div>
-          <div class="form-group" style="margin-bottom:1.5rem"><label class="form-label">Store Name</label><input class="form-input" id="set-name" placeholder="DigiStore DZ" style="max-width:400px"/></div>
-          <div class="form-group">
-            <label class="form-label">Store Logo</label>
-            <div style="display:flex;flex-direction:column;gap:1.1rem">
-
-              <!-- Light theme logo -->
-              <div>
-                <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem">
-                  <i class="fa-regular fa-sun" style="color:var(--accent)"></i> Light Theme Logo
-                </div>
-                <div class="logo-upload-row">
-                  <div class="logo-preview-box" id="logo-preview-light" style="background:repeating-conic-gradient(#e0e0e0 0% 25%,#fff 0% 50%) 0 0/16px 16px">
-                    <i class="fa-solid fa-store placeholder-icon"></i>
-                  </div>
-                  <div class="logo-upload-right">
-                    <label class="logo-upload-label" for="set-logo-light-input"><i class="fa-solid fa-upload"></i> Upload</label>
-                    <input type="file" id="set-logo-light-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this,'light')"/>
-                    <div class="logo-upload-note">Used when site is in light mode.</div>
-                    <button type="button" class="btn btn-sm btn-danger" style="margin-top:.5rem" onclick="removeLogo('light')"><i class="fa-solid fa-trash"></i> Remove</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Dark theme logo -->
-              <div>
-                <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem">
-                  <i class="fa-regular fa-moon" style="color:var(--accent)"></i> Dark Theme Logo
-                </div>
-                <div class="logo-upload-row">
-                  <div class="logo-preview-box" id="logo-preview-dark" style="background:repeating-conic-gradient(#2a2a2a 0% 25%,#1a1a1a 0% 50%) 0 0/16px 16px">
-                    <i class="fa-solid fa-store placeholder-icon"></i>
-                  </div>
-                  <div class="logo-upload-right">
-                    <label class="logo-upload-label" for="set-logo-dark-input"><i class="fa-solid fa-upload"></i> Upload</label>
-                    <input type="file" id="set-logo-dark-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this,'dark')"/>
-                    <div class="logo-upload-note">Used when site is in dark mode.</div>
-                    <button type="button" class="btn btn-sm btn-danger" style="margin-top:.5rem" onclick="removeLogo('dark')"><i class="fa-solid fa-trash"></i> Remove</button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-        <!-- Theme -->
-        <div class="form-section">
-          <div class="form-section-title"><i class="fa-solid fa-palette"></i> Theme Colors</div>
-          <div class="color-row">
-            <div class="color-field"><span class="color-label">Primary Color</span><div class="color-input-wrap"><input type="color" id="set-primary" value="#ff4d6d" oninput="previewColor('primary',this.value)"/><span class="color-val" id="set-primary-val">#ff4d6d</span></div></div>
-            <div class="color-field"><span class="color-label">Secondary Color</span><div class="color-input-wrap"><input type="color" id="set-secondary" value="#00d9ff" oninput="previewColor('secondary',this.value)"/><span class="color-val" id="set-secondary-val">#00d9ff</span></div></div>
-            <div class="color-field"><span class="color-label">Accent Color</span><div class="color-input-wrap"><input type="color" id="set-accent" value="#ffd60a" oninput="previewColor('accent',this.value)"/><span class="color-val" id="set-accent-val">#ffd60a</span></div></div>
-          </div>
-          <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap">
-            <span style="font-size:.82rem;color:var(--text-muted)">Presets:</span>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyPreset('#ff4d6d','#00d9ff','#ffd60a')">🔴 Default</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyPreset('#7c3aed','#a855f7','#fbbf24')">🟣 Purple</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyPreset('#0ea5e9','#38bdf8','#f472b6')">🔵 Blue</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyPreset('#10b981','#34d399','#fbbf24')">🟢 Green</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyPreset('#f97316','#fb923c','#06b6d4')">🟠 Orange</button>
-          </div>
-        </div>
-        <!-- Social -->
-        <div class="form-section" id="social-section">
-          <div class="form-section-title"><i class="fa-solid fa-share-nodes"></i> Social Media Links</div>
-          <div class="social-grid">
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-facebook" style="color:#1877f2"></i> Facebook URL</label><input class="form-input" id="soc-facebook" placeholder="https://facebook.com/yourpage"/></div>
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-instagram" style="color:#e1306c"></i> Instagram URL</label><input class="form-input" id="soc-instagram" placeholder="https://instagram.com/yourpage"/></div>
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-whatsapp" style="color:#25d366"></i> WhatsApp Link</label><input class="form-input" id="soc-whatsapp" placeholder="https://wa.me/213xxxxxxxxx"/></div>
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-telegram" style="color:#229ed9"></i> Telegram Link</label><input class="form-input" id="soc-telegram" placeholder="https://t.me/yourchannel"/></div>
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-tiktok" style="color:#ff0050"></i> TikTok URL</label><input class="form-input" id="soc-tiktok" placeholder="https://tiktok.com/@yourpage"/></div>
-            <div class="form-group"><label class="form-label"><i class="fa-brands fa-youtube" style="color:#ff0000"></i> YouTube URL</label><input class="form-input" id="soc-youtube" placeholder="https://youtube.com/@yourchannel"/></div>
-          </div>
-        </div>
-        <!-- Payment Settings -->
-        <div class="form-section" id="payment-settings-section">
-          <div class="form-section-title"><i class="fa-solid fa-credit-card"></i> Payment Settings</div>
-
-          <!-- Flexy -->
-          <div style="background:rgba(var(--accent-rgb),.04);border:1px solid rgba(var(--accent-rgb),.15);border-radius:var(--radius-sm);padding:1rem 1.1rem;margin-bottom:1rem">
-            <div style="font-size:.78rem;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.8rem">📱 Flexy</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
-              <div class="form-group">
-                <label class="form-label">Flexy Number 1</label>
-                <input class="form-input" id="set-flexy-number1" type="tel" placeholder="0540431312" style="font-family:monospace;letter-spacing:.04em"/>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Flexy Number 2</label>
-                <input class="form-input" id="set-flexy-number2" type="tel" placeholder="0793051230" style="font-family:monospace;letter-spacing:.04em"/>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Flexy Instructions (Arabic)</label>
-              <textarea class="form-input" id="set-flexy-instructions" rows="5" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
-            </div>
-          </div>
-
-          <!-- BaridiMob -->
-          <div style="background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.15);border-radius:var(--radius-sm);padding:1rem 1.1rem;margin-bottom:.6rem">
-            <div style="font-size:.78rem;font-weight:700;color:#3B82F6;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.8rem">🏦 BaridiMob</div>
-            <div class="form-group" style="margin-bottom:.8rem">
-              <label class="form-label">BaridiMob Account Number</label>
-              <input class="form-input" id="set-baridimob-number" type="tel" placeholder="00799999004421651019" style="font-family:monospace;letter-spacing:.04em"/>
-            </div>
-            <div class="form-group">
-              <label class="form-label">BaridiMob Instructions (Arabic)</label>
-              <textarea class="form-input" id="set-baridimob-instructions" rows="5" dir="rtl" style="font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:.88rem;line-height:1.8;text-align:right" placeholder="يرجى تحويل المبلغ..."></textarea>
-            </div>
-          </div>
-
-          <p style="font-size:.76rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-circle-info" style="color:var(--accent)"></i> Numbers appear as copyable buttons at checkout. Instructions are shown to customers when they select a payment method.</p>
-        </div>
-
-        <button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Save All Changes</button>
-      </div>
-
-      <!-- STORAGE MANAGER -->
-      <div class="panel" id="panel-storage">
-        <div class="sec-header"><span class="sec-title">Storage Manager</span><button class="btn btn-sm btn-outline" onclick="refreshStorageInfo()"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
-        <div class="form-section">
-          <div class="form-section-title"><i class="fa-solid fa-hard-drive"></i> Storage Usage</div>
-          <div style="margin-bottom:1.2rem">
-            <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.85rem;color:var(--text-muted)">Used by DigiStore DZ</span><span style="font-size:.85rem;font-weight:700" id="storage-used-text">Calculating...</span></div>
-            <div style="height:10px;border-radius:99px;background:var(--bg3);overflow:hidden"><div id="storage-bar" style="height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--secondary));width:0%;transition:width .6s"></div></div>
-            <p style="font-size:.76rem;color:var(--text-muted);margin-top:.4rem">localStorage limit ~5 MB per origin. Images use the most space.</p>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:1rem" id="storage-breakdown"></div>
-        </div>
-        <div class="form-section" style="border-color:rgba(255,77,109,.2)">
-          <div class="form-section-title" style="color:#ff8fa3"><i class="fa-solid fa-wand-magic-sparkles"></i> Free Up Space</div>
-          <div style="display:flex;flex-direction:column;gap:1rem">
-            <div style="padding:1.2rem;border-radius:var(--radius-sm);background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap">
-              <div style="flex:1;min-width:180px"><div style="font-weight:600;margin-bottom:.25rem">🖼️ Clear All Product Images</div><div style="font-size:.8rem;color:var(--text-muted)">Removes stored images. Products stay, show placeholder icons.</div></div>
-              <button class="btn btn-danger" onclick="clearAllImages()"><i class="fa-solid fa-images"></i> Clear Images</button>
-            </div>
-            <div style="padding:1.2rem;border-radius:var(--radius-sm);background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap">
-              <div style="flex:1;min-width:180px"><div style="font-weight:600;margin-bottom:.25rem">🗑️ Clear Orders History</div><div style="font-size:.8rem;color:var(--text-muted)">Deletes all saved orders permanently.</div></div>
-              <button class="btn btn-danger" onclick="clearOrdersStorage()"><i class="fa-solid fa-trash"></i> Clear Orders</button>
-            </div>
-            <div style="padding:1.2rem;border-radius:var(--radius-sm);background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.25);display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap">
-              <div style="flex:1;min-width:180px"><div style="font-weight:600;margin-bottom:.25rem;color:#ff8fa3">⚠️ Full Reset</div><div style="font-size:.8rem;color:var(--text-muted)">Deletes ALL data, reloads fresh seed. Settings kept.</div></div>
-              <button class="btn btn-danger" onclick="fullReset()"><i class="fa-solid fa-rotate-left"></i> Full Reset</button>
-            </div>
-          </div>
-        </div>
-        <div class="form-section">
-          <div class="form-section-title"><i class="fa-solid fa-lightbulb"></i> Tips to Save Space</div>
-          <ul style="color:var(--text-muted);font-size:.87rem;line-height:2.2;padding-left:1.2rem">
-            <li>Compress images before uploading at <a href="https://squoosh.app" target="_blank" style="color:var(--secondary)">squoosh.app</a></li>
-            <li>Upload at max <strong style="color:var(--text)">800×600px</strong> — site compresses further</li>
-            <li>Use 1–2 images per product, not many</li>
-            <li>Clear old orders regularly</li>
-          </ul>
-        </div>
-      </div>
 
 
       <!-- MANAGE PURCHASES -->
@@ -1051,13 +865,9 @@ let editCategoryData = null;
 let productImages = [];
 let variableGroups = []; // [{title:'', items:[{label:'', price:''}]}]
 let catImage = null;
-let tempLogoLight = null;
-let tempLogoDark = null;
-
 function initAdmin() {
   startAdminPurchasesListener(); // realtime badge + purchases
   Settings.applyTheme();
-  loadSettings();
   renderDashboard();
   renderOrders();
   renderProductsList();
@@ -1083,7 +893,7 @@ function showPanel(name) {
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', orders:'Orders', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', settings:'Store Settings', storage:'Storage Manager', purchases:'Manage Purchases', users:'Users' };
+  const titles = { dashboard:'Dashboard', orders:'Orders', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -1092,8 +902,6 @@ function showPanel(name) {
   if (name === 'categories') renderCategoriesList();
   if (name === 'dashboard') renderDashboard();
   if (name === 'orders') renderOrders();
-  if (name === 'settings') loadSettings();
-  if (name === 'storage') refreshStorageInfo();
   closeSidebar();
 }
 
@@ -1409,128 +1217,8 @@ async function saveCategory(e) {
 }
 function deleteCategory(id) { confirmAction('Delete this category?', 'Products in this category will remain but unlinked.', () => { DB.delete('categories', id); renderCategoriesList(); showToast('Category deleted'); }); }
 
-// ===== SETTINGS =====
-function loadSettings() {
-  const s = Settings.get();
-  document.getElementById('set-name').value = s.storeName||'';
-  ['primary','secondary','accent'].forEach(k => {
-    document.getElementById('set-'+k).value = s[k]||'';
-    document.getElementById('set-'+k+'-val').textContent = s[k]||'';
-  });
-  const soc = s.social||{};
-  ['facebook','instagram','whatsapp','telegram','tiktok','youtube'].forEach(k => { const el = document.getElementById('soc-'+k); if(el) el.value = soc[k]||''; });
-  tempLogoLight = s.logoLight || s.logo || null;
-  tempLogoDark  = s.logoDark  || null;
-  const boxL = document.getElementById('logo-preview-light');
-  const boxD = document.getElementById('logo-preview-dark');
-  if (boxL) boxL.innerHTML = tempLogoLight ? `<img src="${tempLogoLight}" alt="logo"/>` : `<i class="fa-solid fa-store placeholder-icon"></i>`;
-  if (boxD) boxD.innerHTML = tempLogoDark  ? `<img src="${tempLogoDark}"  alt="logo"/>` : `<i class="fa-solid fa-store placeholder-icon"></i>`;
-
-  // Payment Settings
-  const flexyDefault     = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
-  const baridimobDefault = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
-  const flexyEl     = document.getElementById('set-flexy-instructions');
-  const baridimobEl = document.getElementById('set-baridimob-instructions');
-  if (flexyEl)     flexyEl.value     = s.flexyInstructions     || flexyDefault;
-  if (baridimobEl) baridimobEl.value = s.baridimobInstructions || baridimobDefault;
-  // New number fields
-  const fNum1El = document.getElementById('set-flexy-number1');
-  const fNum2El = document.getElementById('set-flexy-number2');
-  const bNumEl  = document.getElementById('set-baridimob-number');
-  if (fNum1El) fNum1El.value = s.flexyNumber1    || '0540431312';
-  if (fNum2El) fNum2El.value = s.flexyNumber2    || '0793051230';
-  if (bNumEl)  bNumEl.value  = s.baridimobNumber || '00799999004421651019';
-}
-async function handleLogoUpload(input, theme) {
-  const f = input.files[0]; if (!f) return;
-  const data = await compressImage(f, 300, 0.9);
-  if (theme === 'dark') {
-    tempLogoDark = data;
-    document.getElementById('logo-preview-dark').innerHTML = `<img src="${data}" alt="logo"/>`;
-  } else {
-    tempLogoLight = data;
-    document.getElementById('logo-preview-light').innerHTML = `<img src="${data}" alt="logo"/>`;
-  }
-  input.value = '';
-}
-function removeLogo(theme) {
-  if (theme === 'dark') {
-    tempLogoDark = null;
-    document.getElementById('logo-preview-dark').innerHTML = `<i class="fa-solid fa-store placeholder-icon"></i>`;
-  } else {
-    tempLogoLight = null;
-    document.getElementById('logo-preview-light').innerHTML = `<i class="fa-solid fa-store placeholder-icon"></i>`;
-  }
-}
-function previewColor(key, val) {
-  document.documentElement.style.setProperty('--'+key, val);
-  document.getElementById('set-'+key+'-val').textContent = val;
-  if (key === 'primary') { const rgb = hexToRgb(val); if(rgb) document.documentElement.style.setProperty('--primary-rgb',`${rgb.r},${rgb.g},${rgb.b}`); }
-  if (key === 'secondary') { const rgb = hexToRgb(val); if(rgb) document.documentElement.style.setProperty('--secondary-rgb',`${rgb.r},${rgb.g},${rgb.b}`); }
-}
-function applyPreset(p, s, a) {
-  document.getElementById('set-primary').value = p;
-  document.getElementById('set-secondary').value = s;
-  document.getElementById('set-accent').value = a;
-  previewColor('primary',p); previewColor('secondary',s); previewColor('accent',a);
-}
-function saveSettings() {
-  const social = {};
-  ['facebook','instagram','whatsapp','telegram','tiktok','youtube'].forEach(k => { social[k] = document.getElementById('soc-'+k).value.trim(); });
-  const flexyEl = document.getElementById('set-flexy-instructions');
-  const baridimobEl = document.getElementById('set-baridimob-instructions');
-  Settings.save({
-    storeName: document.getElementById('set-name').value.trim()||'DigiStore DZ',
-    logo: tempLogoLight||null, logoLight: tempLogoLight||null, logoDark: tempLogoDark||null,
-    primary: document.getElementById('set-primary').value,
-    secondary: document.getElementById('set-secondary').value,
-    accent: document.getElementById('set-accent').value,
-    social,
-    flexyInstructions:     flexyEl     ? flexyEl.value.trim()     : '',
-    baridimobInstructions: baridimobEl ? baridimobEl.value.trim() : '',
-    flexyNumber1:    (document.getElementById('set-flexy-number1')?.value    || '').trim() || '0540431312',
-    flexyNumber2:    (document.getElementById('set-flexy-number2')?.value    || '').trim() || '0793051230',
-    baridimobNumber: (document.getElementById('set-baridimob-number')?.value || '').trim() || '00799999004421651019',
-  });
-  Settings.applyTheme();
-  showToast('Settings saved!');
-}
-
 // ===== STORAGE MANAGER =====
-function refreshStorageInfo() {
-  const kb = Storage.usage(); const maxKb = 5120;
-  const pct = Math.min(100, Math.round(kb / maxKb * 100));
-  document.getElementById('storage-used-text').textContent = `${kb} KB / ~5,120 KB (${pct}%)`;
-  const bar = document.getElementById('storage-bar');
-  bar.style.width = pct + '%';
-  bar.style.background = pct > 85 ? 'linear-gradient(90deg,#ff4d6d,#ff8fa3)' : pct > 60 ? 'linear-gradient(90deg,var(--accent),#f97316)' : 'linear-gradient(90deg,var(--primary),var(--secondary))';
-  const bd = document.getElementById('storage-breakdown'); bd.innerHTML = '';
-  [['Products','products','📦'],['Categories','categories','🗂️'],['Orders','orders','🛍️'],['Settings','settings','⚙️'],['Cart','cart','🛒']].forEach(([label,key,icon]) => {
-    const size = Math.round(((localStorage.getItem('dz_'+key)||'').length*2)/1024);
-    bd.innerHTML += `<div style="padding:1rem;border-radius:var(--radius-sm);background:var(--card);border:1px solid var(--border);text-align:center"><div style="font-size:1.5rem;margin-bottom:.4rem">${icon}</div><div style="font-size:.85rem;font-weight:700">${label}</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem">${size} KB</div></div>`;
-  });
-}
-function clearAllImages() { confirmAction('Clear all product images?', 'Products stay but show placeholders. Frees most space.', () => { DB.getAll('products').forEach(p => DB.update('products', p.id, { images:[] })); refreshStorageInfo(); renderDashboard(); showToast('All images cleared!'); }); }
-function clearOrdersStorage() { confirmAction('Clear all orders?', 'All order history will be permanently deleted.', () => { DB.getAll('orders').forEach(o => DB.delete('orders', o.id)); refreshStorageInfo(); renderDashboard(); renderOrders(); showToast('Orders cleared!'); }); }
-function fullReset() {
-  confirmAction('Full Reset — are you sure?', 'ALL products, categories and orders deleted. Settings kept. Page will reload.', () => {
-    // Save what we want to keep
-    const KEEP = ['dz_settings', 'dz_theme', 'dz_admin_theme', 'dz_auth'];
-    const saved = {};
-    KEEP.forEach(k => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
 
-    // Wipe everything (snapshot keys first to avoid iteration issues)
-    const allKeys = Object.keys(localStorage);
-    allKeys.forEach(k => localStorage.removeItem(k));
-
-    // Restore kept keys
-    Object.entries(saved).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch(e) {} });
-
-    try { document.getElementById('storage-banner').classList.remove('show'); } catch(e) {}
-    showToast('✅ Reset done! Reloading...');
-    setTimeout(() => location.reload(), 1200);
-  });
-}
 
 // ===== CONFIRM MODAL =====
 function confirmAction(title, msg, cb) {
