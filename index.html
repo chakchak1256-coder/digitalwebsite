@@ -165,8 +165,11 @@ section{position:relative;z-index:1}
 
 /* ===== HERO ===== */
 #hero{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  text-align:center;padding:88px 5vw 60px;overflow:hidden;
+  min-height:auto;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:108px 5vw 36px;overflow:hidden;
+}
+@media(max-width:768px){
+  #hero{padding:96px 5vw 32px;}
 }
 .hero-bg{position:absolute;inset:0;
   background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(var(--accent-rgb),.08) 0%,transparent 60%);
@@ -192,7 +195,7 @@ section{position:relative;z-index:1}
 }
 .hero-btns{
   display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;
-  animation:fadeUp .7s .24s both;margin-bottom:3rem;
+  animation:fadeUp .7s .24s both;margin-bottom:0;
 }
 .hero-btns .btn{padding:12px 26px;font-size:.9rem;border-radius:10px}
 .hero-stats{
@@ -985,7 +988,7 @@ body.flash-on #mobile-nav{top:102px}
 }
 .carousel-label {
   text-align: center;
-  padding: 2.5rem 0 1.2rem;
+  padding: 1.4rem 0 .9rem;
 }
 .carousel-label-inner {
   display: inline-flex;
@@ -1007,8 +1010,12 @@ body.flash-on #mobile-nav{top:102px}
 }
 .carousel-track-wrap {
   overflow: hidden;
-  padding: .5rem 0 2.5rem;
+  padding: .5rem 0 2rem;
   cursor: default;
+}
+/* Pause animation when hovering the wrapper */
+.carousel-track-wrap:hover .carousel-track {
+  animation-play-state: paused;
 }
 .carousel-track {
   display: flex;
@@ -1016,9 +1023,6 @@ body.flash-on #mobile-nav{top:102px}
   width: max-content;
   animation: carouselScroll 32s linear infinite;
   will-change: transform;
-}
-.carousel-track:hover {
-  animation-play-state: paused;
 }
 @keyframes carouselScroll {
   0%   { transform: translateX(0); }
@@ -1037,9 +1041,11 @@ body.flash-on #mobile-nav{top:102px}
   transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
 }
 .carousel-item:hover {
-  transform: scale(1.06) translateY(-3px);
-  border-color: rgba(var(--accent-rgb), .55);
-  box-shadow: 0 0 18px rgba(var(--accent-rgb), .28), 0 6px 24px rgba(0,0,0,.4);
+  transform: scale(1.07) translateY(-4px);
+  border-color: rgba(var(--accent-rgb), .6);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb),.25),
+              0 0 20px rgba(var(--accent-rgb), .35),
+              0 8px 28px rgba(0,0,0,.45);
   z-index: 3;
 }
 .carousel-item img {
@@ -1047,10 +1053,10 @@ body.flash-on #mobile-nav{top:102px}
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform .3s ease;
+  transition: transform .35s ease;
 }
 .carousel-item:hover img {
-  transform: scale(1.04);
+  transform: scale(1.06);
 }
 /* placeholder for items without images */
 .carousel-item-placeholder {
@@ -1081,6 +1087,7 @@ body.flash-on #mobile-nav{top:102px}
   .carousel-item { width: 120px; height: 76px; }
   #game-carousel-section::before, #game-carousel-section::after { width: 60px; }
   .carousel-track { gap: 10px; animation-duration: 24s; }
+  .carousel-label { padding: 1rem 0 .7rem; }
 }
 @media(max-width: 480px) {
   .carousel-item { width: 100px; height: 64px; }
