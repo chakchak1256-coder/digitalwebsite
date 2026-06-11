@@ -228,6 +228,18 @@ textarea.form-input{resize:vertical;min-height:90px}
 #toast.show{transform:translateY(0)}
 #toast i{color:var(--accent)}
 
+/* GAME IMAGES PANEL — prevent horizontal overflow clipping cards */
+#panel-game-images { overflow: visible; }
+#panel-game-images .form-section { overflow: visible; }
+#gim-grid { box-sizing: border-box; width: 100%; }
+#gim-carousel-preview { overflow: hidden; }
+#gim-preview-track {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: .3rem;
+}
+
 /* MOBILE */
 @media(max-width:900px){
   #sidebar{transform:translateX(-100%)}
@@ -510,7 +522,7 @@ textarea.form-input{resize:vertical;min-height:90px}
         <div class="form-section" id="gim-preview-section">
           <div class="form-section-title"><i class="fa-solid fa-eye"></i> Live Carousel Preview</div>
           <div id="gim-carousel-preview" style="overflow:hidden;border-radius:var(--radius-sm);background:var(--bg3);padding:1rem;border:1px solid var(--border)">
-            <div id="gim-preview-track" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:.3rem;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3)"></div>
+            <div id="gim-preview-track" style="display:flex;flex-wrap:wrap;gap:10px;padding-bottom:.3rem"></div>
             <p id="gim-preview-empty" style="font-size:.85rem;color:var(--text-muted);text-align:center;padding:.5rem;display:none">No images yet. Upload some to preview.</p>
           </div>
         </div>
@@ -518,7 +530,7 @@ textarea.form-input{resize:vertical;min-height:90px}
         <!-- Image grid -->
         <div class="form-section">
           <div class="form-section-title"><i class="fa-solid fa-grip"></i> Manage Images <span style="font-weight:400;font-size:.78rem;color:var(--text-muted)">(drag to reorder)</span></div>
-          <div id="gim-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;min-height:80px">
+          <div id="gim-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;min-height:80px;overflow:visible">
             <div id="gim-empty-state" style="grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--text-muted)">
               <i class="fa-solid fa-images" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.6rem"></i>
               No images added yet. Click "Upload Images" to add some.
