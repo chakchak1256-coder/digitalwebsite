@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<style id="pre-load-hide">body{visibility:hidden}</style>
 <script>
   (function(){
     // Theme — before paint, no flash
@@ -8,20 +9,59 @@
     // Auth state — CSS will show/hide correct buttons before paint
     var authed = localStorage.getItem('dz_auth') === '1';
     document.documentElement.setAttribute('data-authed', authed ? 'true' : 'false');
-    // Store name — apply immediately so nav text never flashes
+    // Settings — apply from localStorage cache synchronously before first paint
     try {
       var s = JSON.parse(localStorage.getItem('dz_settings') || '{}');
-      if (s.storeName) document.title = s.storeName;
-      document.documentElement.setAttribute('data-storename', s.storeName || 'DigiStore DZ');
-      // Apply correct logo for current theme before paint
-      var _theme = localStorage.getItem('dz_theme') || 'light';
-      var _logo = (_theme === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
-      if (_logo) {
-        document.addEventListener('DOMContentLoaded', function() {
-          document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_logo; el.style.display='block'; });
-        });
+      var storeName = s.storeName || 'DigiStore DZ';
+      // Title
+      document.title = storeName;
+      // CSS custom properties (accent color)
+      if (s.primary) {
+        var rs = document.documentElement.style;
+        rs.setProperty('--accent', s.primary);
+        rs.setProperty('--primary', s.primary);
+        rs.setProperty('--secondary', s.primary);
+        var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.primary);
+        if (m) {
+          var rgb = parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16);
+          rs.setProperty('--accent-rgb', rgb);
+          rs.setProperty('--primary-rgb', rgb);
+          rs.setProperty('--secondary-rgb', rgb);
+        }
       }
+      // Store these for DOMContentLoaded patch-up (logo needs DOM)
+      document.documentElement.setAttribute('data-storename', storeName);
+      document.documentElement.setAttribute('data-presettings', JSON.stringify({
+        storeName: storeName,
+        logo: s.logo || null,
+        logoLight: s.logoLight || null,
+        logoDark: s.logoDark || null
+      }));
     } catch(e) {}
+    // Reveal body as soon as DOM is ready — settings already applied above
+    document.addEventListener('DOMContentLoaded', function() {
+      // Patch store name text nodes (DOM is now available)
+      try {
+        var ps = JSON.parse(document.documentElement.getAttribute('data-presettings') || '{}');
+        if (ps.storeName) {
+          document.querySelectorAll('.store-name').forEach(function(el){ el.textContent = ps.storeName; });
+          var pt = document.getElementById('page-title'); if (pt) pt.textContent = ps.storeName;
+        }
+        var _theme = document.documentElement.getAttribute('data-theme') || 'light';
+        var _logo = (_theme === 'dark' && ps.logoDark) ? ps.logoDark : (ps.logoLight || ps.logo || null);
+        if (_logo) {
+          document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_logo; el.style.display='block'; });
+        }
+      } catch(e) {}
+      // Remove the hide — page is now ready with correct values, no flash
+      var hideStyle = document.getElementById('pre-load-hide');
+      if (hideStyle) hideStyle.remove();
+    });
+    // Safety net: if DOMContentLoaded was missed, reveal after 500ms max
+    setTimeout(function() {
+      var hideStyle = document.getElementById('pre-load-hide');
+      if (hideStyle) hideStyle.remove();
+    }, 500);
   })();
 </script>
 <meta charset="UTF-8"/>
@@ -1723,35 +1763,6 @@ body.flash-on #mobile-nav{top:102px}
 <!-- TOAST -->
 <div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
 
-<script>
-// Apply store name + color immediately from settings cache — before Firebase loads
-(function(){
-  try {
-    var s = JSON.parse(localStorage.getItem('dz_settings') || '{}');
-    if (s.storeName) {
-      document.querySelectorAll('.store-name').forEach(function(el){ el.textContent = s.storeName; });
-      var t = document.getElementById('page-title'); if(t) t.textContent = s.storeName;
-    }
-    if (s.primary) {
-      var r = document.documentElement.style;
-      r.setProperty('--accent', s.primary);
-      r.setProperty('--primary', s.primary);
-      var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.primary);
-      if (m) {
-        var v = parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16);
-        r.setProperty('--accent-rgb', v);
-        r.setProperty('--primary-rgb', v);
-      }
-    }
-    var _ht = localStorage.getItem('dz_theme') || 'light';
-    var _al = (_ht === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
-    if (_al) {
-      document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_al; el.style.display='block'; });
-      // Keep store name visible alongside logo
-    }
-  } catch(e) {}
-})();
-</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
