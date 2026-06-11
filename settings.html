@@ -289,6 +289,7 @@ textarea.form-input{resize:vertical;min-height:90px}
         <div class="nav-item active" onclick="showPanel('store-settings')"><i class="fa-solid fa-sliders"></i> Store Settings</div>
         <div class="nav-item" onclick="showPanel('social-links')"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
         <div class="nav-item" onclick="showPanel('storage-manager')"><i class="fa-solid fa-hard-drive"></i> Storage Manager</div>
+        <div class="nav-item" onclick="showPanel('game-images')"><i class="fa-solid fa-gamepad"></i> Game Images</div>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -487,6 +488,50 @@ textarea.form-input{resize:vertical;min-height:90px}
         </div>
       </div>
 
+      <!-- ===== GAME IMAGES MANAGER PANEL ===== -->
+      <div class="panel" id="panel-game-images">
+        <div class="sec-header">
+          <span class="sec-title">Game Images Manager</span>
+          <div style="display:flex;gap:.5rem">
+            <label class="btn btn-primary" for="gim-upload-input" style="cursor:pointer">
+              <i class="fa-solid fa-upload"></i> Upload Images
+            </label>
+            <input type="file" id="gim-upload-input" accept="image/*" multiple style="display:none" onchange="gimHandleUpload(this)"/>
+            <button class="btn btn-outline" onclick="gimSave()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title"><i class="fa-solid fa-circle-info"></i> How It Works</div>
+          <p style="font-size:.85rem;color:var(--text-muted);line-height:1.7">Upload game or platform cover images that will display in the animated carousel on the homepage. Drag to reorder. Changes are saved to the store and the carousel updates instantly.</p>
+        </div>
+
+        <!-- Live preview -->
+        <div class="form-section" id="gim-preview-section">
+          <div class="form-section-title"><i class="fa-solid fa-eye"></i> Live Carousel Preview</div>
+          <div id="gim-carousel-preview" style="overflow:hidden;border-radius:var(--radius-sm);background:var(--bg3);padding:1rem;border:1px solid var(--border)">
+            <div id="gim-preview-track" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:.3rem;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3)"></div>
+            <p id="gim-preview-empty" style="font-size:.85rem;color:var(--text-muted);text-align:center;padding:.5rem;display:none">No images yet. Upload some to preview.</p>
+          </div>
+        </div>
+
+        <!-- Image grid -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="fa-solid fa-grip"></i> Manage Images <span style="font-weight:400;font-size:.78rem;color:var(--text-muted)">(drag to reorder)</span></div>
+          <div id="gim-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;min-height:80px">
+            <div id="gim-empty-state" style="grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--text-muted)">
+              <i class="fa-solid fa-images" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.6rem"></i>
+              No images added yet. Click "Upload Images" to add some.
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:-.5rem">
+          <button class="btn btn-danger btn-sm" onclick="gimClearAll()"><i class="fa-solid fa-trash"></i> Clear All</button>
+          <button class="btn btn-primary" onclick="gimSave()"><i class="fa-solid fa-floppy-disk"></i> Save &amp; Apply to Store</button>
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 
@@ -601,10 +646,11 @@ function showPanel(name) {
   document.querySelectorAll('.nav-item').forEach(n => {
     if ((n.getAttribute('onclick') || '').includes("'" + name + "'")) n.classList.add('active');
   });
-  const titles = { 'store-settings': 'Store Settings', 'social-links': 'Social Links', 'storage-manager': 'Storage Manager' };
+  const titles = { 'store-settings': 'Store Settings', 'social-links': 'Social Links', 'storage-manager': 'Storage Manager', 'game-images': 'Game Images Manager' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'storage-manager') refreshStorageInfo();
+  if (name === 'game-images') gimLoadPanel();
   closeSidebar();
 }
 
@@ -798,6 +844,187 @@ function initAdminTheme() {
   const t = localStorage.getItem('dz_admin_theme') || 'light';
   const icon = document.getElementById('admin-theme-icon');
   if (icon) icon.className = t === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+})();
+
+// ================================================================
+// ===== GAME IMAGES MANAGER =====
+// ================================================================
+(function() {
+
+  const STORAGE_KEY = 'dz_game_images';
+
+  let _gimImages = [];   // working copy
+  let _dragIdx = null;
+  let _dragOverIdx = null;
+
+  const DEFAULT_GAME_IMAGES = [
+    { id: 'g1', label: 'PlayStation', url: '', emoji: '🎮' },
+    { id: 'g2', label: 'Xbox', url: '', emoji: '🕹️' },
+    { id: 'g3', label: 'Steam', url: '', emoji: '💻' },
+    { id: 'g4', label: 'Nintendo', url: '', emoji: '🎯' },
+    { id: 'g5', label: 'Epic Games', url: '', emoji: '⚔️' },
+    { id: 'g6', label: 'Fortnite', url: '', emoji: '🔫' },
+    { id: 'g7', label: 'Minecraft', url: '', emoji: '⛏️' },
+    { id: 'g8', label: 'FIFA', url: '', emoji: '⚽' },
+    { id: 'g9', label: 'GTA', url: '', emoji: '🚗' },
+    { id: 'g10', label: 'Valorant', url: '', emoji: '🏹' },
+  ];
+
+  function gimLoad() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) _gimImages = JSON.parse(raw);
+      else _gimImages = [...DEFAULT_GAME_IMAGES];
+    } catch(e) { _gimImages = [...DEFAULT_GAME_IMAGES]; }
+  }
+
+  window.gimLoadPanel = function() {
+    gimLoad();
+    gimRenderGrid();
+    gimRenderPreview();
+  };
+
+  function gimRenderGrid() {
+    const grid = document.getElementById('gim-grid');
+    const empty = document.getElementById('gim-empty-state');
+    if (!grid) return;
+    // Remove all cards (keep empty state el)
+    Array.from(grid.children).forEach(ch => { if (ch.id !== 'gim-empty-state') ch.remove(); });
+    if (!_gimImages.length) {
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+    _gimImages.forEach((img, idx) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--bg2);position:relative;cursor:grab;transition:border-color .2s,box-shadow .2s;user-select:none';
+      card.draggable = true;
+      card.dataset.idx = idx;
+      card.innerHTML = `
+        <div style="aspect-ratio:16/10;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
+          ${img.url
+            ? `<img src="${img.url}" alt="${img.label||''}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+               <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:2rem">${img.emoji||'🎮'}</div>`
+            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.2rem">${img.emoji||'🎮'}</div>`
+          }
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);border-radius:5px;padding:2px 7px;font-size:.68rem;font-weight:700;color:#fff;backdrop-filter:blur(4px)">${idx+1}</div>
+          <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px">
+            <button onclick="gimRemove(${idx})" title="Delete" style="width:26px;height:26px;border-radius:5px;background:rgba(239,68,68,.85);border:none;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+        <div style="padding:.55rem .7rem;display:flex;align-items:center;gap:.4rem">
+          <i class="fa-solid fa-grip-dots-vertical" style="color:var(--text-muted);font-size:.8rem;cursor:grab"></i>
+          <input type="text" value="${img.label||''}" placeholder="Label…" data-idx="${idx}"
+            style="flex:1;background:none;border:none;color:var(--text);font-size:.82rem;font-family:inherit;outline:none;font-weight:600"
+            oninput="gimUpdateLabel(${idx},this.value)"/>
+        </div>
+      `;
+      // Drag events
+      card.addEventListener('dragstart', e => { _dragIdx = idx; e.dataTransfer.effectAllowed='move'; card.style.opacity='.4'; });
+      card.addEventListener('dragend', () => { _dragIdx=null; gimRenderGrid(); gimRenderPreview(); });
+      card.addEventListener('dragover', e => { e.preventDefault(); _dragOverIdx = idx; card.style.boxShadow='0 0 0 2px var(--accent)'; });
+      card.addEventListener('dragleave', () => { card.style.boxShadow=''; });
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        if (_dragIdx !== null && _dragIdx !== idx) {
+          const moved = _gimImages.splice(_dragIdx, 1)[0];
+          _gimImages.splice(idx, 0, moved);
+          gimRenderGrid();
+          gimRenderPreview();
+        }
+        card.style.boxShadow='';
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  function gimRenderPreview() {
+    const track = document.getElementById('gim-preview-track');
+    const empty = document.getElementById('gim-preview-empty');
+    if (!track) return;
+    if (!_gimImages.length) { track.innerHTML=''; empty.style.display=''; return; }
+    empty.style.display = 'none';
+    track.innerHTML = _gimImages.map(img => `
+      <div style="flex-shrink:0;width:120px;height:76px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center">
+        ${img.url
+          ? `<img src="${img.url}" alt="${img.label||''}" style="width:100%;height:100%;object-fit:cover"/>`
+          : `<span style="font-size:1.8rem">${img.emoji||'🎮'}</span>`
+        }
+      </div>
+    `).join('');
+  }
+
+  window.gimUpdateLabel = function(idx, val) {
+    if (_gimImages[idx]) _gimImages[idx].label = val;
+  };
+
+  window.gimRemove = function(idx) {
+    _gimImages.splice(idx, 1);
+    gimRenderGrid();
+    gimRenderPreview();
+  };
+
+  window.gimHandleUpload = function(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    const EMOJIS = ['🎮','🕹️','💻','🎯','⚔️','🔫','⛏️','⚽','🚗','🏹','🏆','🎲','🎪','🌟','🔥'];
+    let processed = 0;
+    files.forEach((file, fi) => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Compress via canvas
+        const img = new Image();
+        img.onload = function() {
+          const MAX_W = 320, MAX_H = 200;
+          const ratio = Math.min(MAX_W/img.width, MAX_H/img.height, 1);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * ratio);
+          canvas.height = Math.round(img.height * ratio);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const b64 = canvas.toDataURL('image/jpeg', 0.82);
+          const label = file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+          const newId = 'gim_' + Date.now() + '_' + fi;
+          _gimImages.push({ id: newId, label, url: b64, emoji: EMOJIS[fi % EMOJIS.length] });
+          processed++;
+          if (processed === files.length) { gimRenderGrid(); gimRenderPreview(); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  };
+
+  window.gimSave = function() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(_gimImages));
+      // Dispatch storage event manually for same-page listeners (index.html's listener is cross-tab)
+      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify(_gimImages) }));
+      showToast('✅ Game images saved! Carousel updated.');
+    } catch(e) {
+      showToast('⚠️ Could not save — storage may be full.');
+    }
+  };
+
+  window.gimClearAll = function() {
+    if (typeof confirmAction === 'function') {
+      confirmAction('Clear all game images?', 'The carousel will be hidden on the homepage until new images are added.', () => {
+        _gimImages = [];
+        localStorage.removeItem(STORAGE_KEY);
+        gimRenderGrid();
+        gimRenderPreview();
+        showToast('Game images cleared.');
+      });
+    } else {
+      _gimImages = [];
+      localStorage.removeItem(STORAGE_KEY);
+      gimRenderGrid();
+      gimRenderPreview();
+      showToast('Game images cleared.');
+    }
+  };
+
 })();
 </script>
 </body>
