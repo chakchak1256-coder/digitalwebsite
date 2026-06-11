@@ -2433,6 +2433,15 @@ function closeCheckout() {
   if (phoneHint) phoneHint.style.display = 'none';
   const phoneInput = document.getElementById('co-phone');
   if (phoneInput) { phoneInput.style.borderColor = ''; }
+  // Re-open cart so user returns to it (open overlay + drawer if not already open)
+  const cartOverlay = document.getElementById('cart-overlay');
+  const cartDrawer = document.getElementById('cart-drawer');
+  if (cartOverlay && cartDrawer && !cartDrawer.classList.contains('open')) {
+    cartOverlay.classList.add('open');
+    cartDrawer.classList.add('open');
+    renderCartItems();
+    document.body.classList.add('no-scroll');
+  }
 }
 
 // Handle proof file selection — convert to base64 immediately to avoid CORS/Storage issues
