@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<style id="pre-load-hide">body{visibility:hidden}</style>
 <script>
   (function(){
     // Theme — before paint, no flash
@@ -9,59 +8,54 @@
     // Auth state — CSS will show/hide correct buttons before paint
     var authed = localStorage.getItem('dz_auth') === '1';
     document.documentElement.setAttribute('data-authed', authed ? 'true' : 'false');
-    // Settings — apply from localStorage cache synchronously before first paint
-    try {
-      var s = JSON.parse(localStorage.getItem('dz_settings') || '{}');
-      var storeName = s.storeName || 'DigiStore DZ';
-      // Title
-      document.title = storeName;
-      // CSS custom properties (accent color)
-      if (s.primary) {
-        var rs = document.documentElement.style;
-        rs.setProperty('--accent', s.primary);
-        rs.setProperty('--primary', s.primary);
-        rs.setProperty('--secondary', s.primary);
-        var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.primary);
-        if (m) {
-          var rgb = parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16);
-          rs.setProperty('--accent-rgb', rgb);
-          rs.setProperty('--primary-rgb', rgb);
-          rs.setProperty('--secondary-rgb', rgb);
-        }
+    // ── Hide body immediately so nothing renders until settings are applied ──
+    // We use a <style> tag we can remove later (cleaner than toggling a class)
+    var hideEl = document.createElement('style');
+    hideEl.id = 'dz-preload-hide';
+    hideEl.textContent = 'body{visibility:hidden!important}';
+    document.documentElement.appendChild(hideEl);
+    // Pre-read settings from localStorage cache (synchronous, zero network delay)
+    var _dzSettings = {};
+    try { _dzSettings = JSON.parse(localStorage.getItem('dz_settings') || '{}'); } catch(e) {}
+    // Apply CSS custom properties right now (before any stylesheet overrides)
+    if (_dzSettings.primary) {
+      var rs = document.documentElement.style;
+      rs.setProperty('--accent', _dzSettings.primary);
+      rs.setProperty('--primary', _dzSettings.primary);
+      rs.setProperty('--secondary', _dzSettings.primary);
+      var _m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(_dzSettings.primary);
+      if (_m) {
+        var _rgb = parseInt(_m[1],16)+','+parseInt(_m[2],16)+','+parseInt(_m[3],16);
+        rs.setProperty('--accent-rgb', _rgb);
+        rs.setProperty('--primary-rgb', _rgb);
+        rs.setProperty('--secondary-rgb', _rgb);
       }
-      // Store these for DOMContentLoaded patch-up (logo needs DOM)
-      document.documentElement.setAttribute('data-storename', storeName);
-      document.documentElement.setAttribute('data-presettings', JSON.stringify({
-        storeName: storeName,
-        logo: s.logo || null,
-        logoLight: s.logoLight || null,
-        logoDark: s.logoDark || null
-      }));
-    } catch(e) {}
-    // Reveal body as soon as DOM is ready — settings already applied above
+    }
+    if (_dzSettings.storeName) document.title = _dzSettings.storeName;
+    // Once DOM is ready: patch text/logo nodes, then reveal body
     document.addEventListener('DOMContentLoaded', function() {
-      // Patch store name text nodes (DOM is now available)
       try {
-        var ps = JSON.parse(document.documentElement.getAttribute('data-presettings') || '{}');
-        if (ps.storeName) {
-          document.querySelectorAll('.store-name').forEach(function(el){ el.textContent = ps.storeName; });
-          var pt = document.getElementById('page-title'); if (pt) pt.textContent = ps.storeName;
+        var s = _dzSettings;
+        var name = s.storeName || '';
+        if (name) {
+          document.querySelectorAll('.store-name').forEach(function(el){ el.textContent = name; });
+          var t = document.getElementById('page-title'); if (t) t.textContent = name;
         }
-        var _theme = document.documentElement.getAttribute('data-theme') || 'light';
-        var _logo = (_theme === 'dark' && ps.logoDark) ? ps.logoDark : (ps.logoLight || ps.logo || null);
-        if (_logo) {
-          document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_logo; el.style.display='block'; });
+        if (s.primary) {
+          var r = document.documentElement.style;
+          r.setProperty('--accent', s.primary); r.setProperty('--primary', s.primary); r.setProperty('--secondary', s.primary);
+          var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.primary);
+          if (m) { var v=parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16); r.setProperty('--accent-rgb',v); r.setProperty('--primary-rgb',v); r.setProperty('--secondary-rgb',v); }
         }
+        var _ht = localStorage.getItem('dz_theme') || 'light';
+        var _al = (_ht === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
+        if (_al) { document.querySelectorAll('.nav-logo-img').forEach(function(el){ el.src=_al; el.style.display='block'; }); }
       } catch(e) {}
-      // Remove the hide — page is now ready with correct values, no flash
-      var hideStyle = document.getElementById('pre-load-hide');
-      if (hideStyle) hideStyle.remove();
+      // Remove hide — page is ready with correct values, reveal with no flash
+      var h = document.getElementById('dz-preload-hide'); if (h) h.parentNode.removeChild(h);
     });
-    // Safety net: if DOMContentLoaded was missed, reveal after 500ms max
-    setTimeout(function() {
-      var hideStyle = document.getElementById('pre-load-hide');
-      if (hideStyle) hideStyle.remove();
-    }, 500);
+    // Safety net: never leave page hidden longer than 800ms (e.g. script error)
+    setTimeout(function(){ var h=document.getElementById('dz-preload-hide'); if(h) h.parentNode.removeChild(h); }, 800);
   })();
 </script>
 <meta charset="UTF-8"/>
@@ -1763,6 +1757,7 @@ body.flash-on #mobile-nav{top:102px}
 <!-- TOAST -->
 <div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
 
+<script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
