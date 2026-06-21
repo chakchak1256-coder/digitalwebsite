@@ -1757,7 +1757,6 @@ body.flash-on #mobile-nav{top:102px}
 <!-- TOAST -->
 <div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
 
-<script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1789,6 +1788,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('db:update', () => {
     renderCats();
     renderProducts();
+    renderStats();
     renderContactSocials();
     updateFooter();
     updateWaFloat();
@@ -3325,7 +3325,7 @@ function initFlashBanner() {
     tick();
   }
 }
-window.addEventListener('settings:update', initFlashBanner);
+// (initFlashBanner is already wired to settings:update in DOMContentLoaded)
 
 // ================================================================
 // ===== FEATURE: COUPON / PROMO CODE =====
