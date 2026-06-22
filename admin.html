@@ -1040,6 +1040,9 @@ select.form-input option{background:var(--bg2)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script>
+  window.DIGISTORE_BACKEND_URL = 'https://digital-website.chakchak1256.workers.dev';
+</script>
 <script src="firebase.js"></script>
 <script>
 'use strict';
@@ -1115,7 +1118,6 @@ function toggleEye() {
       document.getElementById('admin-shell').classList.remove('hidden');
       initAdmin();
       showPanel('dashboard');
-      initAdminTheme();
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', _bootAdmin);

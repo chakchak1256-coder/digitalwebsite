@@ -655,37 +655,64 @@ const Storage = {
     return Math.round(bytes / 1024);
   },
 
-  // Upload a file to Firebase Storage and resolve with its public download URL.
+  // Upload a file via the Worker backend, which forwards it to Firebase
+  // Storage server-to-server (no browser CORS involved) and resolves
+  // with its public download URL.
   // folder:     storage path prefix, e.g. 'deliveries/<purchaseId>'
   // onProgress: optional callback(percent:number)
   uploadFile(file, folder, onProgress) {
     return new Promise((resolve, reject) => {
-      const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const path = `${folder}/${Date.now()}_${safeName}`;
-      const metadata = {
-        contentType: file.type || 'application/octet-stream',
-        // Forces the browser to download (not preview) the file when the URL is opened,
-        // regardless of where the link is opened from.
-        contentDisposition: `attachment; filename="${file.name || safeName}"`
+      const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+      if (!backendUrl) {
+        reject(new Error('DIGISTORE_BACKEND_URL is not configured — cannot upload files.'));
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', folder);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', backendUrl + '/api/upload-file');
+
+      xhr.upload.onprogress = (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
       };
-      const ref = _storage.ref().child(path);
-      const task = ref.put(file, metadata);
-      task.on('state_changed',
-        snap => { if (onProgress && snap.totalBytes) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)); },
-        err => reject(err),
-        async () => {
-          try {
-            const url = await task.snapshot.ref.getDownloadURL();
-            resolve({ url, path, name: file.name || safeName, size: file.size || 0 });
-          } catch (e) { reject(e); }
+
+      xhr.onload = () => {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch { data = null; }
+
+        if (xhr.status >= 200 && xhr.status < 300 && data && data.url) {
+          resolve(data);
+        } else {
+          const message = (data && data.error) || ('Upload failed (HTTP ' + xhr.status + ').');
+          reject(new Error(message));
         }
-      );
+      };
+
+      xhr.onerror = () => {
+        reject(new Error(
+          'Could not reach the upload server. Check that ' + backendUrl + ' is reachable ' +
+          'and that the Worker is deployed with the /api/upload-file route.'
+        ));
+      };
+
+      xhr.send(formData);
     });
   },
 
   async deleteFile(path) {
     if (!path) return;
-    try { await _storage.ref().child(path).delete(); } catch (e) { console.warn('Storage.deleteFile:', e); }
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backendUrl) return;
+    try {
+      await fetch(backendUrl + '/api/delete-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+    } catch (e) { console.warn('Storage.deleteFile:', e); }
   }
 };
 

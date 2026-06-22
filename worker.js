@@ -231,6 +231,168 @@ export default {
       }
     }
 
+    // ============================================================
+    // ROUTE: POST /api/upload-file
+    // Admin uploads a file (PDF/etc). Worker forwards it to Firebase
+    // Storage server-to-server using the service account — this is
+    // what avoids the browser CORS problem entirely, since the
+    // browser only ever talks to this Worker, never to Firebase
+    // Storage directly.
+    //
+    // Request: multipart/form-data with fields:
+    //   file   — the binary file
+    //   folder — storage path prefix, e.g. "deliveries/<purchaseId>"
+    // Response: { url, path, name, size }
+    // ============================================================
+    if (path === '/api/upload-file' && method === 'POST') {
+      try {
+        if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
+          return json({ error: 'Server is missing Firebase credentials.' }, 500);
+        }
+
+        let form;
+        try {
+          form = await request.formData();
+        } catch {
+          return json({ error: 'Expected multipart/form-data with a "file" field.' }, 400);
+        }
+
+        const file   = form.get('file');
+        const folder = (form.get('folder') || 'deliveries/misc').toString();
+
+        if (!file || typeof file.arrayBuffer !== 'function') {
+          return json({ error: 'No file provided.' }, 400);
+        }
+
+        const MAX_BYTES = 50 * 1024 * 1024; // 50MB, matches the admin panel's limit
+        if (file.size > MAX_BYTES) {
+          return json({ error: 'File is too large — must be under 50MB.' }, 400);
+        }
+
+        const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const safeFolder = folder.replace(/[^a-zA-Z0-9/_\-]/g, '_').replace(/^\/+/, '');
+        const objectPath = `${safeFolder}/${Date.now()}_${safeName}`;
+        const contentType = file.type || 'application/octet-stream';
+
+        const fileBytes = await file.arrayBuffer();
+
+        // ── 1. Get an access token scoped for Storage R/W ──────────
+        const token = await getGoogleAccessToken(
+          env,
+          'https://www.googleapis.com/auth/devstorage.read_write'
+        );
+
+        const bucket = env.FIREBASE_STORAGE_BUCKET || `${env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
+
+        // ── 2. Upload the bytes via the GCS JSON API ────────────────
+        // contentDisposition forces a download (not inline preview)
+        // when a customer opens the link, matching the old SDK upload.
+        const uploadUrl =
+          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(bucket)}/o` +
+          `?uploadType=media&name=${encodeURIComponent(objectPath)}`;
+
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': contentType,
+          },
+          body: fileBytes,
+        });
+
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text();
+          console.error('[upload-file] GCS upload failed:', errText);
+          return json({ error: 'Upload to storage failed.' }, 502);
+        }
+
+        // ── 3. Set Content-Disposition + make the object public ────
+        // (so the resulting download URL works without auth, same
+        // behavior as the old getDownloadURL() from the Storage SDK)
+        const metaUrl =
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
+
+        await fetch(metaUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contentDisposition: `attachment; filename="${file.name || safeName}"`,
+          }),
+        });
+
+        await fetch(`${metaUrl}/acl`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ entity: 'allUsers', role: 'READER' }),
+        });
+
+        // ── 4. Build the public download URL ─────────────────────
+        const downloadUrl =
+          `https://storage.googleapis.com/${bucket}/${encodeURIComponent(objectPath).replace(/%2F/g, '/')}`;
+
+        return json({
+          url:  downloadUrl,
+          path: objectPath,
+          name: file.name || safeName,
+          size: file.size || 0,
+        });
+
+      } catch (err) {
+        console.error('[upload-file] error:', err.message);
+        return json({ error: 'Internal server error.', message: err.message }, 500);
+      }
+    }
+
+    // ============================================================
+    // ROUTE: POST /api/delete-file
+    // Deletes a previously uploaded file from Firebase Storage.
+    // Body: { path: "deliveries/<purchaseId>/<filename>" }
+    // ============================================================
+    if (path === '/api/delete-file' && method === 'POST') {
+      try {
+        if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
+          return json({ error: 'Server is missing Firebase credentials.' }, 500);
+        }
+
+        let body;
+        try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
+
+        const objectPath = (body.path || '').toString();
+        if (!objectPath) return json({ error: 'path is required.' }, 400);
+
+        const token = await getGoogleAccessToken(
+          env,
+          'https://www.googleapis.com/auth/devstorage.read_write'
+        );
+        const bucket = env.FIREBASE_STORAGE_BUCKET || `${env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
+        const deleteUrl =
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
+
+        const res = await fetch(deleteUrl, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        // 404 just means it's already gone — treat as success either way
+        if (!res.ok && res.status !== 404) {
+          const errText = await res.text();
+          console.warn('[delete-file] GCS delete failed:', errText);
+        }
+
+        return json({ ok: true });
+
+      } catch (err) {
+        console.error('[delete-file] error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
     // ── 404 for unknown /api routes ───────────────────────────────
     if (path.startsWith('/api/')) {
       return json({ error: 'Not found.' }, 404);
@@ -304,7 +466,7 @@ async function updateFirestorePurchases(purchaseIds, checkout, env) {
 // it for a short-lived OAuth2 access token.
 // Cloudflare Workers support SubtleCrypto — no libraries needed.
 // ================================================================
-async function getGoogleAccessToken(env) {
+async function getGoogleAccessToken(env, scope = 'https://www.googleapis.com/auth/datastore') {
   const clientEmail  = env.FIREBASE_CLIENT_EMAIL;
   const privateKeyPem = (env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
 
@@ -315,7 +477,7 @@ async function getGoogleAccessToken(env) {
   const header = { alg: 'RS256', typ: 'JWT' };
   const claims = {
     iss:   clientEmail,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope,
     aud:   'https://oauth2.googleapis.com/token',
     iat:   now,
     exp:   expires,
