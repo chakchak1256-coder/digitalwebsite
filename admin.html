@@ -16,12 +16,12 @@
   } catch(e) {}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Admin — DigiStore DZ</title>
+<title>Admin — DIGITCH</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
 /* ============================================================
-   DigiStore DZ — Admin Panel (Clean Redesign)
+   DIGITCH — Admin Panel (Clean Redesign)
    ============================================================ */
 :root{
   --accent:#10B981;--accent-rgb:16,185,129;--accent-dark:#059669;
@@ -457,6 +457,20 @@ select.form-input option{background:var(--bg2)}
 .modal-title{font-size:1rem;font-weight:700;margin-bottom:1.3rem;color:var(--text)}
 .modal-actions{display:flex;gap:.65rem;justify-content:flex-end;margin-top:1.3rem}
 
+/* DELIVER TYPE BUTTONS */
+.deliver-type-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;
+  padding:.75rem .5rem;border-radius:var(--radius-sm);cursor:pointer;
+  background:var(--card);border:2px solid var(--border-strong);
+  transition:all var(--transition);text-align:center;user-select:none;
+}
+.deliver-type-btn:hover{border-color:rgba(var(--accent-rgb),.45);background:rgba(var(--accent-rgb),.04)}
+.deliver-type-btn.selected{border-color:var(--accent);background:rgba(var(--accent-rgb),.08);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.12)}
+.deliver-type-btn i{font-size:1.2rem;color:var(--text-muted)}
+.deliver-type-btn.selected i{color:var(--accent)}
+.deliver-type-btn span{font-size:.72rem;font-weight:700;color:var(--text-muted)}
+.deliver-type-btn.selected span{color:var(--text)}
+
 /* TOAST */
 #toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg3);border:1px solid var(--border-strong);
   border-radius:var(--radius-sm);padding:10px 16px;font-size:.84rem;font-weight:500;
@@ -489,7 +503,7 @@ select.form-input option{background:var(--bg2)}
   <div class="login-grid"></div>
   <div class="login-box">
     <div class="login-logo">
-      <span class="login-logo-text store-name">DigiStore <span>DZ</span></span>
+      <span class="login-logo-text store-name">DIGITCH</span>
       <span class="login-logo-sub">Admin Panel</span>
     </div>
     <h2 class="login-title">Welcome Back</h2>
@@ -508,7 +522,7 @@ select.form-input option{background:var(--bg2)}
     </label>
     <button class="login-btn" onclick="doLogin()"><i class="fa-solid fa-lock-open"></i> Enter Admin Panel</button>
     <div class="login-error" id="login-error"><i class="fa-solid fa-circle-xmark"></i> Incorrect password. Please try again.</div>
-    <p class="login-hint">Protected area · <span class="store-name">DigiStore DZ</span></p>
+    <p class="login-hint">Protected area · <span class="store-name">DIGITCH</span></p>
   </div>
 </div>
 
@@ -519,7 +533,7 @@ select.form-input option{background:var(--bg2)}
   <aside id="sidebar">
     <div class="sidebar-logo">
       <img class="sidebar-logo-img nav-logo-img" alt="logo"/>
-      <span class="sidebar-logo-text nav-logo-text store-name">DigiStore <span>DZ</span></span>
+      <span class="sidebar-logo-text nav-logo-text store-name">DIGITCH</span>
       <span class="sidebar-logo-badge">ADMIN</span>
     </div>
     <nav class="sidebar-nav">
@@ -2069,105 +2083,206 @@ function openDeliverModal(purchaseId) {
   document.getElementById('deliver-product-name').textContent = purchase.productName || '—';
   document.getElementById('deliver-user-email').textContent = '👤 ' + (purchase.userEmail || 'Unknown user');
   document.getElementById('deliver-error').style.display = 'none';
+  document.getElementById('deliver-note').value = purchase.deliverNote || '';
 
-  // Build fields from existing accessData, or fall back to legacy accessLink
-  _deliverFieldCount = 0;
-  const wrap = document.getElementById('deliver-fields-wrap');
-  wrap.innerHTML = '';
+  // Detect existing delivery type
+  const existingType = purchase.deliveryType || 'credentials';
+  const existingData = purchase.accessData;
+  const existingLink = purchase.accessLink || '';
 
-  const existingData = purchase.accessData && Object.keys(purchase.accessData).length
-    ? purchase.accessData : null;
-
-  if (existingData) {
-    // Re-populate previously saved fields
-    Object.entries(existingData).forEach(([lbl, val]) => {
-      const idx = _deliverFieldCount++;
-      wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML(lbl, val, idx, idx > 0));
-    });
+  // Pre-fill fields based on type
+  if (existingType === 'pdf' || existingType === 'ebook') {
+    document.getElementById('deliver-' + existingType + '-url').value = existingLink || (existingData?.URL || existingData?.Link || '');
+    if (existingType === 'pdf') document.getElementById('deliver-pdf-name').value = existingData?.['File Name'] || '';
+    if (existingType === 'ebook') {
+      document.getElementById('deliver-ebook-title').value = existingData?.['Title'] || existingData?.['Ebook Title'] || '';
+      document.getElementById('deliver-ebook-author').value = existingData?.['Author'] || '';
+    }
+  } else if (existingType === 'canva') {
+    document.getElementById('deliver-canva-url').value = existingLink || (existingData?.URL || existingData?.['Canva Link'] || '');
+    document.getElementById('deliver-canva-name').value = existingData?.['Template Name'] || '';
+  } else if (existingType === 'link') {
+    document.getElementById('deliver-link-url').value = existingLink || (existingData?.URL || existingData?.Link || '');
   } else {
-    // Try to seed from the product's variables (e.g. Email, Password)
-    // Look up the product to get its variables/fields
-    const product = DB.getById ? DB.getById('products', purchase.productId) : null;
-    const variables = product && product.variables;
-    let seeded = false;
+    // credentials or custom — rebuild fields
+    _deliverFieldCount = 0;
+    const wrap = document.getElementById(existingType === 'custom' ? 'deliver-fields-wrap-custom' : 'deliver-fields-wrap');
+    wrap.innerHTML = '';
 
-    if (variables && variables.length) {
-      // Use variable titles as default field labels
-      variables.forEach(v => {
+    if (existingData && Object.keys(existingData).length) {
+      Object.entries(existingData).forEach(([lbl, val]) => {
         const idx = _deliverFieldCount++;
-        const lbl = v.title ? (v.title.charAt(0).toUpperCase() + v.title.slice(1)) : 'Field';
-        const legacyVal = purchase.accessLink || '';
-        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML(lbl, idx === 0 ? legacyVal : '', idx, idx > 0));
-        seeded = true;
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML(lbl, val, idx, idx > 0, existingType));
       });
-    }
-
-    if (!seeded) {
-      // Default: Email + Password fields
-      wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Email', '', 0, false));
-      _deliverFieldCount = 1;
-      const idx2 = _deliverFieldCount++;
-      wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Password', '', idx2, true));
-    }
-
-    // If there was a legacy accessLink, put it in the first field value
-    if (purchase.accessLink && wrap.querySelector('#dfv-0')) {
-      wrap.querySelector('#dfv-0').value = purchase.accessLink;
+    } else {
+      const product = DB.getById ? DB.getById('products', purchase.productId) : null;
+      const variables = product && product.variables;
+      let seeded = false;
+      if (variables && variables.length) {
+        variables.forEach(v => {
+          const idx = _deliverFieldCount++;
+          const lbl = v.title ? (v.title.charAt(0).toUpperCase() + v.title.slice(1)) : 'Field';
+          wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML(lbl, idx === 0 ? existingLink : '', idx, idx > 0, existingType));
+          seeded = true;
+        });
+      }
+      if (!seeded) {
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Email', '', 0, false, existingType));
+        _deliverFieldCount = 1;
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Password', '', 1, true, existingType));
+        _deliverFieldCount = 2;
+      }
+      if (existingLink && wrap.querySelector('#dfv-0')) wrap.querySelector('#dfv-0').value = existingLink;
     }
   }
 
+  switchDeliverType(existingType, false); // switch UI without clearing fields
   document.getElementById('deliver-modal').classList.add('open');
-  setTimeout(() => { const f = wrap.querySelector('.deliver-field-value'); if (f) f.focus(); }, 150);
+  setTimeout(() => {
+    const f = document.querySelector('#deliver-section-' + existingType + ' input, #deliver-section-' + existingType + ' .deliver-field-value');
+    if (f) f.focus();
+  }, 150);
+}
+
+function switchDeliverType(type, clearFields = true) {
+  const types = ['credentials','link','pdf','canva','ebook','custom'];
+  types.forEach(t => {
+    const sec = document.getElementById('deliver-section-' + t);
+    if (sec) sec.style.display = t === type ? '' : 'none';
+    const btn = document.getElementById('dtype-' + t);
+    if (btn) btn.classList.toggle('selected', t === type);
+    const radio = btn?.querySelector('input[type=radio]');
+    if (radio) radio.checked = t === type;
+  });
+
+  if (clearFields) {
+    // Reset the activated section
+    if (type === 'credentials' || type === 'custom') {
+      const wrapId = type === 'credentials' ? 'deliver-fields-wrap' : 'deliver-fields-wrap-custom';
+      const wrap = document.getElementById(wrapId);
+      wrap.innerHTML = '';
+      _deliverFieldCount = 0;
+      if (type === 'credentials') {
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Email', '', 0, false, type));
+        _deliverFieldCount = 1;
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Password', '', 1, true, type));
+        _deliverFieldCount = 2;
+      } else {
+        wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('Field 1', '', 0, false, type));
+        _deliverFieldCount = 1;
+      }
+    } else if (type === 'link') {
+      document.getElementById('deliver-link-url').value = '';
+    } else if (type === 'pdf') {
+      document.getElementById('deliver-pdf-url').value = '';
+      document.getElementById('deliver-pdf-name').value = '';
+    } else if (type === 'canva') {
+      document.getElementById('deliver-canva-url').value = '';
+      document.getElementById('deliver-canva-name').value = '';
+    } else if (type === 'ebook') {
+      document.getElementById('deliver-ebook-url').value = '';
+      document.getElementById('deliver-ebook-title').value = '';
+      document.getElementById('deliver-ebook-author').value = '';
+    }
+  }
+}
+
+function _deliverFieldHTML(label, value, idx, removable, type = 'credentials') {
+  const wrapSuffix = type === 'custom' ? '-custom' : '';
+  return `<div class="deliver-field-row" id="dfr${wrapSuffix}-${idx}" style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.6rem">
+    <input id="dfl${wrapSuffix}-${idx}" class="form-input" value="${label}" placeholder="Label" style="flex:0 0 120px;font-size:.82rem;font-weight:600"/>
+    <input id="dfv${wrapSuffix}-${idx}" class="form-input deliver-field-value" value="${value}" placeholder="Value" style="flex:1;font-size:.85rem;font-family:monospace"/>
+    ${removable ? `<button type="button" onclick="removeDeliverField('${wrapSuffix}','${idx}')" style="width:30px;height:38px;flex-shrink:0;border-radius:6px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="fa-solid fa-xmark" style="font-size:.8rem"></i></button>` : '<div style="width:30px;flex-shrink:0"></div>'}
+  </div>`;
 }
 
 function addDeliverField() {
   const idx = _deliverFieldCount++;
   const wrap = document.getElementById('deliver-fields-wrap');
-  wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('', '', idx, true));
+  wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('', '', idx, true, 'credentials'));
   setTimeout(() => { const f = document.getElementById('dfl-' + idx); if (f) f.focus(); }, 50);
 }
 
-function removeDeliverField(idx) {
-  const row = document.getElementById('dfr-' + idx);
+function addDeliverFieldCustom() {
+  const idx = _deliverFieldCount++;
+  const wrap = document.getElementById('deliver-fields-wrap-custom');
+  wrap.insertAdjacentHTML('beforeend', _deliverFieldHTML('', '', idx, true, 'custom'));
+  setTimeout(() => { const f = document.getElementById('dfl-custom-' + idx); if (f) f.focus(); }, 50);
+}
+
+function removeDeliverField(suffix, idx) {
+  const row = document.getElementById('dfr' + suffix + '-' + idx);
   if (row) row.remove();
 }
 
 async function submitDeliver() {
   const id = document.getElementById('deliver-purchase-id').value;
+  const type = document.querySelector('input[name="deliver-type"]:checked')?.value || 'credentials';
+  const note = document.getElementById('deliver-note').value.trim();
+  const errEl = document.getElementById('deliver-error');
+  errEl.style.display = 'none';
 
-  // Collect all field rows
-  const rows = document.querySelectorAll('#deliver-fields-wrap .deliver-field-row');
-  const accessData = {};
-  let hasAnyValue = false;
-  rows.forEach(row => {
-    const idx = row.id.replace('dfr-', '');
-    const lbl = (document.getElementById('dfl-' + idx)?.value || '').trim();
-    const val = (document.getElementById('dfv-' + idx)?.value || '').trim();
-    if (lbl) {
-      accessData[lbl] = val;
-      if (val) hasAnyValue = true;
-    }
-  });
+  let accessData = {};
+  let accessLink = '';
 
-  if (!hasAnyValue) { showToast('Enter at least one value to deliver'); return; }
+  if (type === 'credentials' || type === 'custom') {
+    const suffix = type === 'custom' ? '-custom' : '';
+    const rows = document.querySelectorAll(type === 'custom' ? '#deliver-fields-wrap-custom .deliver-field-row' : '#deliver-fields-wrap .deliver-field-row');
+    let hasAny = false;
+    rows.forEach(row => {
+      const idx = row.id.replace('dfr' + suffix + '-', '');
+      const lbl = (document.getElementById('dfl' + suffix + '-' + idx)?.value || '').trim();
+      const val = (document.getElementById('dfv' + suffix + '-' + idx)?.value || '').trim();
+      if (lbl) { accessData[lbl] = val; if (val) hasAny = true; }
+    });
+    if (!hasAny) { errEl.textContent = 'Enter at least one value to deliver.'; errEl.style.display = 'block'; return; }
+    accessLink = Object.values(accessData).find(v => v) || '';
+
+  } else if (type === 'link') {
+    const url = document.getElementById('deliver-link-url').value.trim();
+    if (!url) { errEl.textContent = 'Please enter a URL.'; errEl.style.display = 'block'; return; }
+    accessData = { 'Link': url };
+    accessLink = url;
+
+  } else if (type === 'pdf') {
+    const url = document.getElementById('deliver-pdf-url').value.trim();
+    if (!url) { errEl.textContent = 'Please enter the PDF/file URL.'; errEl.style.display = 'block'; return; }
+    const name = document.getElementById('deliver-pdf-name').value.trim();
+    accessData = { 'Download Link': url };
+    if (name) accessData['File Name'] = name;
+    accessLink = url;
+
+  } else if (type === 'canva') {
+    const url = document.getElementById('deliver-canva-url').value.trim();
+    if (!url) { errEl.textContent = 'Please enter the Canva template link.'; errEl.style.display = 'block'; return; }
+    const name = document.getElementById('deliver-canva-name').value.trim();
+    accessData = { 'Canva Template': url };
+    if (name) accessData['Template Name'] = name;
+    accessLink = url;
+
+  } else if (type === 'ebook') {
+    const url = document.getElementById('deliver-ebook-url').value.trim();
+    if (!url) { errEl.textContent = 'Please enter the ebook URL.'; errEl.style.display = 'block'; return; }
+    const title = document.getElementById('deliver-ebook-title').value.trim();
+    const author = document.getElementById('deliver-ebook-author').value.trim();
+    accessData = { 'Download Link': url };
+    if (title) accessData['Ebook Title'] = title;
+    if (author) accessData['Author'] = author;
+    accessLink = url;
+  }
+
+  if (note) accessData['_note'] = note;
 
   const btn = document.getElementById('deliver-submit-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
-  const errEl = document.getElementById('deliver-error');
-  errEl.style.display = 'none';
-
-  // Also keep legacy accessLink as the first non-empty value for backwards compat
-  const firstVal = Object.values(accessData).find(v => v) || '';
-
   try {
-    await Purchases.update(id, { accessData, accessLink: firstVal });
+    await Purchases.update(id, { accessData, accessLink, deliveryType: type, deliverNote: note });
     closeDeliverModal();
     showToast('✅ Product delivered successfully');
     await renderPurchasesAdmin();
   } catch(err) {
-    console.error('Deliver failed:', err);
     errEl.textContent = '❌ Failed: ' + (err.message || String(err));
     errEl.style.display = 'block';
   } finally {
@@ -2809,22 +2924,114 @@ async function saveAdminReview() {
 
 <!-- DELIVER PRODUCT MODAL -->
 <div class="modal-overlay" id="deliver-modal">
-  <div class="modal-box" style="max-width:500px;max-height:90vh;overflow-y:auto">
+  <div class="modal-box" style="max-width:540px;max-height:90vh;overflow-y:auto">
     <button class="modal-close" onclick="closeDeliverModal()"><i class="fa-solid fa-xmark"></i></button>
     <h3 class="modal-title"><i class="fa-solid fa-paper-plane" style="color:var(--accent)"></i> Deliver Product</h3>
-    <div id="deliver-modal-info" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:1.1rem">
+
+    <!-- Product info -->
+    <div id="deliver-modal-info" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:1.2rem">
       <div id="deliver-product-name" style="font-weight:700;font-size:.9rem;margin-bottom:.2rem"></div>
       <div id="deliver-user-email" style="font-size:.8rem;color:var(--text-muted)"></div>
     </div>
     <input type="hidden" id="deliver-purchase-id"/>
-    <!-- Dynamic credential fields injected here by openDeliverModal() -->
-    <div id="deliver-fields-wrap"></div>
-    <!-- Add custom field -->
-    <button type="button" id="deliver-add-field-btn" onclick="addDeliverField()" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px dashed rgba(var(--accent-rgb),.3);border-radius:var(--radius-sm);padding:.4rem .9rem;margin-bottom:1rem;cursor:pointer;transition:all .18s ease">
-      <i class="fa-solid fa-plus"></i> Add Field
-    </button>
+
+    <!-- Delivery type selector -->
+    <div style="margin-bottom:1.2rem">
+      <label class="form-label" style="margin-bottom:.55rem;display:block">Delivery Type</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem" id="deliver-type-grid">
+        <label class="deliver-type-btn" id="dtype-credentials">
+          <input type="radio" name="deliver-type" value="credentials" style="display:none" onchange="switchDeliverType('credentials')"/>
+          <i class="fa-solid fa-key"></i>
+          <span>Credentials</span>
+        </label>
+        <label class="deliver-type-btn" id="dtype-link">
+          <input type="radio" name="deliver-type" value="link" style="display:none" onchange="switchDeliverType('link')"/>
+          <i class="fa-solid fa-link"></i>
+          <span>Link / URL</span>
+        </label>
+        <label class="deliver-type-btn" id="dtype-pdf">
+          <input type="radio" name="deliver-type" value="pdf" style="display:none" onchange="switchDeliverType('pdf')"/>
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>PDF / File</span>
+        </label>
+        <label class="deliver-type-btn" id="dtype-canva">
+          <input type="radio" name="deliver-type" value="canva" style="display:none" onchange="switchDeliverType('canva')"/>
+          <i class="fa-brands fa-creative-commons"></i>
+          <span>Canva</span>
+        </label>
+        <label class="deliver-type-btn" id="dtype-ebook">
+          <input type="radio" name="deliver-type" value="ebook" style="display:none" onchange="switchDeliverType('ebook')"/>
+          <i class="fa-solid fa-book-open"></i>
+          <span>Ebook</span>
+        </label>
+        <label class="deliver-type-btn" id="dtype-custom">
+          <input type="radio" name="deliver-type" value="custom" style="display:none" onchange="switchDeliverType('custom')"/>
+          <i class="fa-solid fa-sliders"></i>
+          <span>Custom</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- CREDENTIALS fields -->
+    <div id="deliver-section-credentials" style="display:none">
+      <div id="deliver-fields-wrap"></div>
+      <button type="button" id="deliver-add-field-btn" onclick="addDeliverField()" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px dashed rgba(var(--accent-rgb),.3);border-radius:var(--radius-sm);padding:.4rem .9rem;margin-bottom:1rem;cursor:pointer;transition:all .18s ease">
+        <i class="fa-solid fa-plus"></i> Add Field
+      </button>
+    </div>
+
+    <!-- LINK / URL section -->
+    <div id="deliver-section-link" style="display:none;margin-bottom:1rem">
+      <label class="form-label">URL / Download Link</label>
+      <input class="form-input" id="deliver-link-url" placeholder="https://drive.google.com/..." style="margin-top:.35rem"/>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem"><i class="fa-solid fa-circle-info"></i> Paste any link — Google Drive, Dropbox, WeTransfer, etc.</div>
+    </div>
+
+    <!-- PDF section -->
+    <div id="deliver-section-pdf" style="display:none;margin-bottom:1rem">
+      <label class="form-label">PDF / File URL or Drive Link</label>
+      <input class="form-input" id="deliver-pdf-url" placeholder="https://drive.google.com/file/d/..." style="margin-top:.35rem;margin-bottom:.6rem"/>
+      <label class="form-label" style="margin-top:.3rem">File Name <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input class="form-input" id="deliver-pdf-name" placeholder="e.g. Course Guide.pdf" style="margin-top:.35rem"/>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> Tip: Upload your PDF to Google Drive, set sharing to "Anyone with the link", then paste the link here.</div>
+    </div>
+
+    <!-- CANVA section -->
+    <div id="deliver-section-canva" style="display:none;margin-bottom:1rem">
+      <label class="form-label">Canva Template Link</label>
+      <input class="form-input" id="deliver-canva-url" placeholder="https://www.canva.com/design/..." style="margin-top:.35rem;margin-bottom:.6rem"/>
+      <label class="form-label" style="margin-top:.3rem">Template Name <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input class="form-input" id="deliver-canva-name" placeholder="e.g. Instagram Story Pack" style="margin-top:.35rem"/>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> Tip: In Canva, click Share → Template link → Copy link. The customer will get their own editable copy.</div>
+    </div>
+
+    <!-- EBOOK section -->
+    <div id="deliver-section-ebook" style="display:none;margin-bottom:1rem">
+      <label class="form-label">Ebook / PDF URL</label>
+      <input class="form-input" id="deliver-ebook-url" placeholder="https://drive.google.com/file/d/..." style="margin-top:.35rem;margin-bottom:.6rem"/>
+      <label class="form-label" style="margin-top:.3rem">Ebook Title <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input class="form-input" id="deliver-ebook-title" placeholder="e.g. The Ultimate Guide to..." style="margin-top:.35rem"/>
+      <label class="form-label" style="margin-top:.6rem">Author <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input class="form-input" id="deliver-ebook-author" placeholder="Author name" style="margin-top:.35rem"/>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> Tip: Upload the PDF to Google Drive and share the direct link here.</div>
+    </div>
+
+    <!-- CUSTOM section -->
+    <div id="deliver-section-custom" style="display:none">
+      <div id="deliver-fields-wrap-custom"></div>
+      <button type="button" onclick="addDeliverFieldCustom()" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px dashed rgba(var(--accent-rgb),.3);border-radius:var(--radius-sm);padding:.4rem .9rem;margin-bottom:1rem;cursor:pointer;transition:all .18s ease">
+        <i class="fa-solid fa-plus"></i> Add Field
+      </button>
+    </div>
+
+    <!-- Notes to customer (all types) -->
+    <div style="margin-bottom:1rem">
+      <label class="form-label">Note to Customer <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <textarea class="form-input" id="deliver-note" rows="2" placeholder="e.g. How to use, instructions, expiry info..." style="margin-top:.35rem;resize:none"></textarea>
+    </div>
+
     <div id="deliver-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.8rem"></div>
-    <div style="display:flex;gap:.7rem;margin-top:1.2rem">
+    <div style="display:flex;gap:.7rem;margin-top:.5rem">
       <button class="btn btn-outline" style="flex:1" onclick="closeDeliverModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:2" id="deliver-submit-btn" onclick="submitDeliver()">
         <i class="fa-solid fa-paper-plane"></i> Deliver Now

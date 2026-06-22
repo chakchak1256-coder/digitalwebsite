@@ -15,12 +15,12 @@
   } catch(e) {}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Settings — DigiStore DZ</title>
+<title>Settings — DIGITCH</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
 /* ============================================================
-   DigiStore DZ — Settings Page
+   DIGITCH — Settings Page
    ============================================================ */
 :root{
   --accent:#10B981;--accent-rgb:16,185,129;--accent-dark:#059669;
@@ -259,7 +259,7 @@ textarea.form-input{resize:vertical;min-height:90px}
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <span class="login-logo-text store-name">DigiStore <span>DZ</span></span>
+      <span class="login-logo-text store-name">DIGITCH</span>
       <span class="login-logo-sub">Admin Panel</span>
     </div>
     <h2 class="login-title">Welcome Back</h2>
@@ -277,7 +277,7 @@ textarea.form-input{resize:vertical;min-height:90px}
     </label>
     <button class="login-btn" onclick="doLogin()"><i class="fa-solid fa-lock-open"></i> Enter Admin Panel</button>
     <div class="login-error" id="login-error"><i class="fa-solid fa-circle-xmark"></i> Incorrect password. Please try again.</div>
-    <p class="login-hint">Protected area · <span class="store-name">DigiStore DZ</span></p>
+    <p class="login-hint">Protected area · <span class="store-name">DIGITCH</span></p>
   </div>
 </div>
 
@@ -288,7 +288,7 @@ textarea.form-input{resize:vertical;min-height:90px}
   <aside id="sidebar">
     <div class="sidebar-logo">
       <img class="sidebar-logo-img nav-logo-img" alt="logo"/>
-      <span class="sidebar-logo-text nav-logo-text store-name">DigiStore <span>DZ</span></span>
+      <span class="sidebar-logo-text nav-logo-text store-name">DIGITCH</span>
       <span class="sidebar-logo-badge">ADMIN</span>
     </div>
     <nav class="sidebar-nav">
@@ -338,7 +338,7 @@ textarea.form-input{resize:vertical;min-height:90px}
         <!-- Identity -->
         <div class="form-section">
           <div class="form-section-title"><i class="fa-solid fa-store"></i> Store Identity</div>
-          <div class="form-group" style="margin-bottom:1.5rem"><label class="form-label">Store Name</label><input class="form-input" id="set-name" placeholder="DigiStore DZ" style="max-width:400px"/></div>
+          <div class="form-group" style="margin-bottom:1.5rem"><label class="form-label">Store Name</label><input class="form-input" id="set-name" placeholder="DIGITCH" style="max-width:400px"/></div>
           <div class="form-group">
             <label class="form-label">Store Logo</label>
             <div style="display:flex;flex-direction:column;gap:1.1rem">
@@ -466,7 +466,7 @@ textarea.form-input{resize:vertical;min-height:90px}
         <div class="form-section">
           <div class="form-section-title"><i class="fa-solid fa-hard-drive"></i> Storage Usage</div>
           <div style="margin-bottom:1.2rem">
-            <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.85rem;color:var(--text-muted)">Used by DigiStore DZ</span><span style="font-size:.85rem;font-weight:700" id="storage-used-text">Calculating...</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.85rem;color:var(--text-muted)">Used by DIGITCH</span><span style="font-size:.85rem;font-weight:700" id="storage-used-text">Calculating...</span></div>
             <div style="height:10px;border-radius:99px;background:var(--bg3);overflow:hidden"><div id="storage-bar" style="height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--secondary));width:0%;transition:width .6s"></div></div>
             <p style="font-size:.76rem;color:var(--text-muted);margin-top:.4rem">localStorage limit ~5 MB per origin. Images use the most space.</p>
           </div>
@@ -748,7 +748,7 @@ function saveSettings() {
   const flexyEl     = document.getElementById('set-flexy-instructions');
   const baridimobEl = document.getElementById('set-baridimob-instructions');
   Settings.save({
-    storeName: document.getElementById('set-name').value.trim() || 'DigiStore DZ',
+    storeName: document.getElementById('set-name').value.trim() || 'DIGITCH',
     logo: tempLogoLight || null, logoLight: tempLogoLight || null, logoDark: tempLogoDark || null,
     primary:   document.getElementById('set-primary').value,
     secondary: document.getElementById('set-secondary').value,

@@ -60,12 +60,12 @@
 </script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title id="page-title">DigiStore DZ</title>
+<title id="page-title">DIGITCH</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
 /* ============================================================
-   DESIGN SYSTEM — DigiStore DZ  (Clean / Premium Redesign)
+   DESIGN SYSTEM — DIGITCH  (Clean / Premium Redesign)
    ============================================================ */
 :root {
   --accent:#10B981;--accent-rgb:16,185,129;--accent-dark:#059669;
@@ -457,17 +457,32 @@ section{position:relative;z-index:1}
 .bs-price{font-family:'Syne',sans-serif;font-weight:800;color:var(--accent);font-size:.95rem;flex-shrink:0}
 .bs-old{font-size:.72rem;color:var(--text-muted);text-decoration:line-through;margin-right:.3rem}
 
-/* ===== TESTIMONIALS ===== */
+/* ===== TESTIMONIALS / SOCIAL PROOF CAROUSEL ===== */
 #testimonials{padding:96px 0;background:var(--bg2)}
-.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
-@media(max-width:860px){.testi-grid{grid-template-columns:1fr;max-width:480px;margin:0 auto}}
+#testi-carousel-wrap{
+  overflow:hidden;position:relative;
+  mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+}
+.testi-track{
+  display:flex;gap:1.4rem;width:max-content;
+  animation:testiSlide var(--testi-duration,40s) linear infinite;
+}
+#testi-carousel-wrap:hover .testi-track{animation-play-state:paused}
+@keyframes testiSlide{
+  from{transform:translateX(0);}
+  to{transform:translateX(var(--testi-shift,-50%));}
+}
 .testi-card{
-  padding:1.6rem;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border);
+  flex:0 0 340px;padding:1.6rem;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border);
   transition:border-color var(--transition),transform var(--transition);
 }
+@media(max-width:600px){.testi-card{flex:0 0 280px}}
 .testi-card:hover{border-color:rgba(var(--accent-rgb),.35);transform:translateY(-3px)}
 .testi-stars{display:flex;gap:2px;margin-bottom:.9rem;color:#F59E0B;font-size:.75rem}
-.testi-text{font-size:.88rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.3rem}
+.testi-stars i.empty{color:var(--border-strong)}
+.testi-text{font-size:.88rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.3rem;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .testi-author{display:flex;align-items:center;gap:.7rem}
 .testi-avatar{
   width:38px;height:38px;border-radius:50%;flex-shrink:0;
@@ -477,6 +492,12 @@ section{position:relative;z-index:1}
 }
 .testi-name{font-size:.84rem;font-weight:700;color:var(--text)}
 .testi-role{font-size:.74rem;color:var(--text-muted)}
+.testi-empty{
+  flex:0 0 100%;width:100%;text-align:center;padding:2.4rem 1rem;color:var(--text-muted);
+}
+.testi-empty i{font-size:2rem;opacity:.2;margin-bottom:.8rem;display:block}
+.testi-empty p{font-size:.88rem}
+.testi-cta{display:flex;justify-content:center;margin-top:2rem}
 
 /* ===== WARRANTY ===== */
 #warranty{padding:96px 0}
@@ -632,10 +653,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .checkout-box-inner::-webkit-scrollbar{width:3px}
 .checkout-box-inner::-webkit-scrollbar-thumb{background:var(--accent);border-radius:99px}
 .co-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.4rem;color:var(--text)}
-.co-success{display:none;text-align:center;padding:1.5rem 0}
-.co-success i{font-size:2rem;color:var(--accent);margin-bottom:.7rem;display:block}
-.co-success h3{font-size:1.1rem;margin-bottom:.4rem;color:var(--text)}
-.co-success p{color:var(--text-muted);font-size:.85rem}
+.co-success{display:none;text-align:center;padding:2rem 1rem}
+.co-success i.fa-circle-check{font-size:2.5rem;color:var(--accent);margin-bottom:.7rem;display:block}
+.co-success h3{font-size:1.2rem;margin-bottom:.5rem;color:var(--text);font-family:'Syne',sans-serif;font-weight:800}
+.co-success p{color:var(--text-muted);font-size:.88rem;line-height:1.6}
 
 /* ── Checkout phone prefix (matches signup) ─────────────────── */
 .co-phone-wrap{display:flex;gap:.4rem;align-items:center}
@@ -686,7 +707,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .co-pay-instr-body{padding:.85rem 1rem}
 .co-pay-instr-text{
   font-size:.84rem;color:var(--text-muted);line-height:1.8;
-  direction:rtl;text-align:right;
+  direction:rtl;text-align:right;white-space:pre-line;
   font-family:'Segoe UI',Tahoma,Arial,sans-serif;
   margin-bottom:.85rem;
 }
@@ -1059,6 +1080,52 @@ body.flash-on #mobile-nav{top:102px}
   display:none;align-items:center;justify-content:center;padding:0 3px;
 }
 
+/* ===== HISTORY (recently viewed) NAV BUTTON + PANEL ===== */
+#history-btn{position:relative;width:38px;height:38px;border-radius:8px;
+  background:var(--card);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;
+  transition:all var(--transition);color:var(--text-muted)}
+#history-btn:hover{background:var(--bg3);color:var(--text)}
+#history-btn.active{color:var(--accent);border-color:rgba(var(--accent-rgb),.4)}
+#history-badge{
+  position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;
+  font-size:.58rem;font-weight:700;min-width:16px;height:16px;border-radius:99px;
+  display:none;align-items:center;justify-content:center;padding:0 3px;
+}
+#history-panel{
+  display:none;position:absolute;top:48px;right:0;z-index:1000;
+  width:320px;max-height:420px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:0 12px 35px rgba(0,0,0,.35);
+  overflow:hidden;flex-direction:column;
+}
+#history-panel.open{display:flex}
+#history-panel-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.8rem 1rem;border-bottom:1px solid var(--border);
+  font-size:.85rem;font-weight:700;color:var(--text);flex-shrink:0;
+}
+#history-panel-hdr i{color:var(--accent);margin-right:.4rem}
+#history-clear-btn{
+  width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted);font-size:.78rem;transition:all var(--transition);
+}
+#history-clear-btn:hover{background:rgba(239,68,68,.1);color:#EF4444}
+#history-panel-body{overflow-y:auto;padding:.7rem;flex:1}
+#rv-grid{display:flex;flex-direction:column;gap:.6rem}
+#rv-grid .rv-item{
+  display:flex;align-items:center;gap:.7rem;padding:.5rem;border-radius:var(--radius-sm);
+  cursor:pointer;transition:background var(--transition);
+}
+#rv-grid .rv-item:hover{background:var(--bg3)}
+#rv-grid .rv-item img{width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--bg3)}
+#rv-grid .rv-item-name{font-size:.82rem;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rv-grid .rv-item-price{font-size:.74rem;color:var(--accent);font-weight:700;margin-top:.1rem}
+#history-empty{text-align:center;padding:2rem 1rem;color:var(--text-muted)}
+#history-empty i{font-size:1.8rem;opacity:.25;margin-bottom:.6rem;display:block}
+#history-empty p{font-size:.82rem}
+@media(max-width:480px){#history-panel{width:280px;right:-40px}}
+
 /* ===== STAR RATINGS ===== */
 .prod-stars{display:flex;align-items:center;gap:2px;margin-bottom:.45rem}
 .prod-stars i{font-size:.65rem;color:#F59E0B}
@@ -1107,13 +1174,6 @@ body.flash-on #mobile-nav{top:102px}
 .t-step-info{padding-top:4px}
 .t-step-name{font-size:.88rem;font-weight:700;color:var(--text)}
 .t-step-desc{font-size:.78rem;color:var(--text-muted);margin-top:.1rem}
-
-/* ===== RECENTLY VIEWED ===== */
-#recently-viewed{padding:60px 0;background:var(--bg)}
-.rv-scroll{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;
-  scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg2)}
-.rv-scroll::-webkit-scrollbar{height:3px}
-.rv-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:99px}
 
 /* ===== AUTH STATE — CSS-driven, no flash ===== */
 /* Default (logged out): show sign-in, hide user btn + my products */
@@ -1330,7 +1390,7 @@ body.flash-on #mobile-nav{top:102px}
 <nav id="nav">
   <div class="nav-logo" onclick="showMain()">
     <img class="nav-logo-img" alt="logo"/>
-    <span class="nav-logo-text store-name">DigiStore <span class="accent-text">DZ</span></span>
+    <span class="nav-logo-text store-name">DIGITCH</span>
   </div>
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
@@ -1366,6 +1426,25 @@ body.flash-on #mobile-nav{top:102px}
       <button onclick="doUserLogout()" style="width:100%;display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;color:var(--text-muted);transition:all var(--transition);text-align:left" onmouseover="this.style.color='#ff4d6d'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
     </div>
     <button id="login-nav-btn" onclick="openLoginModal()" style="padding:8px 16px;border-radius:var(--radius-sm);background:rgba(var(--primary-rgb),.12);border:1px solid rgba(var(--primary-rgb),.3);color:var(--primary);font-size:.83rem;font-weight:700;transition:all var(--transition)"><i class="fa-solid fa-user"></i> Sign In</button>
+    <div id="history-wrap" style="position:relative">
+      <button id="history-btn" onclick="toggleHistoryPanel()" title="Recently viewed">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span id="history-badge"></span>
+      </button>
+      <div id="history-panel">
+        <div id="history-panel-hdr">
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Recently Viewed</span>
+          <button id="history-clear-btn" onclick="clearHistory()" title="Clear history"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+        <div id="history-panel-body">
+          <div id="rv-grid"></div>
+          <div id="history-empty" style="display:none">
+            <i class="fa-regular fa-clock"></i>
+            <p>Products you view will show up here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">
       <i class="fa-solid fa-sun" id="theme-icon"></i>
     </button>
@@ -1480,7 +1559,7 @@ body.flash-on #mobile-nav{top:102px}
       <div>
         <div class="section-tag">About Us</div>
         <h2 class="about-title">Your Hub for <span>Premium Digital</span> Products</h2>
-        <p class="about-desc">DigiStore DZ is your destination for premium digital products — handpicked, verified, and ready to use.</p>
+        <p class="about-desc">DIGITCH is your destination for premium digital products — handpicked, verified, and ready to use.</p>
         <div class="about-feats">
           <div class="about-feat"><div class="feat-icon">⚡</div><div class="feat-body"><h4>Quality First</h4><p>Every product is handpicked and verified before listing.</p></div></div>
           <div class="about-feat"><div class="feat-icon">🔒</div><div class="feat-body"><h4>100% Secure</h4><p>All transactions protected. Verified products.</p></div></div>
@@ -1555,7 +1634,7 @@ body.flash-on #mobile-nav{top:102px}
       <div class="warranty-shield">🛡️</div>
       <div class="section-tag">Warranty & Trust</div>
       <h2 class="warranty-title">We Stand Behind <br/><span class="highlight">Every Product We Sell</span></h2>
-      <p class="warranty-lead">At DigiStore DZ, our commitment doesn't end at checkout. Every product is verified and every customer is protected. Your satisfaction isn't just a promise — it's our policy.</p>
+      <p class="warranty-lead">At DIGITCH, our commitment doesn't end at checkout. Every product is verified and every customer is protected. Your satisfaction isn't just a promise — it's our policy.</p>
       <div class="warranty-cards">
         <div class="warranty-card">
           <div class="warranty-card-icon">✅</div>
@@ -1636,50 +1715,31 @@ body.flash-on #mobile-nav{top:102px}
   </div>
 </section>
 
-<!-- ===== RECENTLY VIEWED ===== -->
-<section id="recently-viewed" style="display:none">
-  <div class="container">
-    <div class="products-hdr" style="margin-bottom:1.2rem">
-      <div>
-        <div class="section-tag">History</div>
-        <h2 class="section-title" style="margin-bottom:0">Recently Viewed</h2>
-      </div>
-    </div>
-    <div class="rv-scroll" id="rv-grid"></div>
-  </div>
-</section>
-
-<!-- ===== TESTIMONIALS ===== -->
+<!-- ===== TESTIMONIALS / SOCIAL PROOF ===== -->
 <section id="testimonials">
   <div class="container">
     <div class="section-header">
       <div class="section-tag">Social Proof</div>
       <h2 class="section-title">What Our Customers Say</h2>
-      <p class="section-sub">Real feedback from people who shop with us every day.</p>
+      <p class="section-sub">Real feedback from real customers — nothing staged.</p>
     </div>
-    <div class="testi-grid">
-      <div class="testi-card">
-        <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-        <p class="testi-text">"DigiStore DZ has completely changed the way I find digital tools. The catalog is well organized and the delivery was instant — no waiting around."</p>
-        <div class="testi-author"><div class="testi-avatar">A</div><div><div class="testi-name">Amine K.</div><div class="testi-role">Digital Entrepreneur</div></div></div>
+    <div id="testi-carousel-wrap">
+      <div id="testi-track" class="testi-track">
+        <div class="testi-empty" id="testi-empty">
+          <i class="fa-regular fa-comments"></i>
+          <p>No reviews yet. Be the first to share your experience!</p>
+        </div>
       </div>
-      <div class="testi-card">
-        <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-        <p class="testi-text">"The best digital products marketplace I've used. High quality products, fair prices, and support that actually responds quickly."</p>
-        <div class="testi-author"><div class="testi-avatar">S</div><div><div class="testi-name">Sara M.</div><div class="testi-role">Online Coach</div></div></div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-        <p class="testi-text">"I've saved hours and money thanks to the resources available here. Everything is verified and exactly as described."</p>
-        <div class="testi-author"><div class="testi-avatar">Y</div><div><div class="testi-name">Yacine B.</div><div class="testi-role">Freelance Developer</div></div></div>
-      </div>
+    </div>
+    <div class="testi-cta">
+      <button class="btn btn-primary" onclick="openReviewModal()"><i class="fa-solid fa-star"></i> Add a Review</button>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="container">
-    <div class="footer-logo store-name">DigiStore <span class="accent">DZ</span></div>
+    <div class="footer-logo store-name">DIGITCH</div>
     <div class="footer-links">
       <a href="#hero" onclick="showMain()">Home</a>
       <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
@@ -1689,7 +1749,7 @@ body.flash-on #mobile-nav{top:102px}
       <a href="#" onclick="openTracking();return false;">Track Order</a>
       <a href="admin.html">Admin</a>
     </div>
-    <p class="footer-copy" id="footer-copy">© 2025 DigiStore DZ · All rights reserved</p>
+    <p class="footer-copy" id="footer-copy">© 2025 DIGITCH · All rights reserved</p>
   </div>
 </footer>
 
@@ -1740,7 +1800,7 @@ body.flash-on #mobile-nav{top:102px}
     <div id="am-login">
       <div style="text-align:center;margin-bottom:1.5rem">
         <div style="width:52px;height:52px;border-radius:50%;background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto .9rem">🔐</div>
-        <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.35rem">Welcome to DigiStore DZ</h3>
+        <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.35rem">Welcome to DIGITCH</h3>
         <p style="font-size:.83rem;color:var(--text-muted)">Sign in with your Google account to continue</p>
       </div>
       <button onclick="doGoogleSignIn()" style="width:100%;padding:13px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.92rem;display:flex;align-items:center;justify-content:center;gap:.7rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -1934,12 +1994,13 @@ body.flash-on #mobile-nav{top:102px}
     </div>
 
     <div class="co-success" id="co-success">
-      <i class="fa-solid fa-circle-check"></i>
+      <div style="font-size:2.4rem;margin-bottom:.6rem">🎉</div>
+      <i class="fa-solid fa-circle-check" style="color:var(--accent);font-size:2rem;display:block;margin-bottom:.7rem"></i>
       <h3>Order Placed!</h3>
       <p>Your purchase has been saved.<br/>Check <strong>My Products</strong> for your access link once delivered.</p>
-      <div style="display:flex;gap:.6rem;justify-content:center;margin-top:1.2rem;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="closeCheckout();openMyProducts()"><i class="fa-solid fa-box-archive"></i> My Products</button>
-        <button class="btn btn-outline" onclick="closeCheckout()">Continue Shopping</button>
+      <div style="display:flex;gap:.6rem;justify-content:center;margin-top:1.4rem;flex-wrap:wrap">
+        <button class="btn btn-primary" id="co-success-myprods-btn"><i class="fa-solid fa-box-archive"></i> My Products</button>
+        <button class="btn btn-outline" id="co-success-continue-btn">Continue Shopping</button>
       </div>
     </div>
 
@@ -2088,6 +2149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFooter();
     updateWaFloat();
     renderRecentlyViewed();
+    renderSocialProof();
   });
 });
 
@@ -2512,6 +2574,14 @@ function _showCoStep(step) {
   document.getElementById('co-form-wrap').style.display     = step === 'form'     ? '' : 'none';
   document.getElementById('co-payment-step').style.display  = step === 'proof'    ? '' : 'none';
   document.getElementById('co-success').style.display       = step === 'success'  ? 'block' : 'none';
+
+  if (step === 'success') {
+    // Wire up buttons here so they always work regardless of DOM state
+    const myProdsBtn = document.getElementById('co-success-myprods-btn');
+    const continueBtn = document.getElementById('co-success-continue-btn');
+    if (myProdsBtn) myProdsBtn.onclick = () => { _doCloseCheckout(); openMyProducts(); };
+    if (continueBtn) continueBtn.onclick = () => { _doCloseCheckout(); };
+  }
 }
 
 function coChooseAccount(useAccount) {
@@ -2636,10 +2706,23 @@ function coShowPaymentInstructions(method) {
   }
 
   instrEl.style.display = '';
-  // Scroll to instructions smoothly inside the checkout box
-  setTimeout(() => {
-    instrEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 80);
+  // Scroll the instructions into view inside the checkout box's own scroll container.
+  // We wait two animation frames so the order-summary re-render above has finished
+  // resizing the layout first — otherwise the scroll position is calculated against
+  // a stale height and the card can end up just out of view.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const scrollBox = instrEl.closest('.checkout-box-inner') || instrEl.parentElement;
+      if (scrollBox) {
+        const boxRect = scrollBox.getBoundingClientRect();
+        const elRect = instrEl.getBoundingClientRect();
+        const offset = (elRect.top - boxRect.top) - 16; // small top padding
+        scrollBox.scrollBy({ top: offset, behavior: 'smooth' });
+      } else {
+        instrEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  });
 }
 
 // ── Build order summary HTML ───────────────────────────────────
@@ -2784,8 +2867,10 @@ function coProceedToProofStep() {
   _showCoStep('proof');
 }
 
-function closeCheckout() {
+// Internal: close checkout cleanly without re-opening cart
+function _doCloseCheckout() {
   document.getElementById('checkout-modal').classList.remove('open');
+  document.body.classList.remove('no-scroll');
   _showCoStep('form');
   document.getElementById('co-success').style.display = 'none';
   _coProofFiles = [];
@@ -2793,25 +2878,30 @@ function closeCheckout() {
   if (prev) prev.innerHTML = '';
   const errEl = document.getElementById('co-proof-error');
   if (errEl) errEl.style.display = 'none';
-  // Reset payment method
   document.querySelectorAll('input[name="co-payment"]').forEach(r => r.checked = false);
   document.querySelectorAll('.co-method-card').forEach(c => c.classList.remove('selected'));
   const instrEl = document.getElementById('co-payment-instructions');
   if (instrEl) instrEl.style.display = 'none';
   _coSurchargeRate = 0;
-  // Reset phone hint
   const phoneHint = document.getElementById('co-phone-hint');
   if (phoneHint) phoneHint.style.display = 'none';
   const phoneInput = document.getElementById('co-phone');
-  if (phoneInput) { phoneInput.style.borderColor = ''; }
-  // Re-open cart so user returns to it (open overlay + drawer if not already open)
-  const cartOverlay = document.getElementById('cart-overlay');
-  const cartDrawer = document.getElementById('cart-drawer');
-  if (cartOverlay && cartDrawer && !cartDrawer.classList.contains('open')) {
-    cartOverlay.classList.add('open');
-    cartDrawer.classList.add('open');
-    renderCartItems();
-    document.body.classList.add('no-scroll');
+  if (phoneInput) phoneInput.style.borderColor = '';
+}
+
+function closeCheckout() {
+  _doCloseCheckout();
+  // Re-open cart only if the success screen is NOT showing
+  const successShown = document.getElementById('co-success')?.style.display === 'block';
+  if (!successShown) {
+    const cartOverlay = document.getElementById('cart-overlay');
+    const cartDrawer = document.getElementById('cart-drawer');
+    if (cartOverlay && cartDrawer && !cartDrawer.classList.contains('open')) {
+      cartOverlay.classList.add('open');
+      cartDrawer.classList.add('open');
+      renderCartItems();
+      document.body.classList.add('no-scroll');
+    }
   }
 }
 
@@ -2945,10 +3035,13 @@ async function placeOrderWithProof() {
     return;
   }
 
-  // Success
+  // Success — close cart first so nothing sits on top
+  const cartOverlay = document.getElementById('cart-overlay');
+  const cartDrawer = document.getElementById('cart-drawer');
+  if (cartDrawer) { cartDrawer.classList.remove('open'); }
+  if (cartOverlay) { cartOverlay.classList.remove('open'); }
   Cart.clear();
   _showCoStep('success');
-  document.getElementById('co-success').style.display = 'block';
 }
 
 // Helper: show error inside checkout info form (legacy, now using co-form-err)
@@ -3475,39 +3568,93 @@ function mpOpenDetailModal(purchase) {
   const date = ts ? new Date(ts).toLocaleString('en-DZ') : '—';
   const img = purchase.productImage || generatePlaceholder(purchase.productName || 'Product', 400, 225);
 
-  // Build access section — support multi-field accessData and legacy accessLink
-  const hasAccessData = purchase.accessData && Object.keys(purchase.accessData).length > 0;
+  const dtype = purchase.deliveryType || 'credentials';
+  const hasAccessData = purchase.accessData && Object.keys(purchase.accessData).filter(k => k !== '_note').length > 0;
   const hasAccessLink = purchase.accessLink && purchase.accessLink.trim();
+  const note = purchase.deliverNote || (purchase.accessData && purchase.accessData['_note']) || '';
   let accessHtml = '';
 
-  if (hasAccessData) {
-    const rows = Object.entries(purchase.accessData).map(([lbl, val]) => {
-      const safeVal = (val||'').replace(/'/g,"\'").replace(/"/g,'&quot;');
-      return `<div style="margin-bottom:.7rem">
-        <div style="font-size:.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">${lbl}</div>
-        <div style="display:flex;align-items:center;gap:.4rem">
-          <div style="flex:1;font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${val||'—'}</div>
-          ${val ? `<button class="btn btn-sm" style="flex-shrink:0;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);padding:6px 10px" onclick="navigator.clipboard.writeText('${safeVal}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i></button>` : ''}
+  // Helper: open/copy button
+  const openCopyBtns = (url, label = 'Open') => {
+    const safe = (url||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div style="display:flex;gap:.5rem;margin-top:.75rem">
+      <button class="btn btn-primary" style="flex:1;padding:9px;font-size:.82rem" onclick="window.open('${safe}','_blank')"><i class="fa-solid fa-external-link-alt"></i> ${label}</button>
+      <button class="btn btn-outline" style="flex:1;padding:9px;font-size:.82rem" onclick="navigator.clipboard.writeText('${safe}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy Link</button>
+    </div>`;
+  };
+
+  if (hasAccessData || hasAccessLink) {
+    const data = purchase.accessData || {};
+
+    if (dtype === 'pdf' || (dtype === 'credentials' && (data['Download Link'] || data['File']))) {
+      const url = data['Download Link'] || data['File'] || hasAccessLink;
+      const fname = data['File Name'] || '';
+      accessHtml = `<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius-sm);padding:1rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+          <i class="fa-solid fa-file-pdf" style="font-size:1.3rem;color:#EF4444"></i>
+          <div><div style="font-size:.75rem;color:#EF4444;font-weight:700;text-transform:uppercase;letter-spacing:.06em">PDF / File</div>${fname?`<div style="font-size:.82rem;color:var(--text-muted)">${fname}</div>`:''}</div>
         </div>
+        ${openCopyBtns(url, 'Download / Open')}
       </div>`;
-    }).join('');
-    accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
-      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem"><i class="fa-solid fa-key"></i> Access Information</div>
-      ${rows}
-    </div>`;
-  } else if (hasAccessLink) {
-    const safeLink = purchase.accessLink.replace(/'/g,"\'").replace(/"/g,'&quot;');
-    accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
-      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem"><i class="fa-solid fa-key"></i> Access</div>
-      <div style="font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.2);padding:.6rem .8rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${purchase.accessLink}</div>
-      <div style="display:flex;gap:.5rem;margin-top:.75rem">
-        <button class="btn btn-primary" style="flex:1;padding:8px;font-size:.8rem" onclick="navigator.clipboard.writeText('${safeLink}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy</button>
-        ${purchase.accessLink.startsWith('http') ? `<button class="btn btn-outline" style="flex:1;padding:8px;font-size:.8rem" onclick="window.open('${safeLink}','_blank')"><i class="fa-solid fa-external-link-alt"></i> Open</button>` : ''}
-      </div>
-    </div>`;
+    } else if (dtype === 'canva') {
+      const url = data['Canva Template'] || data['Template Link'] || hasAccessLink;
+      const tname = data['Template Name'] || '';
+      accessHtml = `<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:var(--radius-sm);padding:1rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+          <i class="fa-brands fa-creative-commons" style="font-size:1.3rem;color:#7C3AED"></i>
+          <div><div style="font-size:.75rem;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Canva Template</div>${tname?`<div style="font-size:.82rem;color:var(--text-muted)">${tname}</div>`:''}</div>
+        </div>
+        <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.4rem;line-height:1.5">Click to open your editable Canva template. You'll get your own copy to customize.</div>
+        ${openCopyBtns(url, 'Open in Canva')}
+      </div>`;
+    } else if (dtype === 'ebook') {
+      const url = data['Download Link'] || hasAccessLink;
+      const title = data['Ebook Title'] || purchase.productName || '';
+      const author = data['Author'] || '';
+      accessHtml = `<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:var(--radius-sm);padding:1rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+          <i class="fa-solid fa-book-open" style="font-size:1.3rem;color:#3B82F6"></i>
+          <div><div style="font-size:.75rem;color:#3B82F6;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Ebook</div>${title?`<div style="font-size:.88rem;font-weight:600;color:var(--text)">${title}</div>`:''} ${author?`<div style="font-size:.78rem;color:var(--text-muted)">by ${author}</div>`:''}</div>
+        </div>
+        ${openCopyBtns(url, 'Download Ebook')}
+      </div>`;
+    } else if (dtype === 'link') {
+      const url = data['Link'] || hasAccessLink;
+      accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+        <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem"><i class="fa-solid fa-link"></i> Access Link</div>
+        <div style="font-size:.84rem;word-break:break-all;background:rgba(0,0,0,.15);padding:.55rem .8rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${url}</div>
+        ${openCopyBtns(url, 'Open Link')}
+      </div>`;
+    } else {
+      // credentials / custom — show key-value cards
+      const filteredEntries = Object.entries(data).filter(([k]) => k !== '_note');
+      const rows = filteredEntries.map(([lbl, val]) => {
+        const safeVal = (val||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        const isUrl = (val||'').startsWith('http');
+        return `<div style="margin-bottom:.7rem">
+          <div style="font-size:.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.28rem">${lbl}</div>
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <div style="flex:1;font-size:.88rem;word-break:break-all;background:rgba(0,0,0,.15);padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${val||'—'}</div>
+            ${val ? `<button style="flex-shrink:0;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);padding:6px 10px;border-radius:6px;font-size:.75rem;cursor:pointer" onclick="navigator.clipboard.writeText('${safeVal}').then(()=>showToast('Copied!'))"><i class="fa-regular fa-copy"></i></button>` : ''}
+            ${isUrl ? `<button style="flex-shrink:0;background:rgba(var(--accent-rgb),.1);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2);padding:6px 10px;border-radius:6px;font-size:.75rem;cursor:pointer" onclick="window.open('${safeVal}','_blank')"><i class="fa-solid fa-external-link-alt"></i></button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      accessHtml = `<div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+        <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem"><i class="fa-solid fa-key"></i> Access Information</div>
+        ${rows}
+      </div>`;
+    }
+
+    // Append note if any
+    if (note) {
+      accessHtml += `<div style="margin-top:.8rem;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.83rem;color:var(--text);line-height:1.6">
+        <i class="fa-solid fa-circle-info" style="color:#F59E0B;margin-right:.4rem"></i> ${note}
+      </div>`;
+    }
   } else {
-    accessHtml = `<div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem">
-      <i class="fa-solid fa-clock" style="margin-bottom:.3rem;display:block;font-size:1.2rem;opacity:.4"></i>
+    accessHtml = `<div style="background:var(--card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1.2rem;text-align:center;color:var(--text-muted);font-size:.85rem">
+      <i class="fa-solid fa-clock" style="margin-bottom:.4rem;display:block;font-size:1.4rem;opacity:.25"></i>
       Your access information is being prepared. Check back soon!
     </div>`;
   }
@@ -4023,7 +4170,7 @@ async function renderProductReviews(productId) {
 }
 
 // ================================================================
-// ===== FEATURE: RECENTLY VIEWED =====
+// ===== FEATURE: RECENTLY VIEWED / HISTORY PANEL =====
 // ================================================================
 function trackRecentlyViewed(prod) {
   try {
@@ -4039,20 +4186,122 @@ function trackRecentlyViewed(prod) {
 function renderRecentlyViewed() {
   try {
     const rv = JSON.parse(sessionStorage.getItem('dz_rv') || '[]');
-    const section = document.getElementById('recently-viewed');
     const grid = document.getElementById('rv-grid');
-    if (!rv.length || !grid) { if (section) section.style.display = 'none'; return; }
+    const empty = document.getElementById('history-empty');
+    const badge = document.getElementById('history-badge');
+    if (!grid) return;
     const prods = rv.map(x => DB.getById('products', x.id)).filter(Boolean);
-    if (!prods.length) { section.style.display = 'none'; return; }
-    section.style.display = '';
-    grid.innerHTML = '';
-    prods.forEach(p => {
-      const card = makeProductCard(p);
-      card.style.flexShrink = '0';
-      card.style.width = '220px';
-      grid.appendChild(card);
+
+    if (badge) {
+      if (prods.length) { badge.textContent = prods.length; badge.style.display = 'flex'; }
+      else { badge.style.display = 'none'; }
+    }
+
+    if (!prods.length) {
+      grid.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    const s = Settings.get();
+    grid.innerHTML = prods.map(p => {
+      const img = (p.images||[])[0] || generatePlaceholder(p.name, 100, 100);
+      return `<div class="rv-item" data-id="${p.id}">
+        <img src="${img}" alt="${p.name}" loading="lazy"/>
+        <div style="flex:1;min-width:0">
+          <div class="rv-item-name">${p.name}</div>
+          <div class="rv-item-price">${p.price.toLocaleString()} ${s.currency}</div>
+        </div>
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('.rv-item').forEach(el => {
+      el.onclick = () => {
+        closeHistoryPanel();
+        openProductDetail(el.dataset.id, false);
+      };
     });
   } catch(e) {}
+}
+
+function toggleHistoryPanel() {
+  const panel = document.getElementById('history-panel');
+  const btn = document.getElementById('history-btn');
+  if (!panel) return;
+  const opening = !panel.classList.contains('open');
+  if (opening) {
+    renderRecentlyViewed();
+    panel.classList.add('open');
+    if (btn) btn.classList.add('active');
+    document.addEventListener('click', _historyOutsideClick);
+  } else {
+    closeHistoryPanel();
+  }
+}
+
+function closeHistoryPanel() {
+  const panel = document.getElementById('history-panel');
+  const btn = document.getElementById('history-btn');
+  if (panel) panel.classList.remove('open');
+  if (btn) btn.classList.remove('active');
+  document.removeEventListener('click', _historyOutsideClick);
+}
+
+function _historyOutsideClick(e) {
+  const wrap = document.getElementById('history-wrap');
+  if (wrap && !wrap.contains(e.target)) closeHistoryPanel();
+}
+
+function clearHistory() {
+  try { sessionStorage.removeItem('dz_rv'); } catch(e) {}
+  renderRecentlyViewed();
+}
+
+// ================================================================
+// ===== FEATURE: SOCIAL PROOF (real customer reviews carousel) =====
+// ================================================================
+async function renderSocialProof() {
+  const track = document.getElementById('testi-track');
+  if (!track) return;
+  let reviews = [];
+  try { reviews = await Reviews.allApproved(24); } catch(e) { reviews = []; }
+
+  if (!reviews.length) {
+    track.style.animation = 'none';
+    track.innerHTML = `<div class="testi-empty" id="testi-empty">
+      <i class="fa-regular fa-comments"></i>
+      <p>No reviews yet. Be the first to share your experience!</p>
+    </div>`;
+    return;
+  }
+
+  const cardHTML = (r) => {
+    const stars = Array.from({length:5}, (_, i) =>
+      `<i class="fa-solid fa-star${i < r.stars ? '' : ' empty'}"></i>`).join('');
+    const initials = (r.userName || 'Customer').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+    const comment = (r.comment || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const product = (r.productName || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="testi-card">
+      <div class="testi-stars">${stars}</div>
+      <p class="testi-text">"${comment}"</p>
+      <div class="testi-author">
+        <div class="testi-avatar">${initials || 'C'}</div>
+        <div>
+          <div class="testi-name">${(r.userName || 'Customer').replace(/</g,'&lt;')}</div>
+          <div class="testi-role">${product || 'Verified Buyer'}</div>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  // Duplicate the list so the CSS animation can loop seamlessly (translateX -50%)
+  const html = reviews.map(cardHTML).join('');
+  track.innerHTML = html + html;
+  track.style.animation = '';
+
+  // Scale scroll duration with content so it always feels like a smooth, steady slide
+  const duration = Math.max(20, reviews.length * 6);
+  track.style.setProperty('--testi-duration', duration + 's');
 }
 
 // ================================================================

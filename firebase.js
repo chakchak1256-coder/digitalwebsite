@@ -355,6 +355,18 @@ const Reviews = {
     } catch(e) { return []; }
   },
 
+  // Get all approved reviews across all products (for homepage social proof carousel)
+  async allApproved(limit) {
+    try {
+      const snap = await _db.collection('reviews')
+        .where('status', '==', 'approved')
+        .get();
+      const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return limit ? docs.slice(0, limit) : docs;
+    } catch(e) { return []; }
+  },
+
   // Admin: realtime listener for all reviews
   onSnapshotAll(callback) {
     return _db.collection('reviews')
@@ -509,7 +521,7 @@ const DB = {
     } catch(e) {
       // Log a helpful hint for the most common cause (Firestore security rules)
       if (e.code === 'permission-denied' || (e.message && e.message.includes('Missing or insufficient permissions'))) {
-        console.error('[DigiStore] Firestore write BLOCKED by security rules. Go to Firebase Console → Firestore → Rules and set: allow read, write: if true; (for testing) or proper auth rules.');
+        console.error('[DIGITCH] Firestore write BLOCKED by security rules. Go to Firebase Console → Firestore → Rules and set: allow read, write: if true; (for testing) or proper auth rules.');
       } else {
         console.error('DB.add error:', e);
       }
@@ -547,7 +559,7 @@ const DB = {
 // ================================================================
 const Settings = {
   _defaults: {
-    storeName:'DigiStore DZ', logo:null, logoLight:null, logoDark:null,
+    storeName:'DIGITCH', logo:null, logoLight:null, logoDark:null,
     primary:'#10B981', secondary:'#10B981', accent:'#10B981', currency:'DA',
     social:{ facebook:'', instagram:'', whatsapp:'', telegram:'', tiktok:'', youtube:'' }
   },
