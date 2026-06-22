@@ -315,6 +315,107 @@ const Purchases = {
 };
 
 // ================================================================
+// REVIEWS — Firestore collection: reviews
+// ================================================================
+const Reviews = {
+  // Submit a new review (one per user per product, enforced client-side)
+  async submit({ userId, userName, productId, productName, stars, comment }) {
+    const data = {
+      userId, userName, productId, productName,
+      stars, comment: comment || '',
+      status: 'pending', // pending | approved | rejected
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      const ref = await _db.collection('reviews').add(data);
+      return { ok: true, id: ref.id };
+    } catch(e) { return { error: e.message }; }
+  },
+
+  // Check if user already reviewed a product
+  async hasReviewed(userId, productId) {
+    try {
+      const snap = await _db.collection('reviews')
+        .where('userId', '==', userId)
+        .where('productId', '==', productId)
+        .limit(1).get();
+      return !snap.empty;
+    } catch(e) { return false; }
+  },
+
+  // Get approved reviews for a product
+  async forProduct(productId) {
+    try {
+      const snap = await _db.collection('reviews')
+        .where('productId', '==', productId)
+        .where('status', '==', 'approved')
+        .get();
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } catch(e) { return []; }
+  },
+
+  // Admin: realtime listener for all reviews
+  onSnapshotAll(callback) {
+    return _db.collection('reviews')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snap => {
+        callback(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      }, () => callback([]));
+  },
+
+  // Admin: update review status
+  async updateStatus(id, status) {
+    try {
+      await _db.collection('reviews').doc(id).update({ status, updatedAt: new Date().toISOString() });
+      // If approved, update the product rating average
+      const doc = await _db.collection('reviews').doc(id).get();
+      if (doc.exists) await Reviews._recalcProductRating(doc.data().productId);
+      return true;
+    } catch(e) { return false; }
+  },
+
+  // Admin: delete a review
+  async delete(id) {
+    try {
+      const doc = await _db.collection('reviews').doc(id).get();
+      const productId = doc.exists ? doc.data().productId : null;
+      await _db.collection('reviews').doc(id).delete();
+      if (productId) await Reviews._recalcProductRating(productId);
+      return true;
+    } catch(e) { return false; }
+  },
+
+  // Recalculate average rating for a product based on approved reviews
+  async _recalcProductRating(productId) {
+    try {
+      const snap = await _db.collection('reviews')
+        .where('productId', '==', productId)
+        .where('status', '==', 'approved').get();
+      const docs = snap.docs;
+      if (!docs.length) {
+        await _db.collection('products').doc(productId).update({ rating: null, reviewCount: 0 });
+        return;
+      }
+      const avg = docs.reduce((s, d) => s + (d.data().stars || 0), 0) / docs.length;
+      await _db.collection('products').doc(productId).update({
+        rating: Math.round(avg * 10) / 10,
+        reviewCount: docs.length,
+      });
+      // Update local cache
+      if (DB._cache.products) {
+        const i = DB._cache.products.findIndex(p => p.id === productId);
+        if (i >= 0) {
+          DB._cache.products[i].rating = Math.round(avg * 10) / 10;
+          DB._cache.products[i].reviewCount = docs.length;
+          try { localStorage.setItem('dz_fc_products', JSON.stringify(DB._cache.products)); } catch(e) {}
+        }
+      }
+    } catch(e) {}
+  }
+};
+
+// ================================================================
 // IMAGE COMPRESSION
 // ================================================================
 async function compressImage(file, maxDim = 700, quality = 0.72) {

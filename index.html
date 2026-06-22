@@ -1261,6 +1261,59 @@ body.flash-on #mobile-nav{top:102px}
   .carousel-track { animation: none; }
 }
 
+/* ===== REVIEWS ===== */
+#review-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity var(--transition);
+  backdrop-filter:blur(4px);
+}
+#review-modal.open{opacity:1;pointer-events:all}
+.review-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  width:100%;max-width:460px;max-height:calc(100dvh - 2rem);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:scale(.97);transition:transform .18s ease;position:relative;
+}
+#review-modal.open .review-box{transform:scale(1)}
+.review-box-inner{overflow-y:auto;padding:1.8rem 2rem;flex:1}
+.review-box-close{
+  position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:50%;
+  background:var(--card);border:1px solid var(--border);display:flex;align-items:center;
+  justify-content:center;color:var(--text-muted);cursor:pointer;font-size:.8rem;z-index:2;
+}
+.review-box-close:hover{color:var(--text);background:var(--bg3)}
+.review-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.4rem;color:var(--text);display:flex;align-items:center;gap:.5rem}
+.review-title i{color:var(--accent)}
+.review-empty{text-align:center;padding:1.5rem 0 .5rem;color:var(--text-muted)}
+.review-empty i{font-size:2rem;opacity:.2;margin-bottom:.8rem;display:block}
+.review-empty p{font-size:.875rem;line-height:1.6}
+.rv-star-picker{display:flex;gap:.4rem}
+.rv-star-picker i{font-size:1.5rem;color:#F59E0B;cursor:pointer;transition:transform .1s ease}
+.rv-star-picker i:hover{transform:scale(1.15)}
+.rv-star-picker i.empty{color:var(--border-strong)}
+
+.pd-reviews-section{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border)}
+.pd-reviews-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;margin-bottom:1.4rem}
+.pd-reviews-hdr h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--text)}
+.pd-reviews-summary{display:flex;align-items:center;gap:.7rem;margin-bottom:1.4rem;color:var(--text-muted);font-size:.85rem}
+.pd-reviews-summary .pd-reviews-avg{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--text)}
+.pd-reviews-list{display:flex;flex-direction:column;gap:1rem}
+.pd-review-card{padding:1.1rem 1.2rem;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border)}
+.pd-review-hdr{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-bottom:.5rem;flex-wrap:wrap}
+.pd-review-user{display:flex;align-items:center;gap:.6rem}
+.pd-review-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(var(--accent-rgb),.15);
+  color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;
+  font-size:.8rem;font-family:'Syne',sans-serif;
+}
+.pd-review-name{font-size:.85rem;font-weight:700;color:var(--text)}
+.pd-review-date{font-size:.72rem;color:var(--text-muted)}
+.pd-review-stars{display:flex;gap:2px;color:#F59E0B;font-size:.72rem}
+.pd-review-stars i.empty{color:var(--border-strong)}
+.pd-review-text{font-size:.85rem;color:var(--text-muted);line-height:1.65}
+.pd-reviews-empty{padding:1.6rem 0;text-align:center;color:var(--text-muted);font-size:.85rem}
+
 </style>
 </head>
 <body>
@@ -1921,7 +1974,10 @@ body.flash-on #mobile-nav{top:102px}
         <h2>My Products</h2>
         <p id="mp-hdr-sub">Your purchased digital products</p>
       </div>
-      <button class="btn btn-outline" onclick="closeMyProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-store"></i> Browse Store</button>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="closeMyProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-store"></i> Browse Store</button>
+        <button class="btn btn-primary" onclick="openReviewModal()"><i class="fa-solid fa-star"></i> Write a Review</button>
+      </div>
     </div>
     <div class="mp-stats" id="mp-stats-row"></div>
     <div class="mp-filter" id="mp-filter-bar">
@@ -1974,6 +2030,18 @@ body.flash-on #mobile-nav{top:102px}
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
         </div>
         <div class="pd-meta" id="pd-meta"></div>
+      </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <div class="pd-reviews-section" id="pd-reviews-section">
+      <div class="pd-reviews-hdr">
+        <h3>Customer Reviews</h3>
+        <button class="btn btn-outline btn-sm" id="pd-reviews-write-btn" style="display:none"><i class="fa-solid fa-pen"></i> Write a Review</button>
+      </div>
+      <div class="pd-reviews-summary" id="pd-reviews-summary" style="display:none"></div>
+      <div class="pd-reviews-list" id="pd-reviews-list">
+        <div class="pd-reviews-empty">Loading reviews…</div>
       </div>
     </div>
   </div>
@@ -2365,6 +2433,9 @@ function openProductDetail(id, fromAllPage = true) {
   document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
   document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
   document.getElementById('pd-back').onclick = closeProductDetail;
+
+  // Load reviews
+  renderProductReviews(prod.id);
 }
 
 function closeProductDetail() {
@@ -3774,6 +3845,184 @@ async function trackOrder() {
 }
 
 // ================================================================
+// ===== FEATURE: REVIEWS =====
+// ================================================================
+let _rvSelectedStar = 0;
+let _rvPurchases = null;
+
+async function openReviewModal() {
+  const user = UserAuth.current();
+  const modal = document.getElementById('review-modal');
+  modal.classList.add('open');
+
+  // Reset
+  _rvSelectedStar = 0;
+  document.getElementById('rv-comment').value = '';
+  document.getElementById('rv-error').style.display = 'none';
+  document.getElementById('rv-already-reviewed').style.display = 'none';
+  rvUpdateStars(0);
+
+  // Hide all steps
+  ['rv-step-product','rv-step-login','rv-step-no-purchases','rv-step-success'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+
+  if (!user) {
+    document.getElementById('rv-step-login').style.display = '';
+    return;
+  }
+
+  // Load user's purchases
+  try {
+    const purchases = await Purchases.forUser(user.id);
+    _rvPurchases = purchases;
+
+    if (!purchases.length) {
+      document.getElementById('rv-step-no-purchases').style.display = '';
+      return;
+    }
+
+    // Populate dropdown (unique products only)
+    const seen = new Set();
+    const select = document.getElementById('rv-product-select');
+    select.innerHTML = '<option value="">— Select a product —</option>';
+    purchases.forEach(p => {
+      const pid = p.productId || p.productName;
+      if (!pid || seen.has(pid)) return;
+      seen.add(pid);
+      const opt = document.createElement('option');
+      opt.value = p.productId || '';
+      opt.dataset.name = p.productName || '';
+      opt.textContent = p.productName || 'Unknown Product';
+      select.appendChild(opt);
+    });
+
+    select.onchange = () => rvCheckAlreadyReviewed(select.value, user.id);
+    document.getElementById('rv-step-product').style.display = '';
+  } catch(e) {
+    document.getElementById('rv-step-no-purchases').style.display = '';
+  }
+}
+
+async function rvCheckAlreadyReviewed(productId, userId) {
+  const el = document.getElementById('rv-already-reviewed');
+  const btn = document.getElementById('rv-submit-btn');
+  if (!productId) { el.style.display = 'none'; btn.disabled = false; return; }
+  const already = await Reviews.hasReviewed(userId, productId);
+  el.style.display = already ? '' : 'none';
+  btn.disabled = already;
+}
+
+function rvSetStar(n) {
+  _rvSelectedStar = n;
+  rvUpdateStars(n);
+}
+
+function rvUpdateStars(n) {
+  document.querySelectorAll('#rv-star-picker i').forEach((el, i) => {
+    el.classList.toggle('empty', i >= n);
+  });
+}
+
+async function submitReview() {
+  const user = UserAuth.current();
+  if (!user) return;
+
+  const select = document.getElementById('rv-product-select');
+  const productId = select.value;
+  const productName = select.options[select.selectedIndex]?.dataset?.name || select.options[select.selectedIndex]?.textContent || '';
+  const comment = document.getElementById('rv-comment').value.trim();
+  const errEl = document.getElementById('rv-error');
+  const btn = document.getElementById('rv-submit-btn');
+
+  errEl.style.display = 'none';
+
+  if (!productId) { errEl.textContent = 'Please select a product.'; errEl.style.display = ''; return; }
+  if (_rvSelectedStar < 1) { errEl.textContent = 'Please select a star rating.'; errEl.style.display = ''; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
+
+  const result = await Reviews.submit({
+    userId: user.id,
+    userName: user.name,
+    productId,
+    productName,
+    stars: _rvSelectedStar,
+    comment,
+  });
+
+  if (result.error) {
+    errEl.textContent = 'Error: ' + result.error;
+    errEl.style.display = '';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Review';
+    return;
+  }
+
+  // Show success
+  document.getElementById('rv-step-product').style.display = 'none';
+  document.getElementById('rv-step-success').style.display = '';
+}
+
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+// Render reviews section inside product detail page
+async function renderProductReviews(productId) {
+  const section = document.getElementById('pd-reviews-section');
+  if (!section) return;
+
+  const reviews = await Reviews.forProduct(productId);
+  const list = document.getElementById('pd-reviews-list');
+  const summaryEl = document.getElementById('pd-reviews-summary');
+  const hdrBtn = document.getElementById('pd-reviews-write-btn');
+
+  // Show/hide write button based on auth + purchase
+  const user = UserAuth.current();
+  if (hdrBtn) {
+    hdrBtn.style.display = user ? '' : 'none';
+    if (user) {
+      hdrBtn.onclick = () => openReviewModal();
+    }
+  }
+
+  if (!reviews.length) {
+    if (summaryEl) summaryEl.style.display = 'none';
+    if (list) list.innerHTML = '<div class="pd-reviews-empty"><i class="fa-regular fa-star" style="font-size:1.5rem;opacity:.2;display:block;margin-bottom:.5rem"></i> No reviews yet. Be the first!</div>';
+    return;
+  }
+
+  const avg = reviews.reduce((s, r) => s + r.stars, 0) / reviews.length;
+  if (summaryEl) {
+    summaryEl.style.display = 'flex';
+    summaryEl.innerHTML = `<span class="pd-reviews-avg">${avg.toFixed(1)}</span><span style="color:#F59E0B">${'<i class="fa-solid fa-star"></i>'.repeat(Math.round(avg))}</span><span style="color:var(--text-muted)">(${reviews.length} review${reviews.length>1?'s':''})</span>`;
+  }
+
+  if (list) {
+    list.innerHTML = reviews.map(r => {
+      const initials = (r.userName||'U').slice(0,2).toUpperCase();
+      const date = new Date(r.createdAt).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' });
+      const stars = Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star${i<r.stars?'':' empty'}"></i>`).join('');
+      return `<div class="pd-review-card">
+        <div class="pd-review-hdr">
+          <div class="pd-review-user">
+            <div class="pd-review-avatar">${initials}</div>
+            <div>
+              <div class="pd-review-name">${r.userName||'Customer'}</div>
+              <div class="pd-review-date">${date}</div>
+            </div>
+          </div>
+          <div class="pd-review-stars">${stars}</div>
+        </div>
+        ${r.comment ? `<div class="pd-review-text">${r.comment}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ================================================================
 // ===== FEATURE: RECENTLY VIEWED =====
 // ================================================================
 function trackRecentlyViewed(prod) {
@@ -3891,6 +4140,75 @@ function updateWaFloat() {
 </script>
 
 
+
+<!-- ===== REVIEW MODAL ===== -->
+<div id="review-modal">
+  <div class="review-box">
+    <button class="review-box-close" onclick="closeReviewModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="review-box-inner">
+      <div class="review-title"><i class="fa-solid fa-star"></i> Write a Review</div>
+
+      <!-- Step 1: Choose product -->
+      <div id="rv-step-product">
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem">Select a product you've purchased to review:</p>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Product</label>
+          <select id="rv-product-select" class="form-input" style="width:100%">
+            <option value="">— Select a product —</option>
+          </select>
+        </div>
+        <div id="rv-already-reviewed" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#F59E0B;margin-bottom:.9rem">
+          <i class="fa-solid fa-circle-info"></i> You've already reviewed this product.
+        </div>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Rating</label>
+          <div class="rv-star-picker" id="rv-star-picker">
+            <i class="fa-solid fa-star empty" data-star="1" onclick="rvSetStar(1)"></i>
+            <i class="fa-solid fa-star empty" data-star="2" onclick="rvSetStar(2)"></i>
+            <i class="fa-solid fa-star empty" data-star="3" onclick="rvSetStar(3)"></i>
+            <i class="fa-solid fa-star empty" data-star="4" onclick="rvSetStar(4)"></i>
+            <i class="fa-solid fa-star empty" data-star="5" onclick="rvSetStar(5)"></i>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Comment <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <textarea id="rv-comment" class="form-input" rows="3" placeholder="Share your experience with this product..." style="resize:none"></textarea>
+        </div>
+        <div id="rv-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-outline" onclick="closeReviewModal()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
+          <button class="btn btn-primary" id="rv-submit-btn" onclick="submitReview()" style="flex:2"><i class="fa-solid fa-paper-plane"></i> Submit Review</button>
+        </div>
+      </div>
+
+      <!-- Step: not logged in -->
+      <div id="rv-step-login" style="display:none">
+        <div class="review-empty">
+          <i class="fa-solid fa-lock"></i>
+          <p>You need to be signed in to leave a review.</p>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="closeReviewModal();openLoginModal()"><i class="fa-solid fa-user"></i> Sign In</button>
+      </div>
+
+      <!-- Step: no purchases -->
+      <div id="rv-step-no-purchases" style="display:none">
+        <div class="review-empty">
+          <i class="fa-solid fa-box-open"></i>
+          <p>Only customers who have purchased a product can leave a review. Buy something first!</p>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="closeReviewModal();openAllProducts()"><i class="fa-solid fa-store"></i> Browse Store</button>
+      </div>
+
+      <!-- Step: success -->
+      <div id="rv-step-success" style="display:none;text-align:center;padding:1.5rem 0">
+        <div style="font-size:2.5rem;margin-bottom:.8rem">🎉</div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.4rem">Review Submitted!</h3>
+        <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.2rem">Your review is pending admin approval. Thank you!</p>
+        <button class="btn btn-primary" onclick="closeReviewModal()" style="width:100%">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- WhatsApp Float Button -->
 <div id="wa-float">
