@@ -69,11 +69,86 @@ export default {
     }
 
     // ============================================================
+    // ROUTE: GET /api/test-auth
+    // Diagnoses JWT signing and token exchange step by step.
+    // Remove this route after confirming uploads work.
+    // ============================================================
+    if (path === '/api/test-auth' && method === 'GET') {
+      const steps = [];
+      try {
+        steps.push('step1: building JWT claims');
+        const now = Math.floor(Date.now() / 1000);
+        const header = { alg: 'RS256', typ: 'JWT' };
+        const claims = {
+          iss: FIREBASE_CLIENT_EMAIL,
+          scope: 'https://www.googleapis.com/auth/devstorage.read_write',
+          aud: 'https://oauth2.googleapis.com/token',
+          iat: now,
+          exp: now + 3600,
+        };
+
+        steps.push('step2: base64url encoding header+claims');
+        const b64url = str => {
+          const bytes = new TextEncoder().encode(str);
+          let binary = '';
+          for (const b of bytes) binary += String.fromCharCode(b);
+          return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        };
+        const headerB64 = b64url(JSON.stringify(header));
+        const claimsB64 = b64url(JSON.stringify(claims));
+        const sigInput = `${headerB64}.${claimsB64}`;
+
+        steps.push('step3: stripping PEM key');
+        const pemBody = FIREBASE_PRIVATE_KEY
+          .replace(/-----BEGIN (RSA )?PRIVATE KEY-----/g, '')
+          .replace(/-----END (RSA )?PRIVATE KEY-----/g, '')
+          .replace(/\s/g, '');
+        steps.push(`step3 result: PEM body length = ${pemBody.length}`);
+
+        steps.push('step4: decoding PEM to bytes');
+        const keyBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+        steps.push(`step4 result: keyBytes length = ${keyBytes.length}`);
+
+        steps.push('step5: importing crypto key');
+        const cryptoKey = await crypto.subtle.importKey(
+          'pkcs8', keyBytes.buffer,
+          { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+          false, ['sign']
+        );
+        steps.push('step5 result: key imported OK');
+
+        steps.push('step6: signing JWT');
+        const sigBytes = await crypto.subtle.sign(
+          'RSASSA-PKCS1-v1_5', cryptoKey,
+          new TextEncoder().encode(sigInput)
+        );
+        const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const jwt = `${sigInput}.${sigB64}`;
+        steps.push('step6 result: JWT signed OK');
+
+        steps.push('step7: exchanging JWT for access token');
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+        });
+        const tokenData = await tokenRes.json();
+        steps.push(`step7 result: HTTP ${tokenRes.status}`);
+
+        if (!tokenData.access_token) {
+          return json({ ok: false, steps, tokenError: tokenData });
+        }
+        steps.push('step8: got access token OK');
+        return json({ ok: true, steps, tokenType: tokenData.token_type, expiresIn: tokenData.expires_in });
+
+      } catch (e) {
+        return json({ ok: false, steps, error: e.message, stack: e.stack });
+      }
+    }
+
+    // ============================================================
     // ROUTE: POST /api/upload-file
-    // Admin uploads a file (PDF/etc). Worker forwards it to Firebase
-    // Storage server-to-server using the service account.
-    // Request: multipart/form-data with fields: file, folder
-    // Response: { url, path, name, size }
     // ============================================================
     if (path === '/api/upload-file' && method === 'POST') {
       try {
@@ -108,12 +183,10 @@ export default {
         );
 
         const bucket = FIREBASE_STORAGE_BUCKET;
-        // firebasestorage.app buckets need the full bucket name URL-encoded
-        const bucketEncoded = encodeURIComponent(bucket);
 
         // Upload the bytes via the GCS JSON API
         const uploadUrl =
-          `https://storage.googleapis.com/upload/storage/v1/b/${bucketEncoded}/o` +
+          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(bucket)}/o` +
           `?uploadType=media&name=${encodeURIComponent(objectPath)}`;
 
         const uploadRes = await fetch(uploadUrl, {
@@ -121,7 +194,6 @@ export default {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': contentType,
-            'X-Goog-Content-Length-Range': `0,${MAX_BYTES}`,
           },
           body: fileBytes,
         });
@@ -129,12 +201,12 @@ export default {
         if (!uploadRes.ok) {
           const errText = await uploadRes.text();
           console.error('[upload-file] GCS upload failed:', uploadRes.status, errText);
-          return json({ error: 'Upload to storage failed.', detail: errText }, 502);
+          return json({ error: 'Upload to storage failed.', detail: errText, status: uploadRes.status }, 502);
         }
 
-        // Set Content-Disposition + make the object public
+        // Set Content-Disposition
         const metaUrl =
-          `https://storage.googleapis.com/storage/v1/b/${bucketEncoded}/o/${encodeURIComponent(objectPath)}`;
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
 
         await fetch(metaUrl, {
           method: 'PATCH',
@@ -147,6 +219,7 @@ export default {
           }),
         });
 
+        // Make the object public
         await fetch(`${metaUrl}/acl`, {
           method: 'POST',
           headers: {
@@ -157,9 +230,8 @@ export default {
         });
 
         // Build the public download URL
-        // Use storage.googleapis.com format which works for firebasestorage.app buckets
-        const downloadUrl =
-          `https://storage.googleapis.com/${bucket}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+        const pathParts = objectPath.split('/').map(encodeURIComponent).join('/');
+        const downloadUrl = `https://storage.googleapis.com/${bucket}/${pathParts}`;
 
         return json({
           url:  downloadUrl,
@@ -176,8 +248,6 @@ export default {
 
     // ============================================================
     // ROUTE: POST /api/delete-file
-    // Deletes a previously uploaded file from Firebase Storage.
-    // Body: { path: "deliveries/<purchaseId>/<filename>" }
     // ============================================================
     if (path === '/api/delete-file' && method === 'POST') {
       try {
@@ -191,9 +261,8 @@ export default {
           'https://www.googleapis.com/auth/devstorage.read_write'
         );
         const bucket = FIREBASE_STORAGE_BUCKET;
-        const bucketEncoded = encodeURIComponent(bucket);
         const deleteUrl =
-          `https://storage.googleapis.com/storage/v1/b/${bucketEncoded}/o/${encodeURIComponent(objectPath)}`;
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
 
         const res = await fetch(deleteUrl, {
           method: 'DELETE',
@@ -225,9 +294,7 @@ export default {
 };
 
 // ================================================================
-// GOOGLE JWT HELPER
-// Signs a JWT with the hardcoded service account private key and
-// exchanges it for a short-lived OAuth2 access token.
+// GOOGLE JWT HELPER — fixed base64url encoding
 // ================================================================
 async function getGoogleAccessToken(scope = 'https://www.googleapis.com/auth/datastore') {
   const now     = Math.floor(Date.now() / 1000);
@@ -242,17 +309,16 @@ async function getGoogleAccessToken(scope = 'https://www.googleapis.com/auth/dat
     exp:   expires,
   };
 
-  // Properly base64url-encode a string (handles all Unicode safely)
-  const encode = obj => {
-    const str = JSON.stringify(obj);
+  // Correct base64url: TextEncoder → bytes → binary string → btoa → url-safe
+  const b64url = str => {
     const bytes = new TextEncoder().encode(str);
     let binary = '';
     for (const b of bytes) binary += String.fromCharCode(b);
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   };
 
-  const headerB64 = encode(header);
-  const claimsB64 = encode(claims);
+  const headerB64 = b64url(JSON.stringify(header));
+  const claimsB64 = b64url(JSON.stringify(claims));
   const sigInput  = `${headerB64}.${claimsB64}`;
 
   // Strip PEM headers and decode base64
