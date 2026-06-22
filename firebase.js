@@ -653,6 +653,39 @@ const Storage = {
     let bytes = 0;
     for (const k in localStorage) { if (localStorage.hasOwnProperty(k)) bytes += (k.length + (localStorage[k]||'').length) * 2; }
     return Math.round(bytes / 1024);
+  },
+
+  // Upload a file to Firebase Storage and resolve with its public download URL.
+  // folder:     storage path prefix, e.g. 'deliveries/<purchaseId>'
+  // onProgress: optional callback(percent:number)
+  uploadFile(file, folder, onProgress) {
+    return new Promise((resolve, reject) => {
+      const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `${folder}/${Date.now()}_${safeName}`;
+      const metadata = {
+        contentType: file.type || 'application/octet-stream',
+        // Forces the browser to download (not preview) the file when the URL is opened,
+        // regardless of where the link is opened from.
+        contentDisposition: `attachment; filename="${file.name || safeName}"`
+      };
+      const ref = _storage.ref().child(path);
+      const task = ref.put(file, metadata);
+      task.on('state_changed',
+        snap => { if (onProgress && snap.totalBytes) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)); },
+        err => reject(err),
+        async () => {
+          try {
+            const url = await task.snapshot.ref.getDownloadURL();
+            resolve({ url, path, name: file.name || safeName, size: file.size || 0 });
+          } catch (e) { reject(e); }
+        }
+      );
+    });
+  },
+
+  async deleteFile(path) {
+    if (!path) return;
+    try { await _storage.ref().child(path).delete(); } catch (e) { console.warn('Storage.deleteFile:', e); }
   }
 };
 

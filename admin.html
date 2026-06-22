@@ -2092,9 +2092,21 @@ function openDeliverModal(purchaseId) {
 
   // Pre-fill fields based on type
   if (existingType === 'pdf' || existingType === 'ebook') {
-    document.getElementById('deliver-' + existingType + '-url').value = existingLink || (existingData?.URL || existingData?.Link || '');
-    if (existingType === 'pdf') document.getElementById('deliver-pdf-name').value = existingData?.['File Name'] || '';
+    const prefillUrl = existingLink || (existingData?.['Download Link'] || existingData?.URL || existingData?.Link || '');
+    if (existingType === 'pdf') {
+      document.getElementById('deliver-pdf-url').value = prefillUrl;
+      document.getElementById('deliver-pdf-name').value = existingData?.['File Name'] || '';
+      // If a file was already uploaded, show the file-info chip instead of the dropzone
+      if (prefillUrl) {
+        const existingFileName = existingData?.['File Name'] || 'Previously uploaded file';
+        document.getElementById('deliver-pdf-dropzone').style.display = 'none';
+        document.getElementById('deliver-pdf-file-info').style.display = 'flex';
+        document.getElementById('deliver-pdf-file-name').textContent = existingFileName + ' — already uploaded \u2713';
+        document.getElementById('deliver-pdf-path').value = existingData?.['_StoragePath'] || '';
+      }
+    }
     if (existingType === 'ebook') {
+      document.getElementById('deliver-ebook-url').value = prefillUrl;
       document.getElementById('deliver-ebook-title').value = existingData?.['Title'] || existingData?.['Ebook Title'] || '';
       document.getElementById('deliver-ebook-author').value = existingData?.['Author'] || '';
     }
@@ -2176,6 +2188,11 @@ function switchDeliverType(type, clearFields = true) {
     } else if (type === 'pdf') {
       document.getElementById('deliver-pdf-url').value = '';
       document.getElementById('deliver-pdf-name').value = '';
+      document.getElementById('deliver-pdf-path').value = '';
+      document.getElementById('deliver-pdf-file').value = '';
+      document.getElementById('deliver-pdf-dropzone').style.display = 'block';
+      document.getElementById('deliver-pdf-file-info').style.display = 'none';
+      document.getElementById('deliver-pdf-progress-wrap').style.display = 'none';
     } else if (type === 'canva') {
       document.getElementById('deliver-canva-url').value = '';
       document.getElementById('deliver-canva-name').value = '';
@@ -2215,6 +2232,70 @@ function removeDeliverField(suffix, idx) {
   if (row) row.remove();
 }
 
+// ── PDF / File upload (Firebase Storage) ───────────────────────
+let _pdfUploadInProgress = false;
+
+async function handlePdfFileSelect(file) {
+  if (!file) return;
+  const errEl = document.getElementById('deliver-error');
+  errEl.style.display = 'none';
+
+  if (file.size > 50 * 1024 * 1024) {
+    errEl.textContent = 'File is too large — please keep it under 50MB.';
+    errEl.style.display = 'block';
+    document.getElementById('deliver-pdf-file').value = '';
+    return;
+  }
+
+  const dropzone   = document.getElementById('deliver-pdf-dropzone');
+  const progWrap   = document.getElementById('deliver-pdf-progress-wrap');
+  const progBar    = document.getElementById('deliver-pdf-progress-bar');
+  const progText   = document.getElementById('deliver-pdf-progress-text');
+  const fileInfo   = document.getElementById('deliver-pdf-file-info');
+  const fileNameEl = document.getElementById('deliver-pdf-file-name');
+
+  _pdfUploadInProgress = true;
+  dropzone.style.display = 'none';
+  fileInfo.style.display = 'none';
+  progWrap.style.display = 'block';
+  progBar.style.width = '0%';
+  progText.textContent = 'Uploading 0%...';
+
+  const purchaseId = document.getElementById('deliver-purchase-id').value || 'misc';
+
+  try {
+    const result = await Storage.uploadFile(file, 'deliveries/' + purchaseId, pct => {
+      progBar.style.width = pct + '%';
+      progText.textContent = 'Uploading ' + pct + '%...';
+    });
+    document.getElementById('deliver-pdf-url').value = result.url;
+    document.getElementById('deliver-pdf-path').value = result.path;
+    if (!document.getElementById('deliver-pdf-name').value.trim()) {
+      document.getElementById('deliver-pdf-name').value = result.name;
+    }
+    fileNameEl.textContent = result.name + ' (' + (result.size / 1024 / 1024).toFixed(2) + ' MB) — uploaded ✓';
+    progWrap.style.display = 'none';
+    fileInfo.style.display = 'flex';
+  } catch (e) {
+    console.error('PDF upload failed:', e);
+    errEl.textContent = '❌ Upload failed: ' + (e.message || String(e));
+    errEl.style.display = 'block';
+    progWrap.style.display = 'none';
+    dropzone.style.display = 'block';
+  } finally {
+    _pdfUploadInProgress = false;
+  }
+}
+
+function clearPdfFile() {
+  document.getElementById('deliver-pdf-url').value = '';
+  document.getElementById('deliver-pdf-path').value = '';
+  document.getElementById('deliver-pdf-file').value = '';
+  document.getElementById('deliver-pdf-file-info').style.display = 'none';
+  document.getElementById('deliver-pdf-progress-wrap').style.display = 'none';
+  document.getElementById('deliver-pdf-dropzone').style.display = 'block';
+}
+
 async function submitDeliver() {
   const id = document.getElementById('deliver-purchase-id').value;
   const type = document.querySelector('input[name="deliver-type"]:checked')?.value || 'credentials';
@@ -2245,11 +2326,14 @@ async function submitDeliver() {
     accessLink = url;
 
   } else if (type === 'pdf') {
+    if (_pdfUploadInProgress) { errEl.textContent = 'Please wait for the upload to finish.'; errEl.style.display = 'block'; return; }
     const url = document.getElementById('deliver-pdf-url').value.trim();
-    if (!url) { errEl.textContent = 'Please enter the PDF/file URL.'; errEl.style.display = 'block'; return; }
+    if (!url) { errEl.textContent = 'Please upload a file first.'; errEl.style.display = 'block'; return; }
     const name = document.getElementById('deliver-pdf-name').value.trim();
-    accessData = { 'Download Link': url };
+    const path = document.getElementById('deliver-pdf-path').value.trim();
+    accessData = { '_DeliveryType': 'pdf', 'Download Link': url };
     if (name) accessData['File Name'] = name;
+    if (path) accessData['_StoragePath'] = path;
     accessLink = url;
 
   } else if (type === 'canva') {
@@ -2989,11 +3073,32 @@ async function saveAdminReview() {
 
     <!-- PDF section -->
     <div id="deliver-section-pdf" style="display:none;margin-bottom:1rem">
-      <label class="form-label">PDF / File URL or Drive Link</label>
-      <input class="form-input" id="deliver-pdf-url" placeholder="https://drive.google.com/file/d/..." style="margin-top:.35rem;margin-bottom:.6rem"/>
-      <label class="form-label" style="margin-top:.3rem">File Name <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <label class="form-label">Upload File</label>
+      <input type="hidden" id="deliver-pdf-url" value=""/>
+      <input type="hidden" id="deliver-pdf-path" value=""/>
+      <input type="file" id="deliver-pdf-file" style="display:none" onchange="handlePdfFileSelect(this.files[0])"/>
+      <div id="deliver-pdf-dropzone" onclick="document.getElementById('deliver-pdf-file').click()"
+           style="margin-top:.35rem;border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:1.3rem 1rem;text-align:center;cursor:pointer;transition:all .15s ease">
+        <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.4rem;color:var(--text-muted);margin-bottom:.4rem;display:block"></i>
+        <div style="font-size:.85rem;color:var(--text-muted)">Click to choose a file to upload</div>
+        <div style="font-size:.72rem;color:var(--text-muted);opacity:.7;margin-top:.2rem">PDF, ZIP, or any file — up to 50MB</div>
+      </div>
+      <div id="deliver-pdf-progress-wrap" style="display:none;margin-top:.6rem">
+        <div style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
+          <div id="deliver-pdf-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width .15s ease"></div>
+        </div>
+        <div id="deliver-pdf-progress-text" style="font-size:.72rem;color:var(--text-muted);margin-top:.35rem">Uploading 0%...</div>
+      </div>
+      <div id="deliver-pdf-file-info" style="display:none;align-items:center;gap:.6rem;margin-top:.6rem;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:.6rem .8rem">
+        <i class="fa-solid fa-file-pdf" style="color:var(--accent)"></i>
+        <span id="deliver-pdf-file-name" style="flex:1;font-size:.82rem;font-weight:600;word-break:break-all"></span>
+        <button type="button" onclick="clearPdfFile()" title="Remove file" style="width:26px;height:26px;flex-shrink:0;border-radius:6px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <i class="fa-solid fa-xmark" style="font-size:.7rem"></i>
+        </button>
+      </div>
+      <label class="form-label" style="margin-top:.7rem">File Name <span style="font-weight:400;opacity:.6">(shown to customer)</span></label>
       <input class="form-input" id="deliver-pdf-name" placeholder="e.g. Course Guide.pdf" style="margin-top:.35rem"/>
-      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> Tip: Upload your PDF to Google Drive, set sharing to "Anyone with the link", then paste the link here.</div>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> The file is uploaded and stored for you — the customer will see a Download button in "My Products", no link to manage.</div>
     </div>
 
     <!-- CANVA section -->
