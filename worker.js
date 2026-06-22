@@ -7,33 +7,11 @@
 // Firebase service account credentials (hardcoded — no secrets needed)
 const FIREBASE_PROJECT_ID    = 'generalwebsite-580f9';
 const FIREBASE_CLIENT_EMAIL  = 'firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com';
+// ⚠️  REPLACE THIS with a fresh key from Firebase Console → Project Settings → Service Accounts → Generate new private key
+// The previous key was corrupted (truncated by 1 byte), causing the 500 error on file uploads.
+// Paste the FULL "private_key" value from the downloaded JSON here.
 const FIREBASE_PRIVATE_KEY   = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtaedmCsUpa6lK
-3vav5bCeTDVJJ7i4vw5m0pLqgrhoJ6Z98dBG1UM2P9P9iTULOYHY5dPPAv2mPWS5
-UKsSV5LZeURLIa53FNjduSNODqU49MFGM/gRYRLCgrPul1KH4d24kOE1WDdBt/um
-oVnoaFWDi2xqnV7DjXhByVv7geTyqMK97nOxNjnarC2UjIgLb5oUg5fyTmGZeAaZ
-npQ8EBUteYdJI7wfqMUbR4RiR1hFZrG7VU+VTyb2VWV3q3v1sIAvYFFeIYDYvdyV
-zB8u9OTJTMhYn3XQdYkwT514rDrxuZnCLEnJuUxL/eouqb/SB2+KYjKrpqqKpHXx
-b0DDL+1NAgMBAAECggEACzZKmrUXXB8hlUotZMamJAeYXTAyYZuH8lgq3WFYGL/e
-vcwWY8xvg1pRugkWtjDHKow3JO5nRcoFZHS8D6Ki4Rwil44uo6gw513ZIJ34yvuk
-MJ/oKgBLprdHRYwtVV5iQaGSAt4++fXlaurwXByKBUgzJjRVLeT/mzB9Zn/Wmv74
-3DV++LJZKKAEAQGIMcUaoScv+VvMd3bhNHkzRnhDEc4GgGqEHnYDNoijIGe2Fsw2
-eYJxGq1g02nXSV4AjBwi6OcU1k1bK1P4kVHHeFSHp5rR4veQxXBifY1eEcU6oq3j
-pU4932Dd4KXViMNyMGge0m/8b1mcc52EW8JkCLk1vwKBgQDaWA+YPxIEf1uZG4xO
-v+4bz6nwN6JQ9lqLAW1tFPAp5VXkPHuemQQZ0Y6R00gUfeEXNdurDnVPqBopSMJG
-bZ1V9FP8uBsUmmCWipHuXDFLb//dGrSPH+mEGwHlDjrlcSwS6r3YXOJOczeEGvDn
-DedqzL/K0Itr9PB8LHqc/rXX2wKBgQDLUijU34FGkh6YoMIj9kVyK5VSwGUo0VxV
-0b5qDyMpONw/yi4ae30S+hRK5u+lypvpKc+votYsca92i2DKDp2pOO2YP7FzHrEj
-GAhatYK+WGuAfnHQO5i93OC0afpEIEXOOqvVOZABclnw+q5Omp/3JlWkm5zWGZxd
-4seqpFbL9wKBgQCfGeoLK3Iqms8ZKwy7WXndBB41r6R0UH87qUeeY9J5BOboj/YY
-ZDGrypqTwhxU6kD508IEzF1JNRoTGTSPc1Jhjs8gaNs60R8uszyRLtawvKT57XrC
-jCNxouhni035YNUX17uMjGpPdf9vIN6HzwbhON9Mn1foy6vtH9Ac1DGXXwKBgGKT
-PNSoYCb05PyexEFnPxgxZT4vpVv61UeOX0FQgX2U4cPTpDKWuHcg5AHEoV/CMYEE
-EntW+XumyqkwvgZ4u5u1zAvKpZ/ou30GQ9amtfLPL5+mrkuE+XLjydXuo7Wv5+gq
-rfC87cKlzFF3WFcnxHKxFUivYYSz+gnSz3c+Ig7VAoGAR6IHErGMJbgYUiLHKojW
-KKGaN59NQMJFACs8F6of+rLsIN/B0HWPcfv9+K4h5mrU0m0Ps0hZc5uJY/jf7+aAE
-Iu5QjBLCeXbsVOQYSxwyBaw2vpVcmVsRO4xK/mwBI88gsrnz8XpRavpifU5KOrYt
-7CzoeHxeJYtcGM11f7lM4M8=
+REPLACE_WITH_YOUR_NEW_PRIVATE_KEY_FROM_FIREBASE_CONSOLE
 -----END PRIVATE KEY-----`;
 const FIREBASE_STORAGE_BUCKET = 'generalwebsite-580f9.firebasestorage.app';
 
