@@ -5,7 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
 
   "assets": {
-    "directory": "./your-repo/public",
+    "directory": "./public",
     "binding": "ASSETS"
   },
 
