@@ -108,10 +108,12 @@ export default {
         );
 
         const bucket = FIREBASE_STORAGE_BUCKET;
+        // firebasestorage.app buckets need the full bucket name URL-encoded
+        const bucketEncoded = encodeURIComponent(bucket);
 
         // Upload the bytes via the GCS JSON API
         const uploadUrl =
-          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(bucket)}/o` +
+          `https://storage.googleapis.com/upload/storage/v1/b/${bucketEncoded}/o` +
           `?uploadType=media&name=${encodeURIComponent(objectPath)}`;
 
         const uploadRes = await fetch(uploadUrl, {
@@ -119,19 +121,20 @@ export default {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': contentType,
+            'X-Goog-Content-Length-Range': `0,${MAX_BYTES}`,
           },
           body: fileBytes,
         });
 
         if (!uploadRes.ok) {
           const errText = await uploadRes.text();
-          console.error('[upload-file] GCS upload failed:', errText);
-          return json({ error: 'Upload to storage failed.' }, 502);
+          console.error('[upload-file] GCS upload failed:', uploadRes.status, errText);
+          return json({ error: 'Upload to storage failed.', detail: errText }, 502);
         }
 
         // Set Content-Disposition + make the object public
         const metaUrl =
-          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
+          `https://storage.googleapis.com/storage/v1/b/${bucketEncoded}/o/${encodeURIComponent(objectPath)}`;
 
         await fetch(metaUrl, {
           method: 'PATCH',
@@ -154,8 +157,9 @@ export default {
         });
 
         // Build the public download URL
+        // Use storage.googleapis.com format which works for firebasestorage.app buckets
         const downloadUrl =
-          `https://storage.googleapis.com/${bucket}/${encodeURIComponent(objectPath).replace(/%2F/g, '/')}`;
+          `https://storage.googleapis.com/${bucket}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
 
         return json({
           url:  downloadUrl,
@@ -187,8 +191,9 @@ export default {
           'https://www.googleapis.com/auth/devstorage.read_write'
         );
         const bucket = FIREBASE_STORAGE_BUCKET;
+        const bucketEncoded = encodeURIComponent(bucket);
         const deleteUrl =
-          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}`;
+          `https://storage.googleapis.com/storage/v1/b/${bucketEncoded}/o/${encodeURIComponent(objectPath)}`;
 
         const res = await fetch(deleteUrl, {
           method: 'DELETE',
@@ -237,9 +242,14 @@ async function getGoogleAccessToken(scope = 'https://www.googleapis.com/auth/dat
     exp:   expires,
   };
 
-  const encode = obj =>
-    btoa(JSON.stringify(obj))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  // Properly base64url-encode a string (handles all Unicode safely)
+  const encode = obj => {
+    const str = JSON.stringify(obj);
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  };
 
   const headerB64 = encode(header);
   const claimsB64 = encode(claims);
