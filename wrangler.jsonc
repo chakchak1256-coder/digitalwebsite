@@ -14,5 +14,12 @@
     "APP_URL": "https://digital-website.chakchak1256.workers.dev",
     "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
     "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com"
-  }
+  },
+
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "digitalproducts"
+    }
+  ]
 }

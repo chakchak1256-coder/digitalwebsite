@@ -655,48 +655,51 @@ const Storage = {
     return Math.round(bytes / 1024);
   },
 
-  // Upload a file via the Worker backend, which forwards it to Firebase
-  // Storage server-to-server (no browser CORS involved) and resolves
-  // with its public download URL.
+  // Upload a file through the Worker, which stores it in Cloudflare R2.
   // folder:     storage path prefix, e.g. 'deliveries/<purchaseId>'
   // onProgress: optional callback(percent:number)
   uploadFile(file, folder, onProgress) {
     return new Promise((resolve, reject) => {
       const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
       if (!backendUrl) {
-        reject(new Error('DIGISTORE_BACKEND_URL is not configured — cannot upload files.'));
+        reject(new Error('DIGISTORE_BACKEND_URL is not configured.'));
         return;
       }
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('folder', folder);
+      formData.append('folder', folder || 'deliveries/misc');
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', backendUrl + '/api/upload-file');
+      xhr.open('POST', `${backendUrl}/api/upload-file`, true);
 
-      xhr.upload.onprogress = (e) => {
-        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+      xhr.upload.onprogress = e => {
+        if (onProgress && e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
       };
 
       xhr.onload = () => {
         let data;
-        try { data = JSON.parse(xhr.responseText); } catch { data = null; }
-
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch (e) {
+          reject(new Error('Upload failed: invalid response from server.'));
+          return;
+        }
         if (xhr.status >= 200 && xhr.status < 300 && data && data.url) {
-          resolve(data);
+          resolve({
+            url:  data.url,
+            path: data.path,
+            name: data.name || file.name,
+            size: data.size || file.size || 0,
+          });
         } else {
-          const message = (data && data.error) || ('Upload failed (HTTP ' + xhr.status + ').');
-          reject(new Error(message));
+          reject(new Error('Upload failed: ' + (data && data.error ? data.error : `HTTP ${xhr.status}`)));
         }
       };
 
-      xhr.onerror = () => {
-        reject(new Error(
-          'Could not reach the upload server. Check that ' + backendUrl + ' is reachable ' +
-          'and that the Worker is deployed with the /api/upload-file route.'
-        ));
-      };
+      xhr.onerror = () => reject(new Error('Upload failed: network error.'));
 
       xhr.send(formData);
     });
@@ -705,14 +708,23 @@ const Storage = {
   async deleteFile(path) {
     if (!path) return;
     const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
-    if (!backendUrl) return;
+    if (!backendUrl) {
+      console.warn('Storage.deleteFile: DIGISTORE_BACKEND_URL is not configured.');
+      return;
+    }
     try {
-      await fetch(backendUrl + '/api/delete-file', {
+      const res = await fetch(`${backendUrl}/api/delete-file`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path }),
       });
-    } catch (e) { console.warn('Storage.deleteFile:', e); }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.warn('Storage.deleteFile:', data.error || `HTTP ${res.status}`);
+      }
+    } catch (e) {
+      console.warn('Storage.deleteFile:', e);
+    }
   }
 };
 
