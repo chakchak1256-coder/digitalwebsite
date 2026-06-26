@@ -10,10 +10,11 @@
   },
 
   "vars": {
-    "CHARGILY_MODE": "test",
     "APP_URL": "https://digital-website.chakchak1256.workers.dev",
     "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
-    "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com"
+    "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com",
+    // "sandbox" uses devapi.slick-pay.com  |  "production" uses prodapi.slick-pay.com
+    "SLICKPAY_ENV": "production"
   },
 
   "r2_buckets": [

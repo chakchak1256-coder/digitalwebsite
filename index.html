@@ -1929,6 +1929,11 @@ body.flash-on #mobile-nav{top:102px}
       <div class="form-group">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Payment Method</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="co-pay-method-wrap">
+          <label class="co-method-card" id="co-method-cib">
+            <input type="radio" name="co-payment" value="cib" onchange="coShowPaymentInstructions('cib')" style="display:none"/>
+            <div class="co-method-icon">💳</div>
+            <div class="co-method-name">CIB / EDAHABIA</div>
+          </label>
           <label class="co-method-card" id="co-method-flexy">
             <input type="radio" name="co-payment" value="flexy" onchange="coShowPaymentInstructions('flexy')" style="display:none"/>
             <div class="co-method-icon">📱</div>
@@ -1971,7 +1976,7 @@ body.flash-on #mobile-nav{top:102px}
 
       <div style="display:flex;gap:.7rem;margin-top:1rem">
         <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
-        <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coProceedToProofStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next: Payment Proof</button>
+        <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coHandleNextStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next</button>
       </div>
     </div>
 
@@ -2645,6 +2650,23 @@ function coShowPaymentInstructions(method) {
   const card = document.getElementById('co-method-' + method);
   if (card) card.classList.add('selected');
 
+  // Update Next button label
+  const nextBtn = document.getElementById('co-submit-btn');
+  if (nextBtn) {
+    if (method === 'cib') {
+      nextBtn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Pay with Card →';
+    } else {
+      nextBtn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next: Payment Proof';
+    }
+  }
+
+  // CIB online payment — no instruction card needed
+  if (method === 'cib') {
+    if (instrEl) instrEl.style.display = 'none';
+    _coRefreshOrderSummary(0);
+    return;
+  }
+
   // Default numbers (used for copy buttons)
   const flexyNumbers    = [
     s.flexyNumber1    || '0540431312',
@@ -2844,6 +2866,100 @@ function coValidatePhone(input) {
 }
 
 // STEP 1 → STEP 2: validate info, then show proof upload
+// Route the "Next" button based on selected payment method
+function coHandleNextStep() {
+  const method = document.querySelector('input[name="co-payment"]:checked')?.value || '';
+  if (method === 'cib') {
+    coInitiateSlickPayCheckout();
+  } else {
+    coProceedToProofStep();
+  }
+}
+
+// ── CIB/EDAHABIA online payment via SlickPay/SATIM ──────────────
+async function coInitiateSlickPayCheckout() {
+  const currentUser = UserAuth.current();
+  if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
+  const cartItems = Cart.get();
+  if (!cartItems.length) { closeCheckout(); return; }
+
+  const errEl = document.getElementById('co-form-err');
+  errEl.style.display = 'none';
+
+  const name         = (document.getElementById('co-name')?.value || '').trim();
+  const email        = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
+  const phonePfx     = (document.getElementById('co-phone-prefix')?.value || '07');
+  const phoneDigits  = (document.getElementById('co-phone')?.value || '').trim();
+  const phone        = phonePfx + phoneDigits;
+
+  if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
+  if (!phoneDigits || phoneDigits.length !== 8 || !/^\d{8}$/.test(phoneDigits)) {
+    errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return;
+  }
+  if (!email) { errEl.textContent = '⚠️ Email is required for online payment.'; errEl.style.display = 'block'; return; }
+
+  // Split name into first/last
+  const nameParts = name.split(' ');
+  const firstname = nameParts[0];
+  const lastname  = nameParts.slice(1).join(' ') || nameParts[0];
+
+  const s = Settings.get();
+  const currency = s.currency || 'DA';
+  const total = Cart.total();
+  if (total <= 100) {
+    errEl.textContent = '⚠️ Total must be greater than 100 DA for online payment.';
+    errEl.style.display = 'block'; return;
+  }
+
+  // Build a single combined product name for the invoice
+  const productName = cartItems.length === 1
+    ? (cartItems[0].variantLabel ? `${cartItems[0].name} — ${cartItems[0].variantLabel}` : cartItems[0].name)
+    : `${s.storeName || 'Order'} (${cartItems.length} items)`;
+
+  const btn = document.getElementById('co-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Redirecting to payment...';
+
+  try {
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    const res = await fetch(`${backendUrl}/api/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id:   cartItems[0]?.productId || cartItems[0]?.id || '',
+        product_name: productName,
+        amount:       total,
+        firstname,
+        lastname,
+        email,
+        phone,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.payment_url) {
+      errEl.textContent = '⚠️ ' + (data.error || 'Payment initiation failed. Please try another method.');
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next';
+      return;
+    }
+
+    // Store order ID for the return page
+    try { sessionStorage.setItem('slickpay_order_id', data.order_id); } catch {}
+
+    // Redirect to SATIM payment page
+    window.location.href = data.payment_url;
+
+  } catch (err) {
+    errEl.textContent = '⚠️ Network error. Please check your connection and try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next';
+  }
+}
+
 function coProceedToProofStep() {
   const currentUser = UserAuth.current();
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
@@ -2862,7 +2978,7 @@ function coProceedToProofStep() {
   if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
   if (!_phoneDigits) { errEl.textContent = '⚠️ Phone number is required.'; errEl.style.display = 'block'; return; }
   if (_phoneDigits.length !== 8 || !/^\d{8}$/.test(_phoneDigits)) { errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return; }
-  if (!method) { errEl.textContent = '⚠️ Please select a payment method (Flexy or BaridiMob).'; errEl.style.display = 'block'; return; }
+  if (!method) { errEl.textContent = '⚠️ Please select a payment method.'; errEl.style.display = 'block'; return; }
 
   _showCoStep('proof');
 }
