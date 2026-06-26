@@ -588,7 +588,7 @@ select.form-input option{background:var(--bg2)}
     <div id="storage-banner">
       <i class="fa-solid fa-triangle-exclamation" style="color:#ff4d6d;font-size:1.1rem"></i>
       <span style="font-size:.88rem;flex:1"><strong style="color:#ff4d6d">Browser storage is full.</strong> Some data may not be saved. Go to Storage Manager to free space.</span>
-      <button class="btn btn-sm btn-danger" onclick="location.href='settings.html?panel=storage-manager'"><i class="fa-solid fa-hard-drive"></i> Fix Now</button>
+      <button class="btn btn-sm btn-danger" onclick="alert('Please clear browser storage manually via DevTools > Application > Storage.')"><i class="fa-solid fa-hard-drive"></i> Fix Now</button>
       <button onclick="document.getElementById('storage-banner').classList.remove('show')" style="color:var(--text-muted);font-size:1rem;padding:4px"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -1138,14 +1138,13 @@ let catImage = null;
 function initAdmin() {
   startAdminPurchasesListener(); // realtime badge + purchases
   initOrderNotifications();      // new order push + sound alerts
-  Settings.applyTheme();
-  renderDashboard();
+  Settings.applyTheme();renderDashboard();
   renderOrders();
   renderProductsList();
   renderCategoriesList();
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-DZ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   window.addEventListener('db:update', () => { renderDashboard(); renderOrders(); renderProductsList(); renderCategoriesList(); });
-  window.addEventListener('settings:update', () => Settings.applyTheme());
+
   window.addEventListener('storage:full', () => document.getElementById('storage-banner').classList.add('show'));
 }
 
