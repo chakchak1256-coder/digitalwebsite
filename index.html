@@ -1777,7 +1777,7 @@ body.flash-on #mobile-nav{top:130px}
         </div>
       </div>
       <div class="about-right">
-        <div class="about-card"><div class="stat-icon grad-1"><i class="fa-solid fa-shield-halved" style="color:#fff;font-size:1.4rem;"></i></div><div class="about-card-num">100%</div><div class="about-card-lbl">Verified</div></div>
+        <div class="about-card"><div class="stat-icon grad-1"><span style="font-size:1.5rem;line-height:1;">✅</span></div><div class="about-card-num">100%</div><div class="about-card-lbl">Verified</div></div>
         <div class="about-card"><div class="stat-icon grad-2"><i class="fa-solid fa-lock"></i></div><div class="about-card-num">Secure</div><div class="about-card-lbl">Payments</div></div>
         <div class="about-card"><div class="stat-icon grad-3"><i class="fa-solid fa-bullseye"></i></div><div class="about-card-num">Curated</div><div class="about-card-lbl">Catalog</div></div>
         <div class="about-card"><div class="stat-icon grad-4"><i class="fa-solid fa-headset"></i></div><div class="about-card-num">Support</div><div class="about-card-lbl">Always Here</div></div>
@@ -2567,12 +2567,17 @@ function openAllProducts(filterCat = 'all') {
   renderAllFilters(filterCat);
   renderAllProducts(filterCat);
   document.getElementById('all-products-page').scrollTo(0,0);
-  // pre-set search empty
   const si = document.getElementById('search-input'); if (si) si.value = '';
+  // Set Products nav link as active
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  const prodLink = document.querySelector('.nav-links a[data-section="products"]');
+  if (prodLink) prodLink.classList.add('active');
 }
 function closeAllProducts() {
   document.getElementById('all-products-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
+  // Restore scrollspy control
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 }
 
 function renderAllFilters(activeCat = 'all') {
