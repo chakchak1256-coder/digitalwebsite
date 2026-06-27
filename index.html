@@ -981,6 +981,12 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 @media(max-width:900px){
   .nav-links{display:none}
   .hamburger{display:flex}
+  #nav{padding:0 1.1rem}
+  .nav-logo-img{height:36px}
+  .nav-logo-text{font-size:.95rem}
+  .nav-actions{gap:5px}
+  #nav-search-wrap{display:none}
+  #history-wrap{display:none}
   .about-grid,.contact-grid,.detail-grid{grid-template-columns:1fr}
   .about-right{grid-template-columns:repeat(4,1fr)}
   .about-card.span2{grid-column:span 4}
@@ -1304,11 +1310,13 @@ body.flash-on #mobile-nav{top:130px}
 #login-nav-btn { display: flex !important; }
 #user-btn      { display: none  !important; }
 #my-products-link { display: none !important; }
+#my-products-link-mobile { display: none !important; }
 
 /* Logged in: flip everything */
 [data-authed="true"] #login-nav-btn    { display: none !important; }
 [data-authed="true"] #user-btn         { display: flex !important; }
 [data-authed="true"] #my-products-link { display: flex !important; }
+[data-authed="true"] #my-products-link-mobile { display: flex !important; }
 
 /* ===== DIGITAL TOOLS CAROUSEL ===== */
 #game-carousel-section {
@@ -1604,6 +1612,7 @@ body.flash-on #mobile-nav{top:130px}
   <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Products</a>
   <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Warranty</a>
   <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Contact</a>
+  <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();openMyProducts();return false;">My Products</a>
 </div>
 
 <!-- ===== HERO ===== -->
@@ -2382,6 +2391,8 @@ window.addEventListener('auth:change', () => {
   initUserAuth();
 });
 
+let _pendingHashScroll = window.location.hash || '';
+
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initUserAuth();
@@ -2401,6 +2412,16 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRecentlyViewed();
     renderSocialProof();
     initFlashBanner();
+    // Re-align to the URL's target section once real content has rendered —
+    // async data above it (categories/products) can shift its position after
+    // the browser's initial (pre-data) anchor jump.
+    if (_pendingHashScroll) {
+      const target = document.querySelector(_pendingHashScroll);
+      if (target) {
+        requestAnimationFrame(() => target.scrollIntoView());
+      }
+      _pendingHashScroll = '';
+    }
   });
 });
 
@@ -3719,6 +3740,8 @@ function openMyProducts() {
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
   const mpLink = document.getElementById('my-products-link');
   if (mpLink) mpLink.classList.add('active');
+  const mpLinkMobile = document.getElementById('my-products-link-mobile');
+  if (mpLinkMobile) mpLinkMobile.classList.add('active');
 }
 
 // If My Products is open when Firebase finally resolves, re-render
@@ -3733,6 +3756,8 @@ function closeMyProducts() {
   document.body.classList.remove('no-scroll');
   const mpLink = document.getElementById('my-products-link');
   if (mpLink) mpLink.classList.remove('active');
+  const mpLinkMobile = document.getElementById('my-products-link-mobile');
+  if (mpLinkMobile) mpLinkMobile.classList.remove('active');
   // Unsubscribe realtime listener to avoid memory leaks
   if (_mpUnsubscribe) { _mpUnsubscribe(); _mpUnsubscribe = null; }
 }
