@@ -557,7 +557,7 @@ select.form-input option{background:var(--bg2)}
       </div>
       <div class="nav-group">
         <div class="nav-group-label">Store</div>
-        <div class="nav-item" onclick="showPanel('reviews')"><i class="fa-solid fa-star"></i> Reviews <span id="reviews-pending-badge" style="margin-left:auto;background:#F59E0B;color:#000;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:99px;display:none"></span></div>
+        <div class="nav-item" onclick="showPanel('reviews')"><i class="fa-solid fa-star"></i> Reviews</div>
         <div class="nav-item" onclick="showPanel('coupons')"><i class="fa-solid fa-tag"></i> Coupons</div>
         <div class="nav-item" onclick="showPanel('announcement')"><i class="fa-solid fa-bullhorn"></i> Announcement</div>
       </div>
@@ -878,35 +878,12 @@ select.form-input option{background:var(--bg2)}
         <div class="sec-header">
           <span class="sec-title">Reviews <span id="reviews-count" style="font-size:.8rem;color:var(--text-muted)"></span></span>
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <select class="form-input" id="reviews-filter" style="min-width:160px" onchange="renderReviewsAdmin()">
-              <option value="all">All Reviews</option>
-              <option value="pending">⏳ Pending</option>
-              <option value="approved">✅ Approved</option>
-              <option value="rejected">❌ Rejected</option>
-            </select>
+
             <button class="btn btn-primary" onclick="openAddReviewModal()"><i class="fa-solid fa-plus"></i> Add Review</button>
           </div>
         </div>
 
-        <!-- Stats -->
-        <div class="pur-stats-row" id="reviews-stats-row">
-          <div class="pur-stat">
-            <div class="pur-stat-icon" style="background:rgba(99,102,241,.1);color:#818CF8"><i class="fa-solid fa-star"></i></div>
-            <div><div class="pur-stat-val" id="rv-stat-total">—</div><div class="pur-stat-lbl">Total Reviews</div></div>
-          </div>
-          <div class="pur-stat">
-            <div class="pur-stat-icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fa-solid fa-clock"></i></div>
-            <div><div class="pur-stat-val" id="rv-stat-pending">—</div><div class="pur-stat-lbl">Pending</div></div>
-          </div>
-          <div class="pur-stat">
-            <div class="pur-stat-icon" style="background:rgba(var(--accent-rgb),.1);color:var(--accent)"><i class="fa-solid fa-check-circle"></i></div>
-            <div><div class="pur-stat-val" id="rv-stat-approved">—</div><div class="pur-stat-lbl">Approved</div></div>
-          </div>
-          <div class="pur-stat">
-            <div class="pur-stat-icon" style="background:rgba(239,68,68,.1);color:#EF4444"><i class="fa-solid fa-xmark-circle"></i></div>
-            <div><div class="pur-stat-val" id="rv-stat-rejected">—</div><div class="pur-stat-lbl">Rejected</div></div>
-          </div>
-        </div>
+
 
         <!-- Search -->
         <div style="margin-bottom:1.1rem">
@@ -922,7 +899,6 @@ select.form-input option{background:var(--bg2)}
                 <th>Product</th>
                 <th>Stars</th>
                 <th>Comment</th>
-                <th>Status</th>
                 <th>Date</th>
                 <th>Actions</th>
               </tr>
@@ -964,14 +940,7 @@ select.form-input option{background:var(--bg2)}
       <label class="form-label">Comment <span style="font-weight:400;opacity:.6">(optional)</span></label>
       <textarea class="form-input" id="arv-comment" rows="3" placeholder="Customer feedback..."></textarea>
     </div>
-    <div class="form-group" style="margin-bottom:1rem">
-      <label class="form-label">Status</label>
-      <select class="form-input" id="arv-status">
-        <option value="approved">✅ Approved</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="rejected">❌ Rejected</option>
-      </select>
-    </div>
+    <input type="hidden" id="arv-status" value="approved"/>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeAddReviewModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveAdminReview()"><i class="fa-solid fa-check"></i> Save Review</button>
@@ -1262,7 +1231,7 @@ function renderProductsList() {
   const prods = DB.getAll('products'); const s = Settings.get();
   document.getElementById('prod-count').textContent = `(${prods.length})`;
   const tbody = document.getElementById('products-tbody');
-  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-box"></i><p>No products yet. <strong>Add your first product!</strong></p></div></td></tr>`; return; }
+  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-box"></i><p>No products yet. <strong>Add your first product!</strong></p></div></td></tr>`; return; }
   tbody.innerHTML = prods.map(p => {
     const img = (p.images||[])[0] || generatePlaceholder(p.name, 80, 60);
     return `<tr>
@@ -2829,7 +2798,6 @@ function startReviewsListener() {
   _reviewsUnsub = Reviews.onSnapshotAll(reviews => {
     _allReviews = reviews;
     renderReviewsAdmin();
-    updateReviewsBadge();
   });
 }
 
@@ -2837,63 +2805,39 @@ function stopReviewsListener() {
   if (_reviewsUnsub) { _reviewsUnsub(); _reviewsUnsub = null; }
 }
 
-function updateReviewsBadge() {
-  const pending = _allReviews.filter(r => r.status === 'pending').length;
-  const badge = document.getElementById('reviews-pending-badge');
-  if (badge) { badge.textContent = pending; badge.style.display = pending ? 'inline' : 'none'; }
-}
 
 function renderReviewsAdmin() {
-  const filter = document.getElementById('reviews-filter')?.value || 'all';
   const q = (document.getElementById('reviews-search')?.value || '').toLowerCase();
   const tbody = document.getElementById('reviews-tbody');
   if (!tbody) return;
 
   let rows = _allReviews;
-  if (filter !== 'all') rows = rows.filter(r => r.status === filter);
   if (q) rows = rows.filter(r =>
     (r.productName||'').toLowerCase().includes(q) ||
     (r.userName||'').toLowerCase().includes(q) ||
     (r.comment||'').toLowerCase().includes(q)
   );
 
-  // Stats
-  const total = _allReviews.length;
-  const pending = _allReviews.filter(r => r.status === 'pending').length;
-  const approved = _allReviews.filter(r => r.status === 'approved').length;
-  const rejected = _allReviews.filter(r => r.status === 'rejected').length;
-  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setVal('rv-stat-total', total);
-  setVal('rv-stat-pending', pending);
-  setVal('rv-stat-approved', approved);
-  setVal('rv-stat-rejected', rejected);
   const cnt = document.getElementById('reviews-count');
   if (cnt) cnt.textContent = '(' + rows.length + ')';
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No reviews found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">No reviews found.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows.map(r => {
     const stars = '★'.repeat(r.stars || 0) + '☆'.repeat(5 - (r.stars || 0));
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' }) : '—';
-    const statusClass = r.status === 'approved' ? 'status-done' : r.status === 'rejected' ? 'status-cancel' : 'status-pending';
-    const statusLabel = r.status === 'approved' ? '✅ Approved' : r.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
     const comment = r.comment ? `<span title="${r.comment.replace(/"/g,'&quot;')}">${r.comment.length > 50 ? r.comment.slice(0,50) + '…' : r.comment}</span>` : '<span style="color:var(--text-muted);font-style:italic">—</span>';
     return `<tr>
       <td style="font-weight:600">${r.userName || '—'}</td>
       <td>${r.productName || '—'}</td>
       <td style="color:#F59E0B;letter-spacing:.05em;font-size:1rem">${stars}</td>
       <td style="max-width:200px;font-size:.82rem;color:var(--text-muted)">${comment}</td>
-      <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
       <td style="font-size:.8rem;color:var(--text-muted)">${date}</td>
       <td>
-        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-          ${r.status !== 'approved' ? `<button class="btn btn-sm" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#10B981" onclick="reviewSetStatus('${r.id}','approved')"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
-          ${r.status !== 'rejected' ? `<button class="btn btn-sm btn-danger" onclick="reviewSetStatus('${r.id}','rejected')"><i class="fa-solid fa-xmark"></i> Reject</button>` : ''}
-          <button class="btn btn-sm btn-danger" onclick="confirmDeleteReview('${r.id}')"><i class="fa-solid fa-trash"></i></button>
-        </div>
+        <button class="btn btn-sm btn-danger" onclick="confirmDeleteReview('${r.id}')"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');
@@ -2917,7 +2861,6 @@ function confirmDeleteReview(id) {
     await Reviews.delete(id);
     _allReviews = _allReviews.filter(r => r.id !== id);
     renderReviewsAdmin();
-    updateReviewsBadge();
     showToast('Review deleted.');
   });
 }
@@ -2935,7 +2878,7 @@ function openAddReviewModal() {
   arvUpdateStars(5);
   document.getElementById('arv-name').value = '';
   document.getElementById('arv-comment').value = '';
-  document.getElementById('arv-status').value = 'approved';
+  document.getElementById('arv-status').value = 'approved'; // always approved
   document.getElementById('add-review-modal').classList.add('open');
 }
 
@@ -2980,7 +2923,6 @@ async function saveAdminReview() {
     if (status === 'approved') await Reviews._recalcProductRating(productId);
     _allReviews.unshift({ ...data, id: ref.id });
     renderReviewsAdmin();
-    updateReviewsBadge();
     closeAddReviewModal();
     showToast('Review added!');
   } catch(e) {
