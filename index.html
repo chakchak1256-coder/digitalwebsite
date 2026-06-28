@@ -1182,15 +1182,18 @@ body.flash-on #mobile-nav{top:130px}
 
 /* ===== WISHLIST ===== */
 .prod-heart{
-  position:absolute;top:8px;right:8px;z-index:3;width:30px;height:30px;border-radius:50%;
+  position:absolute;bottom:8px;right:8px;z-index:3;width:32px;height:32px;border-radius:50%;
   background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
   display:flex;align-items:center;justify-content:center;
-  font-size:.78rem;cursor:pointer;transition:all var(--transition);border:1px solid rgba(255,255,255,.12);
+  font-size:.82rem;cursor:pointer;transition:all var(--transition);border:1px solid rgba(255,255,255,.12);
+  pointer-events:auto;
 }
 .prod-heart:hover{background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.4)}
+[data-theme="light"] .prod-heart{background:rgba(0,0,0,.45);border-color:rgba(255,255,255,.2)}
 .prod-heart.active{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5)}
-.prod-heart.active i{color:#EF4444}
-.prod-heart i{color:rgba(255,255,255,.8);transition:color var(--transition)}
+.prod-heart.active{background:rgba(239,68,68,.35) !important;border-color:rgba(239,68,68,.6) !important}
+.prod-heart.active i{color:#EF4444 !important}
+.prod-heart i{color:#fff;transition:color var(--transition)}
 /* Wishlist page */
 #wishlist-page{
   display:none;position:fixed;inset:0;z-index:800;
