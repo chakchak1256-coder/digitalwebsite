@@ -1549,7 +1549,7 @@ body.flash-on #mobile-nav{top:130px}
     <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
     <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Warranty</a>
     <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Contact</a>
-    <a href="#" id="my-products-link" onclick="openMyProducts();return false;">My Products</a>
+    <a href="#" id="my-products-link" onclick="closeWishlist();openMyProducts();return false;">My Products</a>
   </div>
   <div class="nav-actions">
     <!-- Nav Search -->
@@ -1615,7 +1615,7 @@ body.flash-on #mobile-nav{top:130px}
   <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Products</a>
   <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Warranty</a>
   <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Contact</a>
-  <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();openMyProducts();return false;">My Products</a>
+  <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();closeWishlist();openMyProducts();return false;">My Products</a>
 </div>
 
 <!-- ===== HERO ===== -->
