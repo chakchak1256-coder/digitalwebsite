@@ -2399,6 +2399,15 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartBadge();
   updateWishlistBadge();
   initScrollSpy();
+
+  // Handle ?open= param from other pages (e.g. my-products.html linking here)
+  const _openParam = new URLSearchParams(window.location.search).get('open');
+  if (_openParam === 'products') {
+    // Wait for db:update so products are rendered before opening overlay
+    window.addEventListener('db:update', () => { openAllProducts(); }, { once: true });
+  } else if (_openParam === 'wishlist') {
+    openWishlist();
+  }
   window.addEventListener('cart:update', () => { updateCartBadge(); _coRefreshOrderSummary(); });
   // db:update fires when Firestore data arrives — renders happen here
   window.addEventListener('db:update', () => {
