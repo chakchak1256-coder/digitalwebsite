@@ -2594,13 +2594,6 @@ function renderHeroShowcase() {
 
 // ===== ALL PRODUCTS PAGE =====
 function openAllProducts(filterCat = 'all') {
-  // Close other overlays first so they don't sit on top
-  document.getElementById('my-products-page').classList.remove('active');
-  document.getElementById('wishlist-page').classList.remove('active');
-  const mpLink = document.getElementById('my-products-link');
-  if (mpLink) mpLink.classList.remove('active');
-  const mpLinkMobile = document.getElementById('my-products-link-mobile');
-  if (mpLinkMobile) mpLinkMobile.classList.remove('active');
   document.getElementById('all-products-page').classList.add('active');
   document.body.classList.add('no-scroll');
   renderAllFilters(filterCat);
@@ -2613,6 +2606,7 @@ function openAllProducts(filterCat = 'all') {
 }
 function closeAllProducts() {
   document.getElementById('all-products-page').classList.remove('active');
+  document.getElementById('wishlist-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 }
@@ -3760,6 +3754,7 @@ window.addEventListener('auth:change', () => {
 
 function closeMyProducts() {
   document.getElementById('my-products-page').classList.remove('active');
+  document.getElementById('wishlist-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
   const mpLink = document.getElementById('my-products-link');
   if (mpLink) mpLink.classList.remove('active');
@@ -4119,13 +4114,6 @@ function updateWishlistBadge() {
 }
 
 function openWishlist() {
-  // Close other overlays first so they don't sit on top
-  document.getElementById('my-products-page').classList.remove('active');
-  document.getElementById('all-products-page').classList.remove('active');
-  const mpLink = document.getElementById('my-products-link');
-  if (mpLink) mpLink.classList.remove('active');
-  const mpLinkMobile = document.getElementById('my-products-link-mobile');
-  if (mpLinkMobile) mpLinkMobile.classList.remove('active');
   document.getElementById('wishlist-page').classList.add('active');
   document.body.classList.add('no-scroll');
   renderWishlist();
