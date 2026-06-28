@@ -68,7 +68,7 @@ async function slickpayRequest(env, path, { method = 'GET', body } = {}) {
 }
 
 const SlickPay = {
-  async createInvoice(env, { amount, items, firstname, lastname, email, phone, returnUrl, webhookUrl, webhookSignature, webhookMetaData, fees = 100 }) {
+  async createInvoice(env, { amount, items, firstname, lastname, email, phone, address, returnUrl, webhookUrl, webhookSignature, webhookMetaData, fees = 100 }) {
     const payload = {
       amount,
       items,
@@ -78,6 +78,7 @@ const SlickPay = {
       lastname,
       email,
       phone,
+      address,
     };
     if (env.SLICKPAY_ACCOUNT) payload.account = env.SLICKPAY_ACCOUNT;
     if (webhookUrl)       payload.webhook_url       = webhookUrl;
@@ -485,10 +486,10 @@ export default {
         let body;
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
 
-        const { product_id, product_name, amount, firstname, lastname, email, phone } = body || {};
+        const { product_id, product_name, amount, firstname, lastname, email, phone, address } = body || {};
 
-        if (!product_name || !amount || !firstname || !lastname || (!email && !phone)) {
-          return json({ error: 'Missing required fields: product_name, amount, firstname, lastname, and email or phone.' }, 400);
+        if (!product_name || !amount || !firstname || !lastname || !address || (!email && !phone)) {
+          return json({ error: 'Missing required fields: product_name, amount, firstname, lastname, address, and email or phone.' }, 400);
         }
         if (Number(amount) <= 100) {
           return json({ error: 'Amount must be greater than 100 DZD.' }, 400);
@@ -509,6 +510,7 @@ export default {
             lastname,
             email: email || undefined,
             phone: phone || undefined,
+            address,
             returnUrl,
             webhookUrl:       env.SLICKPAY_WEBHOOK_URL || undefined,
             webhookSignature: env.SLICKPAY_WEBHOOK_SIG || undefined,
@@ -544,6 +546,7 @@ export default {
             lastname,
             email:        email        || '',
             phone:        phone        || '',
+            address:      address      || '',
             status:       'pending',
             paymentUrl,
             createdAt:    new Date().toISOString(),

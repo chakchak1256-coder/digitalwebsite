@@ -2444,6 +2444,11 @@ footer::before{
         <input class="form-input" id="co-email" type="email" placeholder="your@email.com" required/>
       </div>
 
+      <div class="form-group" id="co-address-group">
+        <label>Address</label>
+        <input class="form-input" id="co-address" type="text" placeholder="Street, City" required/>
+      </div>
+
       <!-- Phone field — same design as signup -->
       <div class="form-group">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
@@ -3469,11 +3474,13 @@ async function coInitiateSlickPayCheckout() {
 
   const name         = (document.getElementById('co-name')?.value || '').trim();
   const email        = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
+  const address      = (document.getElementById('co-address')?.value || '').trim();
   const phonePfx     = (document.getElementById('co-phone-prefix')?.value || '07');
   const phoneDigits  = (document.getElementById('co-phone')?.value || '').trim();
   const phone        = phonePfx + phoneDigits;
 
   if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
+  if (!address) { errEl.textContent = '⚠️ Please enter your address.'; errEl.style.display = 'block'; return; }
   if (!phoneDigits || phoneDigits.length !== 8 || !/^\d{8}$/.test(phoneDigits)) {
     errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return;
   }
@@ -3514,6 +3521,7 @@ async function coInitiateSlickPayCheckout() {
         lastname,
         email,
         phone,
+        address,
       }),
     });
 
