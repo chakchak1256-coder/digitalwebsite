@@ -1545,10 +1545,10 @@ body.flash-on #mobile-nav{top:130px}
   </div>
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
-    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">About</a>
-    <a href="#" data-section="products" onclick="openAllProducts();return false;">Products</a>
-    <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Warranty</a>
-    <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();">Contact</a>
+    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
+    <a href="#" data-section="products" onclick="closeWishlist();openAllProducts();return false;">Products</a>
+    <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Warranty</a>
+    <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Contact</a>
     <a href="#" id="my-products-link" onclick="openMyProducts();return false;">My Products</a>
   </div>
   <div class="nav-actions">
@@ -1564,7 +1564,7 @@ body.flash-on #mobile-nav{top:130px}
       </div>
     </div>
     <!-- Wishlist -->
-    <button id="wishlist-nav-btn" onclick="openWishlist()" title="Wishlist">
+    <button id="wishlist-nav-btn" onclick="toggleWishlistPanel()" title="Wishlist">
       <i class="fa-regular fa-heart"></i>
       <span id="wishlist-badge"></span>
     </button>
@@ -1611,10 +1611,10 @@ body.flash-on #mobile-nav{top:130px}
 
 <div id="mobile-nav">
   <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
-  <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">About</a>
-  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Products</a>
-  <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Warranty</a>
-  <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();">Contact</a>
+  <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
+  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Products</a>
+  <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Warranty</a>
+  <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Contact</a>
   <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();openMyProducts();return false;">My Products</a>
 </div>
 
@@ -4132,6 +4132,9 @@ function openWishlist() {
 function closeWishlist() {
   document.getElementById('wishlist-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
+}
+function toggleWishlistPanel() {
+  document.getElementById('wishlist-page').classList.contains('active') ? closeWishlist() : openWishlist();
 }
 function renderWishlist() {
   const ids = Wishlist.get();
