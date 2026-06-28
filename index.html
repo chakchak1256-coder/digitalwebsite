@@ -1196,7 +1196,7 @@ body.flash-on #mobile-nav{top:130px}
 .prod-heart i{color:#fff;transition:color var(--transition)}
 /* Wishlist page */
 #wishlist-page{
-  display:none;position:fixed;inset:0;z-index:800;
+  display:none;position:fixed;inset:0;z-index:820;
   background:var(--bg);overflow-y:auto;
 }
 #wishlist-page.active{display:block}
@@ -2402,6 +2402,15 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartBadge();
   updateWishlistBadge();
   initScrollSpy();
+  // Handle ?open= param from my-products.html nav links
+  (function handleOpenParam() {
+    const p = new URLSearchParams(window.location.search).get('open');
+    if (!p) return;
+    // Remove the param from the URL bar without a page reload
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+    if (p === 'wishlist') { openWishlist(); }
+    else if (p === 'products') { openAllProducts(); }
+  })();
   window.addEventListener('cart:update', () => { updateCartBadge(); _coRefreshOrderSummary(); });
   // db:update fires when Firestore data arrives — renders happen here
   window.addEventListener('db:update', () => {
@@ -2609,7 +2618,6 @@ function openAllProducts(filterCat = 'all') {
 }
 function closeAllProducts() {
   document.getElementById('all-products-page').classList.remove('active');
-  document.getElementById('wishlist-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 }
