@@ -1525,9 +1525,285 @@ body.flash-on #mobile-nav{top:130px}
 .pd-review-text{font-size:.85rem;color:var(--text-muted);line-height:1.65}
 .pd-reviews-empty{padding:1.6rem 0;text-align:center;color:var(--text-muted);font-size:.85rem}
 
+
+/* ============================================================
+   PREMIUM POLISH LAYER — visual-only enhancements
+   (animations, glass depth, glow, micro-interactions)
+   Nothing here overrides structure, content or logic —
+   only adds motion, depth and finish on top of existing rules.
+   ============================================================ */
+
+/* ---- global motion defaults ---- */
+*{ scroll-behavior:smooth; }
+a,button,.btn,.cat-card,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
+.soc-link,.warranty-card,.purchase-card,.feature-strip-item,.trust-item,
+.prod-add,.qty-btn,.cart-close,.theme-btn,#cart-btn,.cart-del,.pc-access-btn,.pc-copy-btn{
+  transition:transform .4s cubic-bezier(.22,.85,.32,1),
+             box-shadow .4s cubic-bezier(.22,.85,.32,1),
+             background .35s ease, border-color .35s ease, color .35s ease, opacity .35s ease;
+}
+:focus-visible{
+  outline:2px solid rgba(var(--accent-rgb),.55);
+  outline-offset:2px;
+  border-radius:6px;
+}
+
+/* ---- ambient animated mesh / blob backdrop ---- */
+.dz-ambient{
+  position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+}
+.dz-blob{
+  position:absolute; border-radius:50%; filter:blur(60px);
+  opacity:.16; will-change:transform;
+  background:radial-gradient(circle at 30% 30%, rgba(var(--accent-rgb),.9), rgba(var(--accent-rgb),0) 70%);
+  animation:dzDrift 26s ease-in-out infinite;
+}
+[data-theme="light"] .dz-blob{ opacity:.12; }
+.dz-blob.dz-b1{ width:46vw; height:46vw; top:-14vw; left:-10vw; animation-duration:30s; }
+.dz-blob.dz-b2{ width:38vw; height:38vw; bottom:-12vw; right:-8vw; animation-duration:24s; animation-delay:-6s;
+  background:radial-gradient(circle at 30% 30%, rgba(99,102,241,.7), rgba(99,102,241,0) 70%); }
+.dz-blob.dz-b3{ width:30vw; height:30vw; top:40%; left:50%; animation-duration:34s; animation-delay:-12s; opacity:.1; }
+@keyframes dzDrift{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  33%{ transform:translate(3%,-4%) scale(1.06); }
+  66%{ transform:translate(-3%,3%) scale(.96); }
+}
+@media (prefers-reduced-motion:reduce){
+  .dz-blob{ animation:none; }
+  *{ scroll-behavior:auto; }
+}
+
+/* ---- subtle grid texture for sections (very low opacity) ---- */
+#hero::after{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(var(--accent-rgb),.05) 1px,transparent 1px),
+                    linear-gradient(90deg,rgba(var(--accent-rgb),.05) 1px,transparent 1px);
+  background-size:42px 42px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 20%,#000 0%,transparent 75%);
+  mask-image:radial-gradient(ellipse 70% 60% at 50% 20%,#000 0%,transparent 75%);
+  opacity:.5;
+}
+
+/* ---- navbar: extra glass + scroll polish ---- */
+#nav{
+  -webkit-backdrop-filter:saturate(160%) blur(18px);
+  backdrop-filter:saturate(160%) blur(18px);
+  transition:background .35s ease,border-color .35s ease,box-shadow .45s cubic-bezier(.22,.85,.32,1),
+             transform .35s ease, top .35s ease;
+}
+#nav.scrolled{
+  box-shadow:0 14px 38px -12px rgba(0,0,0,.22),0 0 0 1px rgba(var(--accent-rgb),.08);
+}
+[data-theme="dark"] #nav.scrolled{
+  box-shadow:0 10px 32px -10px rgba(0,0,0,.55),0 0 0 1px rgba(var(--accent-rgb),.1);
+}
+.nav-logo-img{ transition:transform .45s cubic-bezier(.22,.85,.32,1); }
+.nav-logo:hover .nav-logo-img{ transform:rotate(-4deg) scale(1.06); }
+.nav-links a{ position:relative; }
+.nav-links a::before{
+  content:'';position:absolute;left:50%;bottom:-9px;width:0;height:2px;border-radius:2px;
+  background:var(--accent); transform:translateX(-50%);
+  transition:width .35s cubic-bezier(.22,.85,.32,1);
+}
+.nav-links a:hover::before{ width:70%; }
+.nav-links a.active::after{ box-shadow:0 0 10px rgba(var(--accent-rgb),.7); }
+#cart-btn,.theme-btn{ position:relative; overflow:hidden; }
+#cart-btn:hover,.theme-btn:hover{ transform:translateY(-2px); box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.45); }
+#cart-badge{ box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 2px 6px rgba(0,0,0,.3); animation:dzPop .35s cubic-bezier(.22,1.4,.36,1); }
+@keyframes dzPop{ from{ transform:scale(0); } to{ transform:scale(1); } }
+
+/* ---- buttons: shine sweep + glow ---- */
+.btn{ position:relative; overflow:hidden; isolation:isolate; }
+.btn::before{
+  content:'';position:absolute;inset:0;z-index:1;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 48%,rgba(255,255,255,.05) 54%,transparent 70%);
+  transform:translateX(-130%);
+  transition:transform .65s cubic-bezier(.22,.85,.32,1);
+  pointer-events:none;
+}
+.btn:hover::before{ transform:translateX(130%); }
+.btn-primary{
+  position:relative;
+  box-shadow:0 2px 8px rgba(var(--accent-rgb),.3),0 0 0 0 rgba(var(--accent-rgb),0);
+}
+.btn-primary:hover{
+  transform:translateY(-2px) scale(1.015);
+  box-shadow:0 10px 26px -8px rgba(var(--accent-rgb),.55),0 0 22px -4px rgba(var(--accent-rgb),.4);
+}
+.btn-primary:active{ transform:translateY(0) scale(.985); }
+.btn-outline:hover{ transform:translateY(-2px); box-shadow:0 8px 20px -10px rgba(var(--accent-rgb),.35); }
+.btn-outline:active{ transform:translateY(0); }
+/* animated gradient ring on key CTAs */
+.hero-btns .btn-primary{
+  background:linear-gradient(90deg,var(--accent),#34D399,var(--accent));
+  background-size:220% 100%;
+  animation:dzGradShift 6s ease infinite;
+}
+@keyframes dzGradShift{ 0%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } 100%{ background-position:0% 50%; } }
+
+/* ---- hero polish ---- */
+.hero-eyebrow{ transition:transform .4s ease, box-shadow .4s ease; }
+.hero-eyebrow:hover{ transform:translateY(-2px); box-shadow:0 8px 20px -10px rgba(var(--accent-rgb),.3); }
+.hero-dot{ animation:dzPulseDot 2.2s ease-in-out infinite; }
+@keyframes dzPulseDot{
+  0%,100%{ box-shadow:0 0 0 4px rgba(var(--accent-rgb),.18); }
+  50%{ box-shadow:0 0 0 8px rgba(var(--accent-rgb),.06); }
+}
+.hero-stat{ transition:transform .4s cubic-bezier(.22,.85,.32,1), box-shadow .4s ease, border-color .4s ease; }
+.hero-stat:hover{ transform:translateY(-3px); box-shadow:0 10px 24px -12px rgba(var(--accent-rgb),.4); border-color:rgba(var(--accent-rgb),.35); }
+
+/* floating device mockups */
+.hero-laptop{ animation:dzFloat 7s ease-in-out infinite; }
+.hero-phone{ animation:dzFloat 7s ease-in-out infinite; animation-delay:-2.4s; }
+.hero-plant{ animation:dzFloat 6s ease-in-out infinite .15s, fadeUp .8s .3s both; }
+@keyframes dzFloat{
+  0%,100%{ transform:translateY(0); }
+  50%{ transform:translateY(-9px); }
+}
+.hero-laptop-screen{ transition:box-shadow .5s ease; }
+.hero-visual:hover .hero-laptop-screen{ box-shadow:0 36px 70px -16px rgba(var(--accent-rgb),.28); }
+@media (prefers-reduced-motion:reduce){
+  .hero-laptop,.hero-phone,.hero-plant{ animation:none; }
+}
+
+/* ---- section separators (soft gradient dividers) ---- */
+section{ position:relative; }
+#about::before,#categories::before,#products::before,#best-sellers::before,
+#warranty::before,#contact::before,#testimonials::before{
+  content:'';position:absolute;top:0;left:8%;right:8%;height:1px;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(var(--accent-rgb),.35),transparent);
+}
+
+/* ---- scroll reveal (progressive fade/slide-up) ---- */
+.dz-reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.22,.85,.32,1),transform .7s cubic-bezier(.22,.85,.32,1); will-change:opacity,transform; }
+.dz-reveal.dz-in{ opacity:1; transform:translateY(0); }
+@media (prefers-reduced-motion:reduce){
+  .dz-reveal{ opacity:1; transform:none; transition:none; }
+}
+
+/* ---- glass depth upgrade for existing glass cards ---- */
+.about-card,.cat-card{
+  position:relative; isolation:isolate;
+}
+.about-card::after,.cat-card::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;z-index:-1;
+  background:linear-gradient(135deg,rgba(var(--accent-rgb),.16),transparent 60%);
+  opacity:0; filter:blur(18px); transition:opacity .45s ease;
+}
+.about-card:hover::after,.cat-card:hover::after{ opacity:1; }
+
+/* product / purchase card depth + image zoom (image zoom already present; reinforce w/ shadow lift) */
+.product-card,.purchase-card{ will-change:transform; }
+.product-card:hover,.purchase-card:hover{
+  box-shadow:0 26px 50px -18px rgba(0,0,0,.32),0 0 0 1px rgba(var(--accent-rgb),.14),0 0 30px -10px rgba(var(--accent-rgb),.25);
+}
+.prod-img,.pc-image{ position:relative; }
+.prod-img::after,.pc-image::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.18));
+  opacity:0; transition:opacity .4s ease; pointer-events:none;
+}
+.product-card:hover .prod-img::after,.purchase-card:hover .pc-image::after{ opacity:1; }
+.prod-add{ position:relative; }
+.prod-add:hover{ box-shadow:0 6px 16px -6px rgba(var(--accent-rgb),.6); }
+.qty-btn:hover{ transform:translateY(-1px); }
+
+/* category icon micro-bounce already scales/rotates on hover — add subtle glow */
+.cat-bg{ box-shadow:0 10px 24px -8px rgba(99,102,241,.55),0 0 0 0 rgba(99,102,241,0); }
+.cat-card:hover .cat-bg{ box-shadow:0 14px 30px -8px rgba(99,102,241,.6),0 0 26px -6px rgba(99,102,241,.55); }
+
+/* best-seller rows: shine sweep on hover */
+.bs-row{ position:relative; overflow:hidden; }
+.bs-row::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 20%,rgba(var(--accent-rgb),.07) 50%,transparent 80%);
+  transform:translateX(-100%); transition:transform .6s cubic-bezier(.22,.85,.32,1); pointer-events:none;
+}
+.bs-row:hover::before{ transform:translateX(100%); }
+.bs-img img{ transition:transform .45s cubic-bezier(.22,.85,.32,1); }
+.bs-row:hover .bs-img img{ transform:scale(1.08); }
+
+/* testimonial cards: lift + soft glow border */
+.testi-card{ position:relative; }
+.testi-card:hover{ box-shadow:0 18px 38px -16px rgba(0,0,0,.3),0 0 0 1px rgba(var(--accent-rgb),.18); }
+.testi-avatar{ transition:transform .4s cubic-bezier(.22,.85,.32,1); }
+.testi-card:hover .testi-avatar{ transform:scale(1.08) rotate(-4deg); }
+
+/* warranty / trust icons: gentle float-in on hover */
+.warranty-shield{ transition:transform .4s cubic-bezier(.22,.85,.32,1), box-shadow .4s ease; }
+.warranty-shield:hover{ transform:scale(1.07) rotate(-3deg); box-shadow:0 0 0 8px rgba(var(--accent-rgb),.08); }
+.trust-icon,.feature-strip-icon,.mp-stat-icon{ transition:transform .4s cubic-bezier(.22,.85,.32,1); }
+.trust-item:hover .trust-icon,.feature-strip-item:hover .feature-strip-icon{ transform:scale(1.1) rotate(-4deg); }
+
+/* contact form: refined focus + submit feel */
+.form-input{ transition:border-color .3s ease, box-shadow .3s ease, background .3s ease; }
+.form-input:focus{ box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16); }
+.form-submit{ position:relative; overflow:hidden; }
+.form-submit::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 48%,transparent 66%);
+  transform:translateX(-130%); transition:transform .65s ease;
+}
+.form-submit:hover::before{ transform:translateX(130%); }
+.contact-form-box{ transition:box-shadow .4s ease, border-color .4s ease; }
+.contact-form-box:hover{ box-shadow:0 18px 40px -20px rgba(0,0,0,.3); }
+.soc-link:hover{ box-shadow:0 8px 20px -12px rgba(var(--accent-rgb),.35); }
+
+/* cart drawer + checkout modal: smoother easing */
+#cart-drawer{ transition:transform .45s cubic-bezier(.22,.85,.32,1); }
+#checkout-modal .checkout-box{ transition:transform .3s cubic-bezier(.22,.85,.32,1); }
+.cart-item{ transition:transform .3s ease, border-color .3s ease, box-shadow .3s ease; }
+.cart-item:hover{ transform:translateX(2px); border-color:rgba(var(--accent-rgb),.3); }
+
+/* footer polish */
+footer{ position:relative; }
+footer::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--accent-rgb),.4),transparent);
+}
+.footer-logo{ transition:transform .4s ease; display:inline-block; }
+.footer-logo:hover{ transform:translateY(-2px); }
+.footer-links a{ position:relative; }
+.footer-links a::after{
+  content:'';position:absolute;left:0;bottom:-4px;width:0;height:1px;background:var(--accent);
+  transition:width .3s ease;
+}
+.footer-links a:hover::after{ width:100%; }
+
+/* whatsapp float: gentle pulse to draw the eye, lightweight */
+#wa-float a{ animation:dzWaPulse 2.6s ease-in-out infinite; }
+@keyframes dzWaPulse{
+  0%,100%{ box-shadow:0 6px 18px -6px rgba(0,0,0,.4),0 0 0 0 rgba(37,211,102,.5); }
+  50%{ box-shadow:0 6px 18px -6px rgba(0,0,0,.4),0 0 0 9px rgba(37,211,102,0); }
+}
+#wa-float a:hover{ transform:scale(1.08); animation-play-state:paused; }
+@media (prefers-reduced-motion:reduce){ #wa-float a{ animation:none; } }
+
+/* toast: nicer entrance */
+#toast.show{ animation:dzToastIn .45s cubic-bezier(.22,1.1,.32,1); }
+@keyframes dzToastIn{
+  0%{ transform:translateX(-50%) translateY(14px); opacity:0; }
+  100%{ transform:translateX(-50%) translateY(0); opacity:1; }
+}
+
+/* loading skeletons: nicer shimmer instead of flat pulse (keeps existing class name) */
+.mp-skeleton{
+  animation:none;
+  background-image:linear-gradient(100deg,var(--bg2) 30%,var(--bg3) 50%,var(--bg2) 70%);
+  background-size:200% 100%;
+  animation:dzShimmer 1.6s ease-in-out infinite;
+}
+@keyframes dzShimmer{ 0%{ background-position:160% 0; } 100%{ background-position:-60% 0; } }
+
 </style>
 </head>
 <body>
+<!-- Ambient decorative gradient blobs — purely visual, non-interactive -->
+<div class="dz-ambient" aria-hidden="true">
+  <div class="dz-blob dz-b1"></div>
+  <div class="dz-blob dz-b2"></div>
+  <div class="dz-blob dz-b3"></div>
+</div>
 
 <!-- ===== FLASH SALE BANNER ===== -->
 <div id="flash-banner">
@@ -2164,8 +2440,8 @@ body.flash-on #mobile-nav{top:130px}
       </div>
 
       <div class="form-group" id="co-email-group">
-        <label>Email <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label>
-        <input class="form-input" id="co-email" type="email" placeholder="your@email.com"/>
+        <label>Email</label>
+        <input class="form-input" id="co-email" type="email" placeholder="your@email.com" required/>
       </div>
 
       <!-- Phone field — same design as signup -->
@@ -4868,6 +5144,66 @@ function updateWaFloat() {
      ─────────────────────────────────────────────────────────────── -->
 <script>
   window.DIGISTORE_BACKEND_URL = 'https://digital-website.chakchak1256.workers.dev';
+</script>
+
+<!-- ===== PREMIUM POLISH: scroll-reveal (visual only, no logic touched) ===== -->
+<script>
+(function(){
+  function markRevealTargets(){
+    // Tag visual containers for fade-up reveal; skip anything already tagged.
+    var selectors = [
+      '#about .about-title','#about .about-desc','#about .about-feat',
+      '#about .about-card','.cat-card','.product-card','.purchase-card',
+      '#warranty .warranty-title','#warranty .warranty-lead','.warranty-card','.warranty-banner',
+      '.feature-strip-item','.trust-item','.bs-row','.testi-card',
+      '#contact .contact-form-box','#contact .soc-link','#contact .section-header',
+      '.section-header'
+    ];
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        if (!el.classList.contains('dz-reveal') && !el.classList.contains('dz-in')) {
+          el.classList.add('dz-reveal');
+        }
+      });
+    });
+  }
+
+  function startObserver(){
+    if (!('IntersectionObserver' in window)) {
+      document.querySelectorAll('.dz-reveal').forEach(function(el){ el.classList.add('dz-in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          entry.target.classList.add('dz-in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.dz-reveal').forEach(function(el){ io.observe(el); });
+  }
+
+  function init(){
+    markRevealTargets();
+    startObserver();
+    // Re-scan periodically for content rendered asynchronously by the existing
+    // app logic (products/categories/testimonials load after fetch calls).
+    var rescans = 0;
+    var t = setInterval(function(){
+      markRevealTargets();
+      startObserver();
+      rescans++;
+      if (rescans > 12) clearInterval(t);
+    }, 500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 </script>
 
 </body>
