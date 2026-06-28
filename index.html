@@ -2446,7 +2446,7 @@ footer::before{
 
       <div class="form-group" id="co-address-group">
         <label>Address</label>
-        <input class="form-input" id="co-address" type="text" placeholder="Street, City" required/>
+        <input class="form-input" id="co-address" type="text" placeholder="e.g. Rue Larbi Ben M'hidi, Oran" required/>
       </div>
 
       <!-- Phone field — same design as signup -->
@@ -3480,7 +3480,7 @@ async function coInitiateSlickPayCheckout() {
   const phone        = phonePfx + phoneDigits;
 
   if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
-  if (!address) { errEl.textContent = '⚠️ Please enter your address.'; errEl.style.display = 'block'; return; }
+  if (!address || address.length < 5) { errEl.textContent = '⚠️ Please enter a complete address (at least 5 characters).'; errEl.style.display = 'block'; return; }
   if (!phoneDigits || phoneDigits.length !== 8 || !/^\d{8}$/.test(phoneDigits)) {
     errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return;
   }
