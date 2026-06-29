@@ -978,12 +978,21 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 #toast i{color:var(--accent)}
 
 /* ===== RESPONSIVE ===== */
+@media(max-width:1100px){
+  /* Navbar gets tight — hide logo text, history, search; tighten gaps; shrink Sign In */
+  .nav-logo-text{display:none}
+  #history-wrap{display:none}
+  #nav-search-wrap{display:none}
+  .nav-actions{gap:5px}
+  #login-nav-btn{padding:6px 10px !important;font-size:.78rem !important}
+  #login-nav-btn i{font-size:.78rem !important}
+}
 @media(max-width:900px){
   .nav-links{display:none}
   .hamburger{display:flex}
   #nav{padding:0 1.1rem}
   .nav-logo-img{height:36px}
-  .nav-logo-text{display:none}   /* hide brand name on tablet & mobile */
+  .nav-logo-text{display:none}
   .nav-actions{gap:5px}
   #nav-search-wrap{display:none}
   #history-wrap{display:none}
@@ -993,26 +1002,15 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 }
 /* Collapse Sign In to icon-only circle on mobile — matches theme/cart/wishlist buttons */
 @media(max-width:640px){
-  #login-nav-btn{
-    width:38px;height:38px;padding:0 !important;border-radius:50% !important;
-    font-size:0 !important;
-    gap:0;
-    justify-content:center;
-    /* Strip green tint — match other icon buttons */
-    background:#fff !important;
-    border:1px solid rgba(0,0,0,.08) !important;
-    color:#3F3F46 !important;
-  }
   [data-theme="dark"] #login-nav-btn{
-    background:var(--card) !important;
-    border-color:var(--border) !important;
-    color:var(--text-muted) !important;
+    background:var(--card) !important;border-color:var(--border) !important;color:var(--text-muted) !important;
   }
-  #login-nav-btn i{font-size:.9rem !important}
 }
 @media(max-width:600px){
   .nav-logo-img{height:32px}
   .nav-logo-text{display:none}
+  #login-nav-btn{padding:6px 11px;font-size:.75rem}
+  #login-nav-btn i{font-size:.75rem}
   .about-right{grid-template-columns:1fr 1fr}
   .about-card.span2{grid-column:span 2}
   .form-row{grid-template-columns:1fr}
@@ -1632,7 +1630,6 @@ a,button,.btn,.cat-card,.product-card,.about-card,.testi-card,.bs-row,.about-fea
 }
 .nav-links a:hover::before{ width:70%; }
 .nav-links a.active::after{ box-shadow:0 0 10px rgba(var(--accent-rgb),.7); }
-/* #cart-btn must NOT have overflow:hidden — it clips the badge positioned outside bounds */
 #cart-btn{ position:relative; overflow:visible; }
 .theme-btn{ position:relative; overflow:hidden; }
 #cart-btn:hover,.theme-btn:hover{ transform:translateY(-2px); box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.45); }
