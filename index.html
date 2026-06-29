@@ -1202,29 +1202,37 @@ body.flash-on #mobile-nav{top:130px}
 #wishlist-page.active{display:block}
 .wishlist-inner{max-width:1160px;margin:0 auto;padding:88px 5vw 60px}
 /* Wishlist nav btn */
-#wishlist-nav-btn{position:relative;width:38px;height:38px;border-radius:8px;
+#wishlist-nav-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:.85rem;
   transition:all var(--transition);color:var(--text-muted)}
 #wishlist-nav-btn:hover{background:var(--bg3);color:var(--text)}
 #wishlist-badge{
-  position:absolute;top:-5px;right:-5px;background:#EF4444;color:#fff;
-  font-size:.58rem;font-weight:700;min-width:16px;height:16px;border-radius:99px;
-  display:none;align-items:center;justify-content:center;padding:0 3px;
+  position:absolute;top:-6px;right:-6px;background:#EF4444;color:#fff;
+  font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:99px;
+  display:none;align-items:center;justify-content:center;padding:0 4px;
+  border:2px solid #fff;line-height:1;z-index:2;
+  box-shadow:0 0 0 4px rgba(239,68,68,.25),0 2px 6px rgba(0,0,0,.3);
+  animation:dzPop .35s cubic-bezier(.22,1.4,.36,1);
 }
+[data-theme="dark"] #wishlist-badge{border-color:var(--bg2)}
 
 /* ===== HISTORY (recently viewed) NAV BUTTON + PANEL ===== */
-#history-btn{position:relative;width:38px;height:38px;border-radius:8px;
+#history-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:.85rem;
   transition:all var(--transition);color:var(--text-muted)}
 #history-btn:hover{background:var(--bg3);color:var(--text)}
 #history-btn.active{color:var(--accent);border-color:rgba(var(--accent-rgb),.4)}
 #history-badge{
-  position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;
-  font-size:.58rem;font-weight:700;min-width:16px;height:16px;border-radius:99px;
-  display:none;align-items:center;justify-content:center;padding:0 3px;
+  position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;
+  font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:99px;
+  display:none;align-items:center;justify-content:center;padding:0 4px;
+  border:2px solid #fff;line-height:1;z-index:2;
+  box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 2px 6px rgba(0,0,0,.3);
+  animation:dzPop .35s cubic-bezier(.22,1.4,.36,1);
 }
+[data-theme="dark"] #history-badge{border-color:var(--bg2)}
 #history-panel{
   display:none;position:absolute;top:48px;right:0;z-index:1000;
   width:320px;max-height:420px;background:var(--bg2);border:1px solid var(--border);
