@@ -991,11 +991,19 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   .about-right{grid-template-columns:repeat(4,1fr)}
   .about-card.span2{grid-column:span 4}
 }
+/* Collapse Sign In to icon-only circle on mobile — matches theme/cart/wishlist buttons */
+@media(max-width:640px){
+  #login-nav-btn{
+    width:38px;height:38px;padding:0;border-radius:50%;
+    font-size:0;
+    gap:0;
+    justify-content:center;
+  }
+  #login-nav-btn i{font-size:.9rem}
+}
 @media(max-width:600px){
   .nav-logo-img{height:32px}
-  .nav-logo-text{font-size:.88rem}
-  #login-nav-btn{padding:6px 11px;font-size:.75rem}
-  #login-nav-btn i{font-size:.75rem}
+  .nav-logo-text{display:none}
   .about-right{grid-template-columns:1fr 1fr}
   .about-card.span2{grid-column:span 2}
   .form-row{grid-template-columns:1fr}
