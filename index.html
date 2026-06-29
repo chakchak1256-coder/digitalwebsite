@@ -93,7 +93,7 @@ body{background:var(--bg2)}
 .nav-links a.active{font-weight:600}
 .nav-links a.active::after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:2px;
   background:var(--accent);border-radius:2px}
-.nav-actions{display:flex;gap:8px;align-items:center}
+.nav-actions{display:flex;gap:8px;align-items:center;overflow:visible}
 #cart-btn{
   position:relative;width:38px;height:38px;border-radius:50%;
   background:#fff;border:1px solid rgba(0,0,0,.08);
@@ -1607,7 +1607,9 @@ a,button,.btn,.cat-card,.product-card,.about-card,.testi-card,.bs-row,.about-fea
 }
 .nav-links a:hover::before{ width:70%; }
 .nav-links a.active::after{ box-shadow:0 0 10px rgba(var(--accent-rgb),.7); }
-#cart-btn,.theme-btn{ position:relative; overflow:hidden; }
+/* #cart-btn must NOT have overflow:hidden — it clips the badge positioned outside bounds */
+#cart-btn{ position:relative; overflow:visible; }
+.theme-btn{ position:relative; overflow:hidden; }
 #cart-btn:hover,.theme-btn:hover{ transform:translateY(-2px); box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.45); }
 #cart-badge{ box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 2px 6px rgba(0,0,0,.3); animation:dzPop .35s cubic-bezier(.22,1.4,.36,1); }
 @keyframes dzPop{ from{ transform:scale(0); } to{ transform:scale(1); } }
