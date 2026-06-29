@@ -35,6 +35,7 @@ function slickpayHeaders(env) {
     'Authorization': `Bearer ${env.SLICKPAY_KEY}`,
     'Content-Type':  'application/json',
     'Accept':        'application/json',
+    'User-Agent':    'DigiStoreDZ/1.0 (+https://digital-website.chakchak1256.workers.dev)',
   };
 }
 
@@ -54,14 +55,18 @@ async function slickpayRequest(env, path, { method = 'GET', body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  const resClone = res.clone();
   let data = null;
   try { data = await res.json(); } catch { /* non-JSON response */ }
 
   if (!res.ok) {
+    let rawText = '';
+    if (!data) { try { rawText = await resClone.text(); } catch {} }
     // SlickPay returns a generic "Server Error" when the merchant has no
     // linked bank account (RIB) — surface that distinctly so the caller
     // can map it to a clear 503 instead of a confusing 500.
-    const msg = (data && (data.message || JSON.stringify(data.errors))) || `SlickPay HTTP ${res.status}`;
+    const msg = (data && (data.message || JSON.stringify(data.errors)))
+      || (rawText ? `SlickPay ${res.status}: ${rawText.slice(0, 200)}` : `SlickPay HTTP ${res.status}`);
     throw new SlickPayError(msg, res.status, data);
   }
   return data;
@@ -487,9 +492,10 @@ export default {
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
 
         const { product_id, product_name, amount, firstname, lastname, email, phone, address } = body || {};
+        const safeAddress = (address && address.trim().length >= 5) ? address.trim() : 'Algérie - Livraison numérique';
 
-        if (!product_name || !amount || !firstname || !lastname || !address || (!email && !phone)) {
-          return json({ error: 'Missing required fields: product_name, amount, firstname, lastname, address, and email or phone.' }, 400);
+        if (!product_name || !amount || !firstname || !lastname || (!email && !phone)) {
+          return json({ error: 'Missing required fields: product_name, amount, firstname, lastname, and email or phone.' }, 400);
         }
         if (Number(amount) <= 100) {
           return json({ error: 'Amount must be greater than 100 DZD.' }, 400);
@@ -510,7 +516,7 @@ export default {
             lastname,
             email: email || undefined,
             phone: phone || undefined,
-            address,
+            address: safeAddress,
             returnUrl,
             webhookUrl:       env.SLICKPAY_WEBHOOK_URL || undefined,
             webhookSignature: env.SLICKPAY_WEBHOOK_SIG || undefined,
@@ -546,7 +552,7 @@ export default {
             lastname,
             email:        email        || '',
             phone:        phone        || '',
-            address:      address      || '',
+            address:      safeAddress,
             status:       'pending',
             paymentUrl,
             createdAt:    new Date().toISOString(),
