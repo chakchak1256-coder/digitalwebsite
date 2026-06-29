@@ -104,10 +104,10 @@ body{background:var(--bg2)}
 #cart-btn:hover{background:#F4F5F7;color:#0A0A0A}
 [data-theme="dark"] #cart-btn:hover{background:var(--bg3);color:var(--text)}
 #cart-badge{
-  position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;
-  font-size:.58rem;font-weight:700;min-width:16px;height:16px;border-radius:99px;
-  display:none;align-items:center;justify-content:center;padding:0 3px;
-  border:2px solid #fff;
+  position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;
+  font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:99px;
+  display:none;align-items:center;justify-content:center;padding:0 4px;
+  border:2px solid #fff;line-height:1;z-index:2;
 }
 [data-theme="dark"] #cart-badge{border-color:var(--bg2)}
 #user-btn-wrap{position:relative}
@@ -2475,11 +2475,6 @@ footer::before{
             <div class="co-method-icon">📱</div>
             <div class="co-method-name">Flexy</div>
           </label>
-          <label class="co-method-card" id="co-method-baridimob">
-            <input type="radio" name="co-payment" value="baridimob" onchange="coShowPaymentInstructions('baridimob')" style="display:none"/>
-            <div class="co-method-icon">🏦</div>
-            <div class="co-method-name">BaridiMob</div>
-          </label>
         </div>
       </div>
 
@@ -3239,35 +3234,30 @@ function coShowPaymentInstructions(method) {
     s.flexyNumber1    || '0540431312',
     s.flexyNumber2    || '0793051230'
   ].filter(Boolean);
-  const baridimobNumbers = [
-    s.baridimobNumber || '00799999004421651019'
-  ].filter(Boolean);
 
-  const defaultFlexyText     = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
-  const defaultBaridiText    = `يرجى تحويل المبلغ المطلوب عبر بريدي موب إلى رقم الحساب التالي:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const defaultFlexyText = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
 
-  const isFlexy = method === 'flexy';
-  const baseTotal = Cart.total();
-  const flexyFee  = isFlexy ? Math.round(baseTotal * 0.20) : 0;
+  const baseTotal  = Cart.total();
+  const flexyFee   = Math.round(baseTotal * 0.20);
   const finalTotal = baseTotal + flexyFee;
-  const currency = s.currency || 'DA';
+  const currency   = s.currency || 'DA';
 
-  const flexyNote = isFlexy
-    ? `\n\n⚠️ ملاحظة: يُضاف رسم خدمة 20% عند الدفع عبر فليكسي.\nالمبلغ الأصلي: ${baseTotal.toLocaleString()} ${currency} + رسوم: ${flexyFee.toLocaleString()} ${currency} = المجموع: ${finalTotal.toLocaleString()} ${currency}`
-    : '';
+  const flexyNote =
+    `\n\n⚠️ ملاحظة: يُضاف رسم خدمة 20% عند الدفع عبر فليكسي.\nالمبلغ الأصلي: ${baseTotal.toLocaleString()} ${currency} + رسوم: ${flexyFee.toLocaleString()} ${currency} = المجموع: ${finalTotal.toLocaleString()} ${currency}`;
 
-  const text = isFlexy
-    ? (s.flexyInstructions || defaultFlexyText) + flexyNote
-    : (s.baridimobInstructions || defaultBaridiText);
+  const flexyRestrictionNote =
+    `\n\n🚫 تنبيه هام: هذه الخدمة تقبل فقط رصيد الفليكسي العادي (الرصيد القياسي المحلي).\nغير مقبول: رصيد الفليكسي الدولي (International Flexy)، ولا عروض الفليكسي الخاصة (العروض/البكتات الترويجية).\nيرجى التحويل من رصيد عادي فقط، وإلا لن يتم قبول الدفعة.`;
 
-  titleEl.textContent = isFlexy ? '📱 تعليمات الدفع عبر فليكسي' : '🏦 تعليمات الدفع عبر بريدي موب';
+  const text = (s.flexyInstructions || defaultFlexyText) + flexyNote + flexyRestrictionNote;
+
+  titleEl.textContent = '📱 تعليمات الدفع عبر فليكسي';
   textEl.textContent  = text;
 
   // Update the order summary total to reflect flexy surcharge
-  _coRefreshOrderSummary(isFlexy ? 0.20 : 0);
+  _coRefreshOrderSummary(0.20);
 
   // Build copy-number rows
-  const numbers = method === 'flexy' ? flexyNumbers : baridimobNumbers;
+  const numbers = flexyNumbers;
   if (copyEl) {
     copyEl.innerHTML = '';
     numbers.forEach((num, i) => {
