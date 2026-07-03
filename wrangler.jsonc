@@ -7,14 +7,18 @@
 "assets": {
   "directory": "./",
   "binding": "ASSETS"
-}
+},
 
   "vars": {
     "APP_URL": "https://digital-website.chakchak1256.workers.dev",
     "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
     "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com",
     // "sandbox" uses devapi.slick-pay.com  |  "production" uses prodapi.slick-pay.com
-    "SLICKPAY_ENV": "production"
+    "SLICKPAY_ENV": "production",
+    // Public base URL of your R2 bucket (r2.dev URL or connected custom domain,
+    // NO trailing slash) — required by POST /api/upload-file in worker.js.
+    // Example: "https://pub-xxxxxxxxxxxxxxxx.r2.dev"
+    "R2_PUBLIC_URL": "REPLACE_WITH_YOUR_R2_PUBLIC_URL"
   },
 
   "r2_buckets": [
