@@ -337,9 +337,99 @@ async function priceCartItems(env, cartItems) {
       unitPrice,
       qty,
       variantLabel: item.variantLabel || null,
+      // Carried along so deliverOrder() doesn't need a second product fetch.
+      autoDeliver:   !!product.autoDeliver,
+      deliveryLink:  product.deliveryLink  || '',
+      deliveryType:  product.deliveryType  || 'link',
     });
   }
   return priced;
+}
+
+// ---------------------------------------------------------------
+// Order fulfillment — creates `purchases` docs for a paid order so
+// the buyer sees them on My Products without any admin action.
+// If a product has autoDeliver + deliveryLink configured, the purchase
+// is created already `completed` with the access link attached.
+// Otherwise it's created `pending`, same as the manual proof-of-payment
+// flow, so the admin can deliver it by hand from the admin panel.
+// ---------------------------------------------------------------
+async function deliverOrder(env, order) {
+  if (!order || !order.userId) {
+    // No user to attach the purchase to (e.g. a very old/legacy order) —
+    // nothing we can do automatically. The admin can still see the raw
+    // slickpay_orders record.
+    return;
+  }
+  const now = new Date().toISOString();
+
+  let items = Array.isArray(order.items) && order.items.length ? order.items : null;
+  if (!items) {
+    // Legacy single-item order (created before cart items were persisted).
+    items = [{
+      productId:    order.product_id || order.productId || '',
+      name:         order.product_name || order.productName || '',
+      images:       [],
+      category:     '',
+      unitPrice:    order.amount,
+      qty:          1,
+      variantLabel: null,
+      autoDeliver:  false,
+      deliveryLink: '',
+      deliveryType: 'link',
+    }];
+  }
+
+  for (const item of items) {
+    let { autoDeliver, deliveryLink, deliveryType, images, category, name } = item;
+
+    // Legacy items may not carry delivery info — fetch the product once.
+    if (autoDeliver === undefined && item.productId) {
+      try {
+        const product = await Firestore.getDoc(env, 'products', item.productId);
+        if (product) {
+          autoDeliver  = !!product.autoDeliver;
+          deliveryLink = product.deliveryLink || '';
+          deliveryType = product.deliveryType || 'link';
+          images       = product.images || [];
+          category     = product.category || '';
+          name         = name || product.name;
+        }
+      } catch { /* best-effort */ }
+    }
+
+    const isAuto = !!(autoDeliver && deliveryLink);
+
+    const purchaseDoc = {
+      userId:        order.userId,
+      userEmail:     order.userEmail || order.email || '',
+      productId:     item.productId || '',
+      productName:   item.variantLabel ? `${name || ''} — ${item.variantLabel}` : (name || ''),
+      productImage:  (images || [])[0] || '',
+      productType:   category || 'Digital',
+      accessLink:    isAuto ? deliveryLink : '',
+      accessData:    isAuto ? { '_DeliveryType': deliveryType || 'link', 'Download Link': deliveryLink } : {},
+      proofImages:   [],
+      customerName:  `${order.firstname || ''} ${order.lastname || ''}`.trim(),
+      customerPhone: order.phone || '',
+      customerEmail: order.userEmail || order.email || '',
+      paymentMethod: 'slickpay',
+      orderNotes:    '',
+      status:        isAuto ? 'completed' : 'pending',
+      purchaseDate:  now,
+      createdAt:     now,
+      orderId:       order.orderId || '',
+      variantLabel:  item.variantLabel || null,
+      deliveryType:  isAuto ? (deliveryType || 'link') : '',
+    };
+    if (isAuto) purchaseDoc.deliveredAt = now;
+
+    try {
+      await Firestore.addDoc(env, 'purchases', purchaseDoc);
+    } catch (e) {
+      console.error('[deliverOrder] Firestore addDoc failed:', e.message);
+    }
+  }
 }
 
 async function constantTimeEqual(a, b) {
@@ -478,6 +568,60 @@ export default {
     }
 
     // ============================================================
+    // ROUTE: POST /api/webhook
+    // Receives SlickPay's async payment notification. This is a backstop
+    // to the status-poll endpoint below — it lets an order get delivered
+    // even if the buyer closes the tab right after paying.
+    // ============================================================
+    if (path === '/api/webhook' && method === 'POST') {
+      try {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
+
+        // Optional signature check, if a webhook secret is configured.
+        if (env.SLICKPAY_WEBHOOK_SIG) {
+          const sig = body.webhook_signature || body.signature || request.headers.get('x-webhook-signature') || '';
+          const ok = await constantTimeEqual(String(sig), String(env.SLICKPAY_WEBHOOK_SIG));
+          if (!ok) return json({ error: 'Invalid webhook signature.' }, 403);
+        }
+
+        const invoice   = body.data || body.invoice || body;
+        const completed = (invoice.completed === 1 || body.completed === 1) ? 1 : 0;
+        const meta       = body.meta_data || body.webhook_meta_data || invoice.meta_data || {};
+        let orderId      = meta.order_id || meta.orderId || '';
+        const invoiceId  = String(invoice.id || body.id || '');
+
+        let order = null;
+        if (orderId) {
+          order = await Firestore.getDoc(env, 'slickpay_orders', orderId);
+        }
+        if (!order && invoiceId) {
+          const matches = await Firestore.queryCollection(env, 'slickpay_orders', [['invoiceId', invoiceId]], 1);
+          order = matches[0] || null;
+          if (order) orderId = order.id;
+        }
+        if (!order) return json({ error: 'Order not found for webhook.' }, 404);
+
+        if (completed === 1 && order.status !== 'delivered') {
+          try {
+            await deliverOrder(env, order);
+            await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
+              status: 'delivered',
+              paidAt: new Date().toISOString(),
+            });
+          } catch (fsErr) {
+            console.error('[webhook] delivery failed:', fsErr.message);
+          }
+        }
+
+        return json({ ok: true });
+      } catch (err) {
+        console.error('[webhook] unexpected error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
+    // ============================================================
     // ROUTE: POST /api/checkout
     // Creates a SlickPay invoice and returns { order_id, payment_url, amount }
     // Body: { product_id, product_name, amount, firstname, lastname, email, phone }
@@ -491,13 +635,43 @@ export default {
         let body;
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
 
-        const { product_id, product_name, amount, firstname, lastname, email, phone, address } = body || {};
+        const {
+          product_id, product_name, amount, firstname, lastname, email, phone, address,
+          items: rawItems, user_id, user_email,
+        } = body || {};
         const safeAddress = (address && address.trim().length >= 5) ? address.trim() : 'Algérie - Livraison numérique';
 
-        if (!product_name || !amount || !firstname || !lastname || (!email && !phone)) {
-          return json({ error: 'Missing required fields: product_name, amount, firstname, lastname, and email or phone.' }, 400);
+        if (!firstname || !lastname || (!email && !phone)) {
+          return json({ error: 'Missing required fields: firstname, lastname, and email or phone.' }, 400);
         }
-        if (Number(amount) <= 100) {
+
+        // If the client sent the full cart, re-derive pricing server-side —
+        // never trust the client-computed `amount`. This also lets us know
+        // exactly which products/variants were bought so the order can be
+        // auto-delivered once paid.
+        let pricedItems = null;
+        let computedAmount = Number(amount) || 0;
+        if (Array.isArray(rawItems) && rawItems.length) {
+          try {
+            pricedItems = await priceCartItems(env, rawItems.map(it => ({
+              productId:    it.product_id || it.productId || it.id,
+              variantLabel: it.variant_label || it.variantLabel || null,
+              qty:          it.qty || 1,
+            })));
+          } catch (err) {
+            return json({ error: 'Failed to price cart items: ' + err.message }, 400);
+          }
+          computedAmount = pricedItems.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
+        }
+
+        const finalProductName = product_name || (pricedItems
+          ? (pricedItems.length === 1 ? pricedItems[0].name : `Order (${pricedItems.length} items)`)
+          : '');
+
+        if (!finalProductName || !computedAmount) {
+          return json({ error: 'Missing required fields: product_name/items and amount.' }, 400);
+        }
+        if (Number(computedAmount) <= 100) {
           return json({ error: 'Amount must be greater than 100 DZD.' }, 400);
         }
 
@@ -510,8 +684,10 @@ export default {
         let invoiceData;
         try {
           invoiceData = await SlickPay.createInvoice(env, {
-            amount: Number(amount),
-            items: [{ name: product_name, price: Number(amount), quantity: 1 }],
+            amount: Number(computedAmount),
+            items: pricedItems
+              ? pricedItems.map(it => ({ name: it.name, price: it.unitPrice, quantity: it.qty }))
+              : [{ name: finalProductName, price: Number(computedAmount), quantity: 1 }],
             firstname,
             lastname,
             email: email || undefined,
@@ -545,9 +721,12 @@ export default {
           await Firestore.setDoc(env, 'slickpay_orders', orderId, {
             orderId,
             invoiceId: String(invoiceId),
-            product_id:   product_id   || '',
-            product_name: product_name || '',
-            amount:       Number(amount),
+            product_id:   product_id       || (pricedItems && pricedItems.length === 1 ? pricedItems[0].productId : ''),
+            product_name: finalProductName || '',
+            amount:       Number(computedAmount),
+            items:        pricedItems || null,
+            userId:       user_id    || '',
+            userEmail:    user_email || email || '',
             firstname,
             lastname,
             email:        email        || '',
@@ -562,7 +741,7 @@ export default {
           console.error('[checkout] Firestore write failed:', fsErr.message);
         }
 
-        return json({ order_id: orderId, payment_url: paymentUrl, amount: Number(amount), invoice_id: invoiceId });
+        return json({ order_id: orderId, payment_url: paymentUrl, amount: Number(computedAmount), invoice_id: invoiceId });
 
       } catch (err) {
         console.error('[checkout] unexpected error:', err.message);
@@ -590,9 +769,19 @@ export default {
           return json({ error: 'Order not found.' }, 404);
         }
 
-        // If already marked paid/delivered, return immediately
+        // If already marked paid/delivered, return immediately. If payment was
+        // confirmed on a previous poll but delivery hadn't finished yet
+        // (status === 'paid'), retry delivery now before responding.
         if (order.status === 'paid' || order.status === 'delivered') {
-          return json({ status: order.status, completed: 1, invoice_id: order.invoiceId, rejection_reason: null });
+          if (order.status === 'paid') {
+            try {
+              await deliverOrder(env, order);
+              await Firestore.updateDoc(env, 'slickpay_orders', orderId, { status: 'delivered' });
+            } catch (fsErr) {
+              console.error('[checkout/status] delivery retry failed:', fsErr.message);
+            }
+          }
+          return json({ status: 'paid', completed: 1, invoice_id: order.invoiceId, rejection_reason: null });
         }
 
         // Poll SlickPay for fresh status
@@ -606,11 +795,15 @@ export default {
         const completed = invoiceStatus.completed === 1 ? 1 : 0;
         const rejectionReason = invoiceStatus.data?.rejection_reason || null;
 
-        // Update Firestore if payment confirmed
+        // Payment confirmed — create the buyer's `purchases` doc(s) right away
+        // (auto-delivered if the product has an auto-delivery link configured,
+        // otherwise queued as `pending` for the admin to fulfill manually),
+        // then mark the order as delivered so we never re-run this twice.
         if (completed === 1 && order.status === 'pending') {
           try {
+            await deliverOrder(env, order);
             await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
-              status:  'paid',
+              status:  'delivered',
               paidAt:  new Date().toISOString(),
             });
           } catch (fsErr) {

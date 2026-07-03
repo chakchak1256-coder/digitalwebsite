@@ -2825,18 +2825,70 @@ function makeProductCard(prod) {
       ${starsHtml}
       <div class="prod-price-row">
         <div class="prod-prices">
-          <span class="prod-price">${prod.price.toLocaleString()} ${s.currency}</span>
+          <span class="prod-price">${formatPrice(prod.price, s.currency)}</span>
           ${prod.oldPrice ? `<span class="prod-old">${prod.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}
         </div>
         <button class="prod-add" title="Add to cart"><i class="fa-solid fa-plus"></i></button>
       </div>
     </div>`;
-  d.querySelector('.prod-add').onclick = e => { e.stopPropagation(); addToCart(prod); };
+  d.querySelector('.prod-add').onclick = e => { e.stopPropagation(); if ((Number(prod.price)||0) <= 0) claimFreeProduct(prod); else addToCart(prod); };
   d.onclick = () => { trackRecentlyViewed(prod); openProductDetail(prod.id, false); };
   return d;
 }
 
 function addToCart(prod) { Cart.add(prod); showToast(`"${prod.name}" added to cart`); }
+
+// ── FREE products (price === 0) — no cart, no payment ──────────────
+// Delivers the product straight to My Products for a signed-in user.
+// If auto-delivery (a link/PDF) is configured on the product, the
+// purchase is created already completed; otherwise it's queued as
+// pending, same as any manually-fulfilled order.
+async function claimFreeProduct(prod) {
+  const user = UserAuth.current();
+  if (!user) { openLoginModal('checkout'); return; }
+
+  const fullProd = (DB.getById ? DB.getById('products', prod.id) : null) || prod;
+  const orderId  = 'FREE-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+
+  try {
+    const purchase = await Purchases.add(
+      user.id, user.email,
+      {
+        id:       prod.id,
+        name:     prod.variantLabel ? `${prod.name} — ${prod.variantLabel}` : prod.name,
+        images:   fullProd.images || [],
+        category: fullProd.category || '',
+      },
+      {
+        customerName:  user.name  || '',
+        customerEmail: user.email || '',
+        paymentMethod: 'free',
+        orderId,
+        variantLabel:  prod.variantLabel || null,
+      }
+    );
+
+    if (fullProd.autoDeliver && fullProd.deliveryLink) {
+      await Purchases.update(purchase.id, {
+        accessData: {
+          '_DeliveryType': fullProd.deliveryType === 'pdf' ? 'pdf' : 'link',
+          'Download Link': fullProd.deliveryLink,
+        },
+        accessLink:   fullProd.deliveryLink,
+        deliveryType: fullProd.deliveryType === 'pdf' ? 'pdf' : 'link',
+      });
+      showToast(`✅ "${prod.name}" is free — added to My Products!`);
+    } else {
+      showToast(`✅ "${prod.name}" added — the seller will deliver it shortly.`);
+    }
+
+    closeProductDetail();
+    openMyProducts();
+  } catch (err) {
+    console.error('[claimFreeProduct]', err);
+    showToast('❌ Something went wrong. Please try again.');
+  }
+}
 
 // ===== BEST SELLERS =====
 function renderBestSellers() {
@@ -2866,7 +2918,7 @@ function renderBestSellers() {
           <span>${p.category || ''}</span>
         </div>
       </div>
-      <div class="bs-price">${p.oldPrice ? `<span class="bs-old">${p.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}${p.price.toLocaleString()} ${s.currency}</div>`;
+      <div class="bs-price">${p.oldPrice ? `<span class="bs-old">${p.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}${formatPrice(p.price, s.currency)}</div>`;
     row.onclick = () => { trackRecentlyViewed(p); openProductDetail(p.id, false); };
     list.appendChild(row);
   });
@@ -2893,7 +2945,7 @@ function renderHeroShowcase() {
     if (imgEl) imgEl.src = img;
     if (tagEl) tagEl.textContent = p.badge || p.category || 'Featured';
     if (nameEl) nameEl.textContent = p.name;
-    if (priceEl) priceEl.textContent = `${p.price.toLocaleString()} ${s.currency}`;
+    if (priceEl) priceEl.textContent = formatPrice(p.price, s.currency);
     card.onclick = () => { trackRecentlyViewed(p); openProductDetail(p.id, false); };
     card.style.cursor = 'pointer';
   });
@@ -2962,7 +3014,7 @@ function openProductDetail(id, fromAllPage = true) {
 
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
-  document.getElementById('pd-price').textContent = prod.price.toLocaleString() + ' ' + s.currency;
+  document.getElementById('pd-price').textContent = formatPrice(prod.price, s.currency);
   document.getElementById('pd-desc').textContent = prod.description||'';
 
   const oldEl = document.getElementById('pd-old'), discEl = document.getElementById('pd-disc');
@@ -3028,7 +3080,7 @@ function openProductDetail(id, fromAllPage = true) {
     const variantLabel = parts.join(' / ');
     const price = selectedByGroup[0] ? (selectedByGroup[0].price ?? prod.price) : prod.price;
     activeProd = { ...prod, price, variantLabel };
-    document.getElementById('pd-price').textContent = price.toLocaleString() + ' ' + s.currency;
+    document.getElementById('pd-price').textContent = formatPrice(price, s.currency);
   }
 
   if (groups.length) {
@@ -3075,7 +3127,10 @@ function openProductDetail(id, fromAllPage = true) {
   window.onVariantChange = function() {}; // no-op, replaced by per-group listeners
 
   document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
-  document.getElementById('pd-buy-btn').onclick = () => { addToCart(activeProd); closeProductDetail(); toggleCart(); };
+  document.getElementById('pd-buy-btn').onclick = () => {
+    if ((Number(activeProd.price)||0) <= 0) { claimFreeProduct(activeProd); return; }
+    addToCart(activeProd); closeProductDetail(); toggleCart();
+  };
   const wBtn = document.getElementById('pd-wish-btn');
   const updateWBtn = () => {
     const w = Wishlist.has(activeProd.id);
@@ -3130,7 +3185,7 @@ function renderCartItems() {
       <div class="cart-item-img"><img src="${img}" alt=""/></div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${(item.price*item.qty).toLocaleString()} ${s.currency}</div>
+        <div class="cart-item-price">${formatPrice(item.price*item.qty, s.currency)}</div>
         <div class="cart-item-row">
           <button class="qty-btn" onclick="changeQty('${item.id}',-1)"><i class="fa-solid fa-minus"></i></button>
           <span class="qty-num">${item.qty}</span>
@@ -3154,9 +3209,30 @@ let _coUseAccount = false;
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
+  const cartItems = Cart.get();
+  if (cartItems.length && Cart.total() <= 0) {
+    // Entire cart is free (e.g. free items added before this update) —
+    // claim everything directly, no payment step needed.
+    claimFreeCart(cartItems);
+    return;
+  }
   document.getElementById('checkout-modal').classList.add('open');
   // Skip step 0 — go straight to form, auto-fill from account if available
   coChooseAccount(!!user);
+}
+
+async function claimFreeCart(cartItems) {
+  const items = cartItems || Cart.get();
+  for (const item of items) {
+    await claimFreeProduct({
+      id: item.productId || item.id,
+      name: item.name,
+      price: 0,
+      variantLabel: item.variantLabel || null,
+    });
+  }
+  Cart.clear();
+  toggleCart();
 }
 
 function _showCoStep(step) {
@@ -3525,6 +3601,13 @@ async function coInitiateSlickPayCheckout() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        items: cartItems.map(it => ({
+          product_id:    it.productId || it.id,
+          variant_label: it.variantLabel || null,
+          qty:           it.qty || 1,
+        })),
+        user_id:      currentUser.id,
+        user_email:   currentUser.email || email,
         product_id:   cartItems[0]?.productId || cartItems[0]?.id || '',
         product_name: productName,
         amount:       total,
@@ -4483,7 +4566,7 @@ function navSearchQuery(q) {
           <div class="ns-name">${p.name}</div>
           <div class="ns-cat">${p.category||''}</div>
         </div>
-        <div class="ns-price">${p.price.toLocaleString()} ${s.currency}</div>
+        <div class="ns-price">${formatPrice(p.price, s.currency)}</div>
       </div>`;
     }).join('');
   }, 200);
@@ -4873,7 +4956,7 @@ function renderRecentlyViewed() {
         <img src="${img}" alt="${p.name}" loading="lazy"/>
         <div style="flex:1;min-width:0">
           <div class="rv-item-name">${p.name}</div>
-          <div class="rv-item-price">${p.price.toLocaleString()} ${s.currency}</div>
+          <div class="rv-item-price">${formatPrice(p.price, s.currency)}</div>
         </div>
       </div>`;
     }).join('');

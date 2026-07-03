@@ -615,6 +615,15 @@ const Settings = {
   }
 };
 
+// Formats a product price for display — shows "FREE" for 0/empty prices
+// instead of "0 DA", everywhere a price is rendered on the storefront.
+function formatPrice(price, currency) {
+  const n = Number(price) || 0;
+  if (n <= 0) return 'FREE';
+  return n.toLocaleString() + ' ' + (currency || 'DA');
+}
+window.formatPrice = formatPrice;
+
 function hexToRgb(hex){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);return r?{r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)}:null;}
 function adjustColor(hex,amount){const rgb=hexToRgb(hex);if(!rgb)return hex;const clamp=v=>Math.max(0,Math.min(255,v+amount));return '#'+[clamp(rgb.r),clamp(rgb.g),clamp(rgb.b)].map(v=>v.toString(16).padStart(2,'0')).join('');}
 
@@ -631,6 +640,64 @@ const Cart = {
   total(){return this.get().reduce((s,i)=>s+i.price*i.qty,0);},
   count(){return this.get().reduce((s,i)=>s+i.qty,0);},
 };
+
+// ================================================================
+// WISHLIST SYNC — Firestore (synced per user, fallback to localStorage)
+// ================================================================
+const WishlistSync = {
+  // Save the current wishlist array to Firestore for the logged-in user
+  async save(ids) {
+    const user = UserAuth.current();
+    if (!user) return;
+    try {
+      await _db.collection('users').doc(user.id).set(
+        { wishlist: ids },
+        { merge: true }
+      );
+    } catch(e) { console.warn('WishlistSync.save:', e); }
+  },
+
+  // Load the wishlist from Firestore and merge into localStorage
+  async load() {
+    const user = UserAuth.current();
+    if (!user) return;
+    try {
+      const doc = await _db.collection('users').doc(user.id).get();
+      if (doc.exists) {
+        const data = doc.data();
+        const cloudIds = Array.isArray(data.wishlist) ? data.wishlist : [];
+        // Merge with any local ids (e.g. added while logged out)
+        let localIds = [];
+        try { localIds = JSON.parse(localStorage.getItem('dz_wishlist') || '[]'); } catch {}
+        const merged = [...new Set([...cloudIds, ...localIds])];
+        try { localStorage.setItem('dz_wishlist', JSON.stringify(merged)); } catch {}
+        window.dispatchEvent(new Event('wishlist:update'));
+        // Persist the merged list back to Firestore if it grew
+        if (merged.length > cloudIds.length) await this.save(merged);
+      }
+    } catch(e) { console.warn('WishlistSync.load:', e); }
+  },
+
+  // Clear wishlist from Firestore (called on logout)
+  async clear() {
+    const user = UserAuth.current();
+    if (!user) return;
+    try {
+      await _db.collection('users').doc(user.id).set({ wishlist: [] }, { merge: true });
+    } catch(e) {}
+  }
+};
+
+// Hook: whenever auth state changes, load or reset the wishlist
+window.addEventListener('auth:change', () => {
+  if (UserAuth.current()) {
+    WishlistSync.load();
+  } else {
+    // Clear local wishlist when user logs out (privacy)
+    try { localStorage.removeItem('dz_wishlist'); } catch {}
+    window.dispatchEvent(new Event('wishlist:update'));
+  }
+});
 
 // ================================================================
 // ORDERS — Firestore

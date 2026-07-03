@@ -679,6 +679,52 @@ select.form-input option{background:var(--bg2)}
             </div>
             <div class="img-previews" id="prod-img-previews"></div>
           </div>
+          <!-- AUTOMATIC DELIVERY SECTION -->
+          <div class="form-section">
+            <div class="form-section-title"><i class="fa-solid fa-bolt"></i> Automatic Delivery <span style="font-weight:400;font-size:.75rem;color:var(--text-muted);margin-left:.4rem">(optional)</span></div>
+            <div class="variant-hint" style="margin-bottom:1rem">
+              <i class="fa-solid fa-circle-info"></i>
+              When enabled, the buyer gets this link the moment payment is confirmed (or instantly for FREE products) —
+              no manual delivery needed from the admin panel. Leave this off for products that need manual fulfillment
+              (e.g. account credentials).
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+              <input type="checkbox" id="prod-auto-deliver" style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer" onchange="toggleProdDeliveryFields()"/>
+              <label for="prod-auto-deliver" class="form-label" style="cursor:pointer;margin:0">Automatically deliver this product</label>
+            </div>
+            <div id="prod-delivery-fields" style="display:none">
+              <div style="display:flex;gap:.6rem;margin-bottom:.9rem">
+                <label class="co-method-card" style="flex:1;cursor:pointer;padding:.6rem .9rem;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:.5rem" id="pdtype-link">
+                  <input type="radio" name="prod-delivery-type" value="link" checked onchange="switchProdDeliveryType('link')"/> <i class="fa-solid fa-link"></i> Link / URL
+                </label>
+                <label class="co-method-card" style="flex:1;cursor:pointer;padding:.6rem .9rem;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:.5rem" id="pdtype-pdf">
+                  <input type="radio" name="prod-delivery-type" value="pdf" onchange="switchProdDeliveryType('pdf')"/> <i class="fa-solid fa-file-pdf"></i> Upload File (PDF, etc.)
+                </label>
+              </div>
+              <div class="form-group full" id="prod-delivery-link-wrap">
+                <label class="form-label">Delivery Link</label>
+                <input class="form-input" id="prod-delivery-link" type="url" placeholder="https://... (download link, Drive link, Canva template, etc.)"/>
+              </div>
+              <div class="form-group full" id="prod-delivery-file-wrap" style="display:none">
+                <label class="form-label">Delivery File</label>
+                <div class="img-upload-zone" id="prod-delivery-dropzone" style="cursor:pointer" onclick="document.getElementById('prod-delivery-file-input').click()">
+                  <input type="file" id="prod-delivery-file-input" style="display:none" onchange="handleProductDeliveryFile(this.files[0])"/>
+                  <div class="img-upload-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                  <div class="img-upload-text"><strong>Click to upload</strong> the file to deliver</div>
+                  <div class="img-upload-sub">Any file type — max 50MB</div>
+                </div>
+                <div id="prod-delivery-progress-wrap" style="display:none;margin-top:.6rem">
+                  <div style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden"><div id="prod-delivery-progress-bar" style="height:100%;width:0%;background:var(--primary);transition:width .15s"></div></div>
+                  <div id="prod-delivery-progress-text" style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem">Uploading 0%...</div>
+                </div>
+                <div id="prod-delivery-file-info" style="display:none;align-items:center;gap:.6rem;margin-top:.6rem;font-size:.85rem">
+                  <i class="fa-solid fa-circle-check" style="color:var(--primary)"></i>
+                  <span id="prod-delivery-file-name"></span>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="clearProdDeliveryFile()"><i class="fa-solid fa-xmark"></i> Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
           <!-- VARIABLES SECTION -->
           <div class="form-section">
             <div class="form-section-title"><i class="fa-solid fa-sliders"></i> Product Variables <span style="font-weight:400;font-size:.75rem;color:var(--text-muted);margin-left:.4rem">(optional)</span></div>
@@ -1238,7 +1284,7 @@ function renderProductsList() {
       <td><div class="td-img"><img src="${img}" alt=""/></div></td>
       <td><div class="td-name">${p.name}</div>${p.badge?`<span class="status-badge status-pending">${p.badge}</span>`:''}</td>
       <td class="td-cat">${p.category||'—'}</td>
-      <td class="td-price">${p.price.toLocaleString()} ${s.currency}</td>
+      <td class="td-price">${p.price ? p.price.toLocaleString()+' '+s.currency : 'FREE'}</td>
       <td style="color:var(--text-muted);text-decoration:line-through">${p.oldPrice?p.oldPrice.toLocaleString()+' '+s.currency:'—'}</td>
       <td><span style="font-size:.8rem;${p.featured?'color:var(--accent)':'color:var(--text-muted)'}">${p.featured?'⭐ Yes':'No'}</span></td>
       <td><div class="td-actions">
@@ -1266,6 +1312,19 @@ function loadProductForm() {
     document.getElementById('prod-desc').value = p.description||'';
     productImages = [...(p.images||[])];
     renderProductImagePreviews();
+    // Auto-delivery fields
+    document.getElementById('prod-auto-deliver').checked = !!p.autoDeliver;
+    document.getElementById('prod-delivery-link').value = p.deliveryLink || '';
+    const dtype = p.deliveryType === 'pdf' ? 'pdf' : 'link';
+    const dtypeRadio = document.querySelector(`input[name="prod-delivery-type"][value="${dtype}"]`);
+    if (dtypeRadio) dtypeRadio.checked = true;
+    switchProdDeliveryType(dtype);
+    toggleProdDeliveryFields();
+    if (dtype === 'pdf' && p.deliveryLink) {
+      document.getElementById('prod-delivery-dropzone').style.display = 'none';
+      document.getElementById('prod-delivery-file-info').style.display = 'flex';
+      document.getElementById('prod-delivery-file-name').textContent = 'Previously uploaded file \u2713';
+    }
     // Load variable groups
     variableGroups = (p.variables || []).map(grp => ({
       title: grp.title || '',
@@ -1289,7 +1348,73 @@ function resetProductForm() {
   document.getElementById('variable-groups-list').innerHTML = '';
   document.getElementById('add-prod-title').textContent = 'Add New Product';
   document.getElementById('save-prod-btn-text').textContent = 'Save Product';
+  document.getElementById('prod-auto-deliver').checked = false;
+  clearProdDeliveryFile();
+  switchProdDeliveryType('link');
+  toggleProdDeliveryFields();
 }
+// ── Product Automatic Delivery — toggle + type switch + file upload ──
+function toggleProdDeliveryFields() {
+  const on = document.getElementById('prod-auto-deliver').checked;
+  document.getElementById('prod-delivery-fields').style.display = on ? '' : 'none';
+}
+
+function switchProdDeliveryType(type) {
+  document.getElementById('pdtype-link').classList.toggle('selected', type === 'link');
+  document.getElementById('pdtype-pdf').classList.toggle('selected', type === 'pdf');
+  document.getElementById('prod-delivery-link-wrap').style.display = type === 'link' ? '' : 'none';
+  document.getElementById('prod-delivery-file-wrap').style.display = type === 'pdf' ? '' : 'none';
+}
+
+let _prodDeliveryUploadInProgress = false;
+
+async function handleProductDeliveryFile(file) {
+  if (!file) return;
+  if (file.size > 50 * 1024 * 1024) { showToast('File is too large — must be under 50MB.'); return; }
+
+  const dropzone = document.getElementById('prod-delivery-dropzone');
+  const progWrap = document.getElementById('prod-delivery-progress-wrap');
+  const progBar  = document.getElementById('prod-delivery-progress-bar');
+  const progText = document.getElementById('prod-delivery-progress-text');
+  const fileInfo = document.getElementById('prod-delivery-file-info');
+  const fileName = document.getElementById('prod-delivery-file-name');
+
+  _prodDeliveryUploadInProgress = true;
+  dropzone.style.display = 'none';
+  fileInfo.style.display = 'none';
+  progWrap.style.display = 'block';
+  progBar.style.width = '0%';
+  progText.textContent = 'Uploading 0%...';
+
+  const productId = document.getElementById('edit-prod-id').value || 'new';
+
+  try {
+    const result = await Storage.uploadFile(file, 'deliveries/product-' + productId, pct => {
+      progBar.style.width = pct + '%';
+      progText.textContent = 'Uploading ' + pct + '%...';
+    });
+    document.getElementById('prod-delivery-link').value = result.url;
+    fileName.textContent = result.name + ' (' + (result.size / 1024 / 1024).toFixed(2) + ' MB) — uploaded \u2713';
+    progWrap.style.display = 'none';
+    fileInfo.style.display = 'flex';
+  } catch (e) {
+    console.error('Delivery file upload failed:', e);
+    showToast('❌ Upload failed: ' + (e.message || String(e)));
+    progWrap.style.display = 'none';
+    dropzone.style.display = 'block';
+  } finally {
+    _prodDeliveryUploadInProgress = false;
+  }
+}
+
+function clearProdDeliveryFile() {
+  document.getElementById('prod-delivery-link').value = '';
+  document.getElementById('prod-delivery-file-input').value = '';
+  document.getElementById('prod-delivery-file-info').style.display = 'none';
+  document.getElementById('prod-delivery-progress-wrap').style.display = 'none';
+  document.getElementById('prod-delivery-dropzone').style.display = 'block';
+}
+
 async function handleProductImages(input) {
   for (const f of [...input.files]) { const b64 = await compressImage(f, 900, 0.8); if(b64) productImages.push(b64); }
   renderProductImagePreviews(); input.value = '';
@@ -1367,6 +1492,10 @@ async function saveProduct(e) {
     }))
     .filter(grp => grp.title && grp.items.length > 0);
 
+  const autoDeliver = document.getElementById('prod-auto-deliver').checked;
+  const deliveryType = document.querySelector('input[name="prod-delivery-type"]:checked')?.value || 'link';
+  const deliveryLink = (document.getElementById('prod-delivery-link').value || '').trim();
+
   const data = {
     name: document.getElementById('prod-name').value.trim(),
     category: document.getElementById('prod-cat').value,
@@ -1377,9 +1506,13 @@ async function saveProduct(e) {
     featured: document.getElementById('prod-featured').checked,
     description: document.getElementById('prod-desc').value.trim(),
     images: productImages,
-    variables: variables
+    variables: variables,
+    autoDeliver: autoDeliver && !!deliveryLink,
+    deliveryType: deliveryType,
+    deliveryLink: deliveryLink,
   };
-  if (!data.name || !data.price) { showToast('Please fill required fields (name and price)'); return; }
+  if (!data.name || data.price === '' || isNaN(data.price) || data.price < 0) { showToast('Please fill required fields (name and price)'); return; }
+  if (autoDeliver && !deliveryLink) { showToast('Add a delivery link/file, or turn off automatic delivery.'); return; }
   const btn = document.getElementById('save-prod-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
   try {
