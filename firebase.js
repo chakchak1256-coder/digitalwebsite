@@ -713,6 +713,120 @@ const Orders = {
 };
 
 // ================================================================
+// ANALYTICS — Firestore collection: product_events
+// Tracks product-detail views and add-to-cart actions. Each is
+// deduped once per browser session per product so refreshing or
+// re-opening the same product repeatedly doesn't inflate the count —
+// the goal is "how many people", not "how many clicks".
+// Purchases are already tracked in the 'purchases' collection, so
+// admin analytics reads from there directly for the "bought" number.
+// ================================================================
+const Analytics = {
+  _seenSet(key) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch(e) { return new Set(); }
+  },
+  _seenSave(key, set) {
+    try { sessionStorage.setItem(key, JSON.stringify([...set])); } catch(e) {}
+  },
+
+  // Log a product-detail view (once per product per browser session)
+  async logView(productId, productName) {
+    if (!productId) return;
+    const seen = this._seenSet('dz_seen_views');
+    if (seen.has(productId)) return;
+    seen.add(productId); this._seenSave('dz_seen_views', seen);
+    try {
+      await _db.collection('product_events').add({
+        type: 'view', productId, productName: productName || '',
+        createdAt: new Date().toISOString()
+      });
+    } catch(e) { console.warn('Analytics.logView:', e); }
+  },
+
+  // Log an add-to-cart action (once per product per browser session)
+  async logCart(productId, productName) {
+    if (!productId) return;
+    const seen = this._seenSet('dz_seen_carts');
+    if (seen.has(productId)) return;
+    seen.add(productId); this._seenSave('dz_seen_carts', seen);
+    try {
+      await _db.collection('product_events').add({
+        type: 'cart', productId, productName: productName || '',
+        createdAt: new Date().toISOString()
+      });
+    } catch(e) { console.warn('Analytics.logCart:', e); }
+  },
+
+  // Admin: fetch every event — filtering by date range / product happens
+  // client-side (same pattern used elsewhere in this app, e.g. Purchases.getAll).
+  async getAllEvents() {
+    try {
+      const snap = await _db.collection('product_events').get();
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    } catch(e) { console.error('Analytics.getAllEvents:', e); return []; }
+  }
+};
+
+// ================================================================
+// PRESENCE — Firestore collection: presence
+// Lightweight "who's online right now" tracker for the storefront.
+// Each open tab writes a heartbeat doc every 20s (tagged with the
+// product page it's currently viewing, if any). The admin panel
+// counts docs whose heartbeat is recent to estimate live visitors —
+// no extra backend or websocket needed.
+// ================================================================
+const Presence = {
+  _sid: null,
+  _productId: null,
+  _timer: null,
+
+  _getSid() {
+    if (this._sid) return this._sid;
+    try {
+      let sid = sessionStorage.getItem('dz_sid');
+      if (!sid) { sid = 'sid_' + Date.now().toString(36) + Math.random().toString(36).slice(2); sessionStorage.setItem('dz_sid', sid); }
+      this._sid = sid;
+    } catch(e) { this._sid = 'sid_' + Date.now() + Math.random(); }
+    return this._sid;
+  },
+
+  // Call when entering/leaving a product detail page (null = not on one)
+  setProduct(productId) { this._productId = productId || null; this._beat(); },
+
+  async _beat() {
+    try {
+      await _db.collection('presence').doc(this._getSid()).set({
+        productId: this._productId || null,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { /* best-effort — never block the UI on this */ }
+  },
+
+  // Start the heartbeat loop. Safe to call once per page load.
+  start() {
+    if (this._timer) return;
+    this._beat();
+    this._timer = setInterval(() => this._beat(), 20000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this._beat(); });
+  },
+
+  // Admin: sessions with a heartbeat inside the last `windowSec` seconds
+  async getActive(windowSec = 45) {
+    try {
+      const snap = await _db.collection('presence').get();
+      const now = Date.now();
+      return snap.docs.map(d => d.data()).filter(x => {
+        const t = x.lastSeen && x.lastSeen.toDate ? x.lastSeen.toDate().getTime() : 0;
+        return t && (now - t) < windowSec * 1000;
+      });
+    } catch(e) { console.error('Presence.getActive:', e); return []; }
+  }
+};
+
+// ================================================================
 // STORAGE (for admin storage manager)
 // ================================================================
 const Storage = {

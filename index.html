@@ -2697,6 +2697,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartBadge();
   updateWishlistBadge();
   initScrollSpy();
+  Presence.start();
   // Handle ?open= param from my-products.html nav links
   (function handleOpenParam() {
     const p = new URLSearchParams(window.location.search).get('open');
@@ -2836,7 +2837,7 @@ function makeProductCard(prod) {
   return d;
 }
 
-function addToCart(prod) { Cart.add(prod); showToast(`"${prod.name}" added to cart`); }
+function addToCart(prod) { Cart.add(prod); Analytics.logCart(prod.id, prod.name); showToast(`"${prod.name}" added to cart`); }
 
 // ── FREE products (price === 0) — no cart, no payment ──────────────
 // Delivers the product straight to My Products for a signed-in user.
@@ -2924,33 +2925,6 @@ function renderBestSellers() {
   });
 }
 
-// ===== HERO SHOWCASE =====
-function renderHeroShowcase() {
-  const stage = document.getElementById('hero-showcase');
-  if (!stage) return;
-  const cards = stage.querySelectorAll('.hv-card');
-  if (!cards.length) return;
-  const s = Settings.get();
-  let prods = DB.getAll('products').slice();
-  prods.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-  prods = prods.slice(0, cards.length);
-  cards.forEach((card, i) => {
-    const p = prods[i];
-    if (!p) return; // keep static fallback content if not enough products
-    const img = (p.images || [])[0] || generatePlaceholder(p.name, 300, 220);
-    const imgEl = card.querySelector('.hv-card-media img');
-    const tagEl = card.querySelector('.hv-card-tag');
-    const nameEl = card.querySelector('.hv-card-name');
-    const priceEl = card.querySelector('.hv-card-price');
-    if (imgEl) imgEl.src = img;
-    if (tagEl) tagEl.textContent = p.badge || p.category || 'Featured';
-    if (nameEl) nameEl.textContent = p.name;
-    if (priceEl) priceEl.textContent = formatPrice(p.price, s.currency);
-    card.onclick = () => { trackRecentlyViewed(p); openProductDetail(p.id, false); };
-    card.style.cursor = 'pointer';
-  });
-}
-
 // ===== ALL PRODUCTS PAGE =====
 function openAllProducts(filterCat = 'all') {
   document.getElementById('all-products-page').classList.add('active');
@@ -3004,6 +2978,8 @@ function renderAllProducts(filterCat) {
 // ===== PRODUCT DETAIL =====
 function openProductDetail(id, fromAllPage = true) {
   const prod = DB.getById('products', id); if (!prod) return;
+  Analytics.logView(prod.id, prod.name);
+  Presence.setProduct(prod.id);
   fromAll = fromAllPage || document.getElementById('all-products-page').classList.contains('active');
   const s = Settings.get();
   const imgs = (prod.images||[]).length ? prod.images : [generatePlaceholder(prod.name, 600, 450)];
@@ -3149,6 +3125,7 @@ function openProductDetail(id, fromAllPage = true) {
 function closeProductDetail() {
   document.getElementById('product-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
+  Presence.setProduct(null);
 }
 
 // ===== SHOW MAIN =====
@@ -4065,30 +4042,6 @@ function validatePhoneField(input, hintId, iconId) {
   }
 }
 
-function updatePassStrength(val) {
-  const bar  = document.getElementById('am-r-pass-bar');
-  const hint = document.getElementById('am-r-pass-hint');
-  if (!bar) return;
-  let score = 0;
-  if (val.length >= 6)  score++;
-  if (val.length >= 10) score++;
-  if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
-  if (/\d/.test(val))   score++;
-  if (/[^A-Za-z0-9]/.test(val)) score++;
-  const levels = [
-    { pct: '0%',   color: '',          label: '' },
-    { pct: '25%',  color: '#EF4444',   label: 'Too short' },
-    { pct: '50%',  color: '#F59E0B',   label: 'Weak' },
-    { pct: '70%',  color: '#3B82F6',   label: 'Good' },
-    { pct: '90%',  color: '#10B981',   label: 'Strong' },
-    { pct: '100%', color: '#10B981',   label: 'Very strong' },
-  ];
-  const lvl = levels[Math.min(score, 5)];
-  bar.style.width = lvl.pct;
-  bar.style.background = lvl.color;
-  if (hint) { hint.textContent = lvl.label; hint.style.color = lvl.color || 'var(--text-muted)'; }
-}
-
 function doUserLogout() {
   UserAuth.logout(); initUserAuth();
   document.getElementById('user-menu').style.display = 'none';
@@ -4475,7 +4428,13 @@ function buildStarsHtml(rating, cls) {
 // ================================================================
 const Wishlist = {
   get() { try { return JSON.parse(localStorage.getItem('dz_wishlist')||'[]'); } catch { return []; } },
-  _save(a) { try { localStorage.setItem('dz_wishlist', JSON.stringify(a)); } catch {} window.dispatchEvent(new Event('wishlist:update')); },
+  _save(a) {
+    try { localStorage.setItem('dz_wishlist', JSON.stringify(a)); } catch {}
+    window.dispatchEvent(new Event('wishlist:update'));
+    // Persist to the account immediately so it survives logout/device switches —
+    // previously this only happened opportunistically inside WishlistSync.load().
+    if (typeof WishlistSync !== 'undefined' && UserAuth.current()) WishlistSync.save(a);
+  },
   has(id) { return this.get().includes(id); },
   add(id) { const a = this.get(); if (!a.includes(id)) { a.push(id); this._save(a); } },
   remove(id) { this._save(this.get().filter(x => x !== id)); },

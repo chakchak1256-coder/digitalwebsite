@@ -541,6 +541,7 @@ select.form-input option{background:var(--bg2)}
         <div class="nav-group-label">Overview</div>
         <div class="nav-item active" onclick="showPanel('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
         <div class="nav-item" onclick="showPanel('orders')"><i class="fa-solid fa-bag-shopping"></i> Orders <span id="pending-badge" style="margin-left:auto;background:var(--primary);color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:99px;display:none"></span></div>
+        <div class="nav-item" onclick="showPanel('analytics')"><i class="fa-solid fa-chart-line"></i> Analytics <span id="live-badge" style="margin-left:auto;background:#10b981;color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:99px;display:none"></span></div>
       </div>
       <div class="nav-group">
         <div class="nav-group-label">Catalog</div>
@@ -623,6 +624,32 @@ select.form-input option{background:var(--bg2)}
             <div class="sec-header"><span class="sec-title">Top Products</span><button class="btn btn-sm btn-outline" onclick="showPanel('products')">View All</button></div>
             <div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th></tr></thead><tbody id="dash-products"></tbody></table></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="panel" id="panel-analytics">
+        <div class="stats-row" id="an-live-stats"></div>
+
+        <div class="sec-header">
+          <span class="sec-title">Product Performance</span>
+          <div class="chart-period-btns" id="an-period-btns">
+            <button class="chart-period-btn" onclick="setAnalyticsPeriod('day',this)">Day</button>
+            <button class="chart-period-btn" onclick="setAnalyticsPeriod('week',this)">Week</button>
+            <button class="chart-period-btn active" onclick="setAnalyticsPeriod('month',this)">Month</button>
+            <button class="chart-period-btn" onclick="setAnalyticsPeriod('year',this)">Year</button>
+            <button class="chart-period-btn" onclick="setAnalyticsPeriod('all',this)">All Time</button>
+          </div>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin:-.8rem 0 1rem">
+          "Entered" and "Added to Cart" count unique visitor sessions (deduped per browser). "Purchased" counts checkout submissions from the Purchases records.
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Product</th><th>Live Now</th><th>Entered</th><th>Added to Cart</th><th>Purchased</th><th>Enter → Cart</th><th>Cart → Buy</th></tr></thead>
+            <tbody id="an-tbody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -739,7 +766,7 @@ select.form-input option{background:var(--bg2)}
             </button>
           </div>
           <div style="display:flex;gap:.75rem">
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> <span id="save-prod-btn-text">Save Product</span></button>
+            <button type="submit" id="save-prod-btn" class="btn btn-primary"><i class="fa-solid fa-check"></i> <span id="save-prod-btn-text">Save Product</span></button>
             <button type="button" class="btn btn-outline" onclick="resetProductForm()"><i class="fa-solid fa-xmark"></i> Reset</button>
           </div>
         </form>
@@ -777,7 +804,7 @@ select.form-input option{background:var(--bg2)}
             </div>
           </div>
           <div style="display:flex;gap:.75rem">
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> <span id="save-cat-btn-text">Save Category</span></button>
+            <button type="submit" id="save-cat-btn" class="btn btn-primary"><i class="fa-solid fa-check"></i> <span id="save-cat-btn-text">Save Category</span></button>
             <button type="button" class="btn btn-outline" onclick="resetCategoryForm()"><i class="fa-solid fa-xmark"></i> Reset</button>
           </div>
         </form>
@@ -1161,6 +1188,19 @@ function initAdmin() {
   window.addEventListener('db:update', () => { renderDashboard(); renderOrders(); renderProductsList(); renderCategoriesList(); });
 
   window.addEventListener('storage:full', () => document.getElementById('storage-banner').classList.add('show'));
+
+  // Sidebar "live" badge — refreshes even when the Analytics panel isn't open
+  updateLiveBadgeOnly();
+  setInterval(updateLiveBadgeOnly, 30000);
+}
+
+async function updateLiveBadgeOnly() {
+  if (currentPanel === 'analytics') return; // renderAnalyticsLive() already keeps it fresh
+  try {
+    const active = await Presence.getActive(45);
+    const lb = document.getElementById('live-badge');
+    if (lb) { lb.textContent = active.length; lb.style.display = active.length ? 'inline-block' : 'none'; }
+  } catch(e) {}
 }
 
 // ===== PANEL NAV =====
@@ -1173,6 +1213,7 @@ function showPanel(name) {
     _adminPurchasesUnsub(); _adminPurchasesUnsub = null;
   }
   if (name !== 'reviews' && _reviewsUnsub) stopReviewsListener();
+  if (name !== 'analytics') stopAnalyticsLive();
   if (name === 'purchases') { startAdminPurchasesListener(); }
   if (name === 'reviews') { startReviewsListener(); }
   if (name === 'users') { renderUsersAdmin(); } // async — ok
@@ -1182,7 +1223,7 @@ function showPanel(name) {
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', orders:'Orders', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews' };
+  const titles = { dashboard:'Dashboard', orders:'Orders', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -1191,6 +1232,7 @@ function showPanel(name) {
   if (name === 'categories') renderCategoriesList();
   if (name === 'dashboard') renderDashboard();
   if (name === 'orders') renderOrders();
+  if (name === 'analytics') { renderAnalytics(); startAnalyticsLive(); }
   closeSidebar();
 }
 
@@ -1271,6 +1313,105 @@ function exportOrders() {
   const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'orders.csv'; a.click();
 }
+
+// ===== ANALYTICS =====
+let _anPeriod = 'month';
+let _anEvents = [];      // cached product_events (views + cart adds)
+let _anPurchases = [];   // cached purchases
+let _anLiveByProduct = {};
+let _anLiveTimer = null;
+let _anLoaded = false;
+
+async function renderAnalytics() {
+  const tbody = document.getElementById('an-tbody');
+  if (!_anLoaded) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem"><i class="fa-solid fa-spinner fa-spin"></i> Loading analytics…</td></tr>`;
+  const [events, purchases] = await Promise.all([ Analytics.getAllEvents(), Purchases.getAll() ]);
+  _anEvents = events; _anPurchases = purchases; _anLoaded = true;
+  renderAnalyticsTable();
+}
+
+function _anPeriodCutoff(period) {
+  const now = Date.now();
+  const day = 24*60*60*1000;
+  if (period === 'day')   return now - day;
+  if (period === 'week')  return now - 7*day;
+  if (period === 'month') return now - 30*day;
+  if (period === 'year')  return now - 365*day;
+  return null; // all time
+}
+
+function setAnalyticsPeriod(period, btn) {
+  _anPeriod = period;
+  document.querySelectorAll('#an-period-btns .chart-period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderAnalyticsTable();
+}
+
+function renderAnalyticsTable() {
+  const tbody = document.getElementById('an-tbody');
+  const prods = DB.getAll('products');
+  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-box"></i><p>No products yet.</p></div></td></tr>`; return; }
+
+  const cutoff = _anPeriodCutoff(_anPeriod);
+  const inRange = iso => { if (!cutoff) return true; const t = new Date(iso).getTime(); return t && t >= cutoff; };
+
+  const countBy = (arr, matches) => {
+    const m = {};
+    arr.forEach(x => { if (matches(x) && inRange(x.createdAt)) m[x.productId] = (m[x.productId]||0) + 1; });
+    return m;
+  };
+  const viewCounts = countBy(_anEvents, e => e.type === 'view');
+  const cartCounts = countBy(_anEvents, e => e.type === 'cart');
+  const buyCounts  = countBy(_anPurchases, () => true);
+
+  const rows = prods.map(p => {
+    const v = viewCounts[p.id]||0, c = cartCounts[p.id]||0, b = buyCounts[p.id]||0;
+    return {
+      p, v, c, b,
+      live: _anLiveByProduct[p.id]||0,
+      vc: v ? Math.round((c/v)*100)+'%' : '—',
+      cb: c ? Math.round((b/c)*100)+'%' : '—',
+    };
+  }).sort((a,b) => (b.v+b.c+b.b) - (a.v+a.c+a.b));
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="td-name">${r.p.name}</td>
+      <td>${r.live > 0 ? `<span class="status-badge status-done"><i class="fa-solid fa-circle" style="font-size:.45rem;margin-right:4px"></i>${r.live} now</span>` : `<span style="color:var(--text-muted)">—</span>`}</td>
+      <td>${r.v}</td>
+      <td>${r.c}</td>
+      <td>${r.b}</td>
+      <td style="color:var(--text-muted)">${r.vc}</td>
+      <td style="color:var(--text-muted)">${r.cb}</td>
+    </tr>`).join('');
+}
+
+async function renderAnalyticsLive() {
+  let active = [];
+  try { active = await Presence.getActive(45); } catch(e) {}
+  const totalSite = active.length;
+  const byProduct = {};
+  let onProductPages = 0;
+  active.forEach(a => { if (a.productId) { byProduct[a.productId] = (byProduct[a.productId]||0) + 1; onProductPages++; } });
+  _anLiveByProduct = byProduct;
+
+  document.getElementById('an-live-stats').innerHTML = [
+    { icon:'fa-signal', color:'#10b981',        label:'People On Site Now',      val: totalSite },
+    { icon:'fa-eye',    color:'var(--accent)',  label:'Viewing A Product Now',   val: onProductPages },
+  ].map(x => `<div class="stat-card"><div class="stat-icon" style="background:${x.color}18;color:${x.color}"><i class="fa-solid ${x.icon}"></i></div><div><div class="stat-num">${x.val}</div><div class="stat-label">${x.label}</div></div></div>`).join('');
+
+  const lb = document.getElementById('live-badge');
+  if (lb) { lb.textContent = totalSite; lb.style.display = totalSite ? 'inline-block' : 'none'; }
+
+  if (_anLoaded) renderAnalyticsTable(); // refresh the "Live Now" column
+}
+
+function startAnalyticsLive() {
+  renderAnalyticsLive();
+  if (_anLiveTimer) clearInterval(_anLiveTimer);
+  _anLiveTimer = setInterval(renderAnalyticsLive, 10000);
+}
+function stopAnalyticsLive() { if (_anLiveTimer) { clearInterval(_anLiveTimer); _anLiveTimer = null; } }
 
 // ===== PRODUCTS =====
 function renderProductsList() {
