@@ -475,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyNavBranding();
   initTheme();
   updateCartBadge();
+  Presence.start();
   window.addEventListener('auth:change', () => { initUserAuth(); onAuthChange(); });
   window.addEventListener('cart:update', updateCartBadge);
 });
