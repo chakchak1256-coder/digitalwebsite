@@ -727,19 +727,6 @@ window.addEventListener('auth:change', () => {
 });
 
 // ================================================================
-// ORDERS — Firestore
-// ================================================================
-const Orders = {
-  place(customer) {
-    const items = Cart.get(); if (!items.length) return null;
-    const order = { customer, items: [...items], total: Cart.total(), status: 'pending' };
-    Cart.clear();
-    DB.add('orders', order);
-    return order;
-  }
-};
-
-// ================================================================
 // ANALYTICS — Firestore collection: product_events
 // Tracks product-detail views and add-to-cart actions. Each is
 // deduped once per browser session per product so refreshing or

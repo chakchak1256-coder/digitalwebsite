@@ -284,19 +284,6 @@ select.form-input option{background:var(--bg2)}
   font-size:.6rem;cursor:pointer;transition:background var(--transition);border:none}
 .img-preview-remove:hover{background:#EF4444}
 
-/* FULFILL MODAL */
-#fulfill-modal .modal-box{max-width:540px;max-height:88vh;overflow-y:auto}
-.fulfill-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:.6rem}
-.fulfill-item-name{font-weight:700;font-size:.86rem;margin-bottom:.45rem;color:var(--text)}
-.fulfill-link-input{width:100%;padding:8px 10px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);color:var(--text);font-size:.82rem;outline:none;transition:border-color var(--transition)}
-.fulfill-link-input:focus{border-color:var(--accent)}
-.fulfill-link-input::placeholder{color:var(--text-muted)}
-
-/* ORDERS */
-.order-row{cursor:pointer}
-.order-detail-row{display:none}
-.order-detail-row.open{display:table-row}
-.order-detail-cell{padding:.9rem 1.3rem;background:var(--bg3)}
 
 /* ── PURCHASE CARDS ─────────────────────────────────────────── */
 .pur-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.6rem}
@@ -540,7 +527,6 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-group">
         <div class="nav-group-label">Overview</div>
         <div class="nav-item active" onclick="showPanel('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
-        <div class="nav-item" onclick="showPanel('orders')"><i class="fa-solid fa-bag-shopping"></i> Orders <span id="pending-badge" style="margin-left:auto;background:var(--primary);color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:99px;display:none"></span></div>
         <div class="nav-item" onclick="showPanel('analytics')"><i class="fa-solid fa-chart-line"></i> Analytics <span id="live-badge" style="margin-left:auto;background:#10b981;color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:99px;display:none"></span></div>
       </div>
       <div class="nav-group">
@@ -615,11 +601,7 @@ select.form-input option{background:var(--bg2)}
           <canvas id="revenue-canvas"></canvas>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem" id="dash-lower">
-          <div>
-            <div class="sec-header"><span class="sec-title">Recent Orders</span><button class="btn btn-sm btn-outline" onclick="showPanel('orders')">View All</button></div>
-            <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Total</th><th>Status</th></tr></thead><tbody id="dash-orders"></tbody></table></div>
-          </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:1.5rem" id="dash-lower">
           <div>
             <div class="sec-header"><span class="sec-title">Top Products</span><button class="btn btn-sm btn-outline" onclick="showPanel('products')">View All</button></div>
             <div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th></tr></thead><tbody id="dash-products"></tbody></table></div>
@@ -650,20 +632,6 @@ select.form-input option{background:var(--bg2)}
             <thead><tr><th>Product</th><th>Live Now</th><th>Entered</th><th>Added to Cart</th><th>Purchased</th><th>Enter → Cart</th><th>Cart → Buy</th></tr></thead>
             <tbody id="an-tbody"></tbody>
           </table>
-        </div>
-      </div>
-
-      <!-- ORDERS -->
-      <div class="panel" id="panel-orders">
-        <div class="sec-header">
-          <span class="sec-title">All Orders</span>
-          <div style="display:flex;gap:.5rem">
-            <button class="btn btn-sm btn-outline" onclick="exportOrders()"><i class="fa-solid fa-download"></i> Export CSV</button>
-            <button class="btn btn-sm btn-danger" onclick="clearAllOrders()"><i class="fa-solid fa-trash"></i> Clear All</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>#</th><th>Customer</th><th>Contact</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="orders-tbody"></tbody></table>
         </div>
       </div>
 
@@ -1181,11 +1149,10 @@ function initAdmin() {
   startAdminPurchasesListener(); // realtime badge + purchases
   initOrderNotifications();      // new order push + sound alerts
   Settings.applyTheme();renderDashboard();
-  renderOrders();
   renderProductsList();
   renderCategoriesList();
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-DZ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  window.addEventListener('db:update', () => { renderDashboard(); renderOrders(); renderProductsList(); renderCategoriesList(); });
+  window.addEventListener('db:update', () => { renderDashboard(); renderProductsList(); renderCategoriesList(); });
 
   window.addEventListener('storage:full', () => document.getElementById('storage-banner').classList.add('show'));
 
@@ -1223,7 +1190,7 @@ function showPanel(name) {
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', orders:'Orders', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews' };
+  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -1231,7 +1198,6 @@ function showPanel(name) {
   if (name === 'products') renderProductsList();
   if (name === 'categories') renderCategoriesList();
   if (name === 'dashboard') renderDashboard();
-  if (name === 'orders') renderOrders();
   if (name === 'analytics') { renderAnalytics(); startAnalyticsLive(); }
   closeSidebar();
 }
@@ -1243,75 +1209,18 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 function renderDashboard() {
   const prods = DB.getAll('products');
   const cats = DB.getAll('categories');
-  const orders = DB.getAll('orders');
   const s = Settings.get();
-  const rev = orders.reduce((acc, o) => acc + (o.total || 0), 0);
 
   document.getElementById('dash-stats').innerHTML = [
     { icon:'fa-box',         color:'var(--primary)',   label:'Products',   val: prods.length },
     { icon:'fa-tags',        color:'var(--secondary)', label:'Categories', val: cats.length },
-    { icon:'fa-bag-shopping',color:'var(--accent)',    label:'Orders',     val: orders.length },
-    { icon:'fa-coins',       color:'#10b981',          label:'Revenue',    val: rev.toLocaleString() + ' ' + s.currency },
   ].map(x => `<div class="stat-card"><div class="stat-icon" style="background:${x.color}18;color:${x.color}"><i class="fa-solid ${x.icon}"></i></div><div><div class="stat-num">${x.val}</div><div class="stat-label">${x.label}</div></div></div>`).join('');
-
-  const pending = orders.filter(o => o.status === 'pending').length;
-  const pb = document.getElementById('pending-badge');
-  pb.textContent = pending; pb.style.display = pending ? 'inline-block' : 'none';
-
-  const ro = document.getElementById('dash-orders');
-  ro.innerHTML = orders.length ? orders.slice(0,5).map(o => `<tr><td><strong>${o.customer?.name||'—'}</strong></td><td class="td-price">${(o.total||0).toLocaleString()} ${s.currency}</td><td><span class="status-badge status-${o.status}">${o.status}</span></td></tr>`).join('') : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:1.5rem">No orders yet</td></tr>`;
 
   const tp = document.getElementById('dash-products');
   tp.innerHTML = prods.length ? prods.slice(0,5).map(p => `<tr><td class="td-name">${p.name}</td><td class="td-cat">${p.category||'—'}</td><td class="td-price">${p.price.toLocaleString()} ${s.currency}</td></tr>`).join('') : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:1.5rem">No products</td></tr>`;
 
-  if (window.innerWidth < 700) document.getElementById('dash-lower').style.gridTemplateColumns = '1fr';
-  else document.getElementById('dash-lower').style.gridTemplateColumns = '1fr 1fr';
+  document.getElementById('dash-lower').style.gridTemplateColumns = '1fr';
   renderRevenueChart(7);
-}
-
-// ===== ORDERS =====
-function renderOrders() {
-  const orders = DB.getAll('orders');
-  const s = Settings.get();
-  const tbody = document.getElementById('orders-tbody');
-  if (!orders.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-bag-shopping"></i><p>No orders yet.</p></div></td></tr>`; return; }
-  tbody.innerHTML = orders.map((o, i) => `
-    <tr class="order-row" onclick="toggleOrderDetail('od-${o.id}')">
-      <td><strong>#${i+1}</strong></td>
-      <td><strong>${o.customer?.name||'—'}</strong><br/><span style="font-size:.75rem;color:var(--text-muted)">${o.customer?.wilaya||''}</span></td>
-      <td><a href="tel:${o.customer?.phone||''}" style="color:var(--secondary)">${o.customer?.phone||'—'}</a><br/><span style="font-size:.75rem;color:var(--text-muted)">${o.customer?.email||''}</span></td>
-      <td>${(o.items||[]).length} item(s)</td>
-      <td class="td-price">${(o.total||0).toLocaleString()} ${s.currency}</td>
-      <td><select class="form-input" style="padding:4px 8px;font-size:.78rem;width:auto" onclick="event.stopPropagation()" onchange="updateOrderStatus('${o.id}',this.value)">
-        <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
-        <option value="done" ${o.status==='done'?'selected':''}>Done</option>
-        <option value="cancel" ${o.status==='cancel'?'selected':''}>Cancelled</option>
-      </select></td>
-      <td style="font-size:.8rem;color:var(--text-muted)">${new Date(o.createdAt).toLocaleDateString('en-DZ')}</td>
-      <td style="display:flex;gap:.35rem;align-items:center">
-        <button class="btn btn-sm" style="background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.25);color:var(--accent);padding:5px 9px" onclick="event.stopPropagation();openFulfillModal('${o.id}')" title="Send to My Products"><i class="fa-solid fa-paper-plane"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteOneOrder('${o.id}')"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    </tr>
-    <tr class="order-detail-row" id="od-${o.id}">
-      <td colspan="8" class="order-detail-cell">
-        <div style="display:flex;flex-direction:column;gap:.5rem">
-          ${(o.items||[]).map(it=>`<div style="display:flex;gap:1rem;align-items:center;font-size:.85rem;color:var(--text-muted)"><span style="color:var(--text)">${it.name}</span><span>×${it.qty}</span><span class="td-price">${(it.price*it.qty).toLocaleString()} ${s.currency}</span></div>`).join('')}
-        </div>
-        ${o.customer?.notes?`<p style="margin-top:.5rem;font-size:.82rem;color:var(--text-muted)">📝 Notes: ${o.customer.notes}</p>`:''}
-      </td>
-    </tr>`).join('');
-}
-function toggleOrderDetail(id) { document.getElementById(id)?.classList.toggle('open'); }
-function updateOrderStatus(id, status) { DB.update('orders', id, { status }); renderOrders(); showToast('Order status updated'); }
-function deleteOneOrder(id) { confirmAction('Delete this order?', 'This cannot be undone.', () => { DB.delete('orders', id); renderOrders(); showToast('Order deleted'); }); }
-function clearAllOrders() { confirmAction('Clear ALL orders?', 'Every order will be permanently deleted.', () => { DB.getAll('orders').forEach(o => DB.delete('orders', o.id)); renderOrders(); renderDashboard(); showToast('All orders cleared'); }); }
-function exportOrders() {
-  const orders = DB.getAll('orders'); const s = Settings.get();
-  const rows = [['#','Customer','Phone','Email','Wilaya','Items','Total','Status','Date']];
-  orders.forEach((o,i) => rows.push([i+1,o.customer?.name||'',o.customer?.phone||'',o.customer?.email||'',o.customer?.wilaya||'',(o.items||[]).map(it=>`${it.name}x${it.qty}`).join('; '),(o.total||0)+' '+s.currency,o.status,new Date(o.createdAt).toLocaleDateString()]));
-  const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'orders.csv'; a.click();
 }
 
 // ===== ANALYTICS =====
@@ -2167,138 +2076,6 @@ async function renderUsersAdmin() {
     tbody.appendChild(tr);
   });
 }
-
-
-// ===== FULFILL ORDER =====
-let _fulfillOrder = null;
-
-async function openFulfillModal(orderId) {
-  const order = DB.getById('orders', orderId);
-  if (!order) return;
-  _fulfillOrder = order;
-
-  const email = order.customer?.email || '';
-  let userId = null, userFound = false;
-  if (email) {
-    try {
-      const users = await UserAuth.getAll();
-      const match = users.find(u => (u.email||'').toLowerCase() === email.toLowerCase());
-      if (match) { userId = match.id; userFound = true; }
-    } catch(e) {}
-  }
-  _fulfillOrder._userId = userId;
-
-  const items = order.items || [];
-  const itemsHtml = items.map((it, i) => `
-    <div class="fulfill-item">
-      <div class="fulfill-item-name"><i class="fa-solid fa-box-archive" style="color:var(--accent);margin-right:.35rem"></i>${it.name} <span style="color:var(--text-muted);font-weight:400;font-size:.76rem">×${it.qty}</span></div>
-      <input class="fulfill-link-input" id="fl-${i}" placeholder="Access link, credentials, or download URL (optional)"/>
-    </div>`).join('');
-
-  document.getElementById('fulfill-modal-body').innerHTML = `
-    <div style="margin-bottom:.9rem">
-      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem">Customer</div>
-      <div style="font-weight:700;font-size:.95rem">${order.customer?.name || '—'}</div>
-      <div style="font-size:.82rem;color:var(--text-muted)">${email}</div>
-    </div>
-    <div style="display:inline-flex;align-items:center;gap:.4rem;padding:3px 10px;border-radius:99px;font-size:.73rem;font-weight:600;margin-bottom:.9rem;${userFound
-      ? 'background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);color:var(--accent)'
-      : 'background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#F59E0B'}">
-      <i class="fa-solid fa-${userFound ? 'circle-check' : 'triangle-exclamation'}"></i>
-      ${userFound ? 'Firebase account found' : 'No account — enter email below'}
-    </div>
-    ${!userFound ? `<div style="margin-bottom:.9rem">
-      <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.3rem">Customer Email</label>
-      <input class="fulfill-link-input" id="fl-email" type="email" value="${email}" placeholder="customer@email.com"/>
-    </div>` : `<div id="fl-email-holder" data-email="${email}"></div>`}
-    <div style="font-size:.76rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">
-      <i class="fa-solid fa-key" style="color:var(--accent);margin-right:.3rem"></i>Access Link per Item
-    </div>
-    ${itemsHtml}
-    <div style="display:flex;gap:.6rem;margin-top:1.1rem">
-      <button class="btn btn-outline" style="flex:1" onclick="closeFulfillModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex:2" onclick="submitFulfill()">
-        <i class="fa-solid fa-paper-plane"></i> Send to My Products
-      </button>
-    </div>`;
-
-  document.getElementById('fulfill-modal').classList.add('open');
-}
-
-async function submitFulfill() {
-  const order = _fulfillOrder;
-  if (!order) return;
-
-  const emailEl = document.getElementById('fl-email');
-  const emailHolder = document.getElementById('fl-email-holder');
-  const email = emailEl ? emailEl.value.trim() : (emailHolder ? emailHolder.dataset.email : '');
-  if (!email) { showToast('Email is required'); return; }
-
-  // Show loading state
-  const sendBtn = document.querySelector('#fulfill-modal .btn-primary');
-  if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...'; }
-
-  let userId = order._userId;
-  if (!userId) {
-    try {
-      const users = await UserAuth.getAll();
-      const match = users.find(u => (u.email||'').toLowerCase() === email.toLowerCase());
-      if (match) userId = match.id;
-    } catch(e) { console.warn('Could not fetch users:', e); }
-  }
-  if (!userId) userId = 'guest_' + email.replace(/[^a-z0-9]/gi,'_').toLowerCase();
-
-  const items = order.items || [];
-  const products = DB.getAll('products');
-  let sent = 0, failed = 0, lastError = '';
-
-  for (let i = 0; i < items.length; i++) {
-    const it   = items[i];
-    const link = (document.getElementById('fl-' + i)?.value || '').trim();
-    const prod = products.find(p => p.id === it.id) || {};
-    try {
-      const result = await Purchases.add(
-        userId, email,
-        { id: it.id, name: it.name, images: prod.images || (it.img ? [it.img] : []), category: prod.category || '' },
-        { accessLink: link }
-      );
-      if (result) { sent++; }
-      else { failed++; lastError = 'Firestore write returned null — check security rules or sign in to Firebase.'; }
-    } catch(e) {
-      failed++;
-      lastError = e.message || String(e);
-      console.error('Purchases.add failed:', e);
-    }
-  }
-
-  if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send to My Products'; }
-
-  if (failed > 0) {
-    // Show error inside modal
-    const body = document.getElementById('fulfill-modal-body');
-    const errDiv = document.createElement('div');
-    errDiv.style.cssText = 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.9rem 1rem;margin-top:.8rem;font-size:.82rem;color:#EF4444';
-    errDiv.innerHTML = '<strong>❌ Failed to save ' + failed + ' item(s) to Firestore.</strong><br/><span style="opacity:.8">' + lastError + '</span>' +
-      '<br/><br/><strong style="color:var(--text)">Common causes:</strong><ul style="margin:.4rem 0 0 1rem;color:var(--text-muted);line-height:1.8">' +
-      '<li>Firestore security rules require authentication</li>' +
-      '<li>Running on <code>file://</code> — deploy to a server or use Live Server</li>' +
-      '<li>Firebase project not configured for writes</li></ul>';
-    body.appendChild(errDiv);
-    return;
-  }
-
-  DB.update('orders', order.id, { status: 'done', fulfilledAt: new Date().toISOString() });
-  renderOrders();
-  closeFulfillModal();
-  showToast('✅ ' + sent + ' product' + (sent > 1 ? 's' : '') + ' sent to customer\'s My Products');
-}
-
-function closeFulfillModal() {
-  document.getElementById('fulfill-modal').classList.remove('open');
-  _fulfillOrder = null;
-}
-
-
 
 // ===== DELIVER PRODUCT =====
 // ── Deliver modal — field management ───────────────────────────
@@ -3211,15 +2988,6 @@ async function saveAdminReview() {
   <i class="fa-solid fa-bell"></i>
   <span id="order-notif-msg">New order received!</span>
   <span style="font-size:.7rem;opacity:.7;margin-left:auto">Click to view</span>
-</div>
-
-<!-- FULFILL ORDER MODAL -->
-<div class="modal-overlay" id="fulfill-modal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeFulfillModal()"><i class="fa-solid fa-xmark"></i></button>
-    <h3 class="modal-title"><i class="fa-solid fa-paper-plane" style="color:var(--accent)"></i> Send to My Products</h3>
-    <div id="fulfill-modal-body"></div>
-  </div>
 </div>
 
 
