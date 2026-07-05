@@ -677,15 +677,30 @@ const WishlistSync = {
       const doc = await _db.collection('users').doc(user.id).get();
       if (doc.exists) {
         const data = doc.data();
-        const cloudIds = Array.isArray(data.wishlist) ? data.wishlist : [];
+        let cloudIds = Array.isArray(data.wishlist) ? data.wishlist : [];
         // Merge with any local ids (e.g. added while logged out)
         let localIds = [];
         try { localIds = JSON.parse(localStorage.getItem('dz_wishlist') || '[]'); } catch {}
+
+        // If the product catalog is already loaded, strip ids for products
+        // that no longer exist. Without this, a stale cloud copy (synced
+        // before a product was deleted) can resurrect it into localStorage
+        // even after the local prune already removed it — this was the
+        // race causing the wishlist badge to look "un-fixed".
+        if (typeof DB !== 'undefined' && (DB.getAll('products') || []).length) {
+          const validIds = new Set(DB.getAll('products').map(p => p.id));
+          cloudIds = cloudIds.filter(id => validIds.has(id));
+          localIds  = localIds.filter(id => validIds.has(id));
+        }
+
         const merged = [...new Set([...cloudIds, ...localIds])];
         try { localStorage.setItem('dz_wishlist', JSON.stringify(merged)); } catch {}
         window.dispatchEvent(new Event('wishlist:update'));
-        // Persist the merged list back to Firestore if it grew
-        if (merged.length > cloudIds.length) await this.save(merged);
+        // Persist back to Firestore if the set actually changed — either it
+        // grew (local-only additions) or shrank (stale/deleted ids pruned).
+        const original = Array.isArray(data.wishlist) ? data.wishlist : [];
+        const changed = merged.length !== original.length || merged.some(id => !original.includes(id));
+        if (changed) await this.save(merged);
       }
     } catch(e) { console.warn('WishlistSync.load:', e); }
   },

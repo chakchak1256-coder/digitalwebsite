@@ -2862,6 +2862,27 @@ async function claimFreeProduct(prod) {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
 
+  // Don't hand out a second copy of a free product someone already owns.
+  // "Owns" here means any existing purchase record for this product (and
+  // variant, if it has one) — pending or delivered — since that's the
+  // real source of truth for My Products, not anything stored locally.
+  try {
+    const existing = await Purchases.forUser(user.id);
+    const already = existing.find(p =>
+      p.productId === prod.id &&
+      (p.variantLabel || '') === (prod.variantLabel || '')
+    );
+    if (already) {
+      showToast(`ℹ️ You already have "${prod.name}" — check My Products`);
+      closeProductDetail();
+      openMyProducts();
+      return;
+    }
+  } catch (e) {
+    console.warn('[claimFreeProduct] ownership check failed:', e);
+    // Fail open — a transient read error shouldn't block a legitimate claim.
+  }
+
   const fullProd = (DB.getById ? DB.getById('products', prod.id) : null) || prod;
   const orderId  = 'FREE-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
 
