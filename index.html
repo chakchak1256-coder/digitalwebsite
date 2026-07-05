@@ -2649,6 +2649,7 @@ footer::before{
         <div class="pd-actions">
           <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
+          <button class="btn-buy-now" id="pd-free-btn" style="display:none"><i class="fa-solid fa-gift"></i> Add to My Products</button>
           <button class="pd-wish-btn" id="pd-wish-btn" title="Add to Wishlist"><i class="fa-regular fa-heart"></i></button>
         </div>
         <div class="pd-meta" id="pd-meta"></div>
@@ -2710,6 +2711,19 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('cart:update', () => { updateCartBadge(); _coRefreshOrderSummary(); });
   // db:update fires when Firestore data arrives — renders happen here
   window.addEventListener('db:update', () => {
+    // Clean up stale references to products that were deleted by the
+    // seller: drop them from anyone's cart and wishlist so people can no
+    // longer buy a removed product, and the wishlist badge count stays
+    // accurate. Guarded on validIds.size so this never wipes carts before
+    // the product list has actually loaded.
+    const validIds = new Set(DB.getAll('products').map(p => p.id));
+    if (validIds.size) {
+      const removedFromCart = Cart.prune(validIds);
+      if (removedFromCart > 0) {
+        showToast(`${removedFromCart} item${removedFromCart > 1 ? 's' : ''} removed from your cart — no longer available`);
+      }
+      Wishlist.prune(validIds);
+    }
     renderCats();
     renderProducts();
     renderStats();
@@ -3057,6 +3071,17 @@ function openProductDetail(id, fromAllPage = true) {
     const price = selectedByGroup[0] ? (selectedByGroup[0].price ?? prod.price) : prod.price;
     activeProd = { ...prod, price, variantLabel };
     document.getElementById('pd-price').textContent = formatPrice(price, s.currency);
+    updatePdActionButtons();
+  }
+
+  // Free products (price <= 0) skip cart/payment entirely — only action
+  // is claiming it straight into "My Products". Re-run whenever the
+  // selected variant changes price, in case a variant makes it free (or not).
+  function updatePdActionButtons() {
+    const isFree = (Number(activeProd.price) || 0) <= 0;
+    document.getElementById('pd-add-btn').style.display  = isFree ? 'none' : '';
+    document.getElementById('pd-buy-btn').style.display  = isFree ? 'none' : '';
+    document.getElementById('pd-free-btn').style.display = isFree ? '' : 'none';
   }
 
   if (groups.length) {
@@ -3107,6 +3132,8 @@ function openProductDetail(id, fromAllPage = true) {
     if ((Number(activeProd.price)||0) <= 0) { claimFreeProduct(activeProd); return; }
     addToCart(activeProd); closeProductDetail(); toggleCart();
   };
+  document.getElementById('pd-free-btn').onclick = () => claimFreeProduct(activeProd);
+  updatePdActionButtons(); // set correct buttons immediately, even with no variants
   const wBtn = document.getElementById('pd-wish-btn');
   const updateWBtn = () => {
     const w = Wishlist.has(activeProd.id);
@@ -3147,6 +3174,8 @@ function toggleCart() {
 }
 
 function renderCartItems() {
+  const validIds = new Set(DB.getAll('products').map(p => p.id));
+  if (validIds.size) Cart.prune(validIds); // drop items for products the seller has since removed
   const items = Cart.get(); const s = Settings.get();
   const body = document.getElementById('cart-body');
   const foot = document.getElementById('cart-foot');
@@ -3186,6 +3215,8 @@ let _coUseAccount = false;
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
+  const validIds = new Set(DB.getAll('products').map(p => p.id));
+  if (validIds.size) Cart.prune(validIds); // never let someone check out a product that was removed
   const cartItems = Cart.get();
   if (cartItems.length && Cart.total() <= 0) {
     // Entire cart is free (e.g. free items added before this update) —
@@ -4439,7 +4470,17 @@ const Wishlist = {
   add(id) { const a = this.get(); if (!a.includes(id)) { a.push(id); this._save(a); } },
   remove(id) { this._save(this.get().filter(x => x !== id)); },
   toggle(id) { this.has(id) ? this.remove(id) : this.add(id); return this.has(id); },
-  count() { return this.get().length; }
+  count() { return this.get().length; },
+  // Drop any wishlisted id whose product no longer exists in the live
+  // catalog. `validIds` is a Set of currently-existing product ids.
+  // Saves (and syncs to Firestore for logged-in users) only if something
+  // actually changed, which also fires 'wishlist:update' so the badge
+  // count corrects itself automatically.
+  prune(validIds) {
+    const ids = this.get();
+    const kept = ids.filter(id => validIds.has(id));
+    if (kept.length !== ids.length) this._save(kept);
+  }
 };
 
 function toggleWishlist(prodId, btn) {

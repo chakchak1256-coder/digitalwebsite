@@ -639,6 +639,18 @@ const Cart = {
   clear(){localStorage.removeItem('dz_cart');window.dispatchEvent(new Event('cart:update'));},
   total(){return this.get().reduce((s,i)=>s+i.price*i.qty,0);},
   count(){return this.get().reduce((s,i)=>s+i.qty,0);},
+  // Drop any cart line whose underlying product no longer exists in the
+  // live catalog (e.g. the seller deleted it). `validIds` is a Set of
+  // currently-existing product ids. Returns how many lines were removed
+  // so callers can toast/notify. People who already bought a product keep
+  // access via the separate `purchases` collection — this prune only
+  // affects items still sitting unpurchased in someone's cart.
+  prune(validIds){
+    const items = this.get();
+    const kept = items.filter(i => validIds.has(i.productId || i.id));
+    if (kept.length !== items.length) { this._save(kept); return items.length - kept.length; }
+    return 0;
+  },
 };
 
 // ================================================================
