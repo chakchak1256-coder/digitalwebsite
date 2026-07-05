@@ -623,13 +623,19 @@ select.form-input option{background:var(--bg2)}
             <button class="chart-period-btn" onclick="setAnalyticsPeriod('all',this)">All Time</button>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1rem">
+          <div style="position:relative;max-width:280px;width:100%">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.8rem"></i>
+            <input type="text" id="an-search" class="form-input" placeholder="Search products…" style="padding-left:2.1rem" oninput="renderAnalyticsTable()"/>
+          </div>
+        </div>
         <div style="font-size:.78rem;color:var(--text-muted);margin:-.8rem 0 1rem">
-          "Entered" and "Added to Cart" count unique visitor sessions (deduped per browser). "Purchased" counts checkout submissions from the Purchases records.
+          "Entered" and "Added to Cart" count unique visitor sessions (deduped per browser). "Purchased" counts checkout submissions from the Purchases records. "Live In Cart" is real-time — it goes up when someone adds the product and back down the moment they remove it.
         </div>
 
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Product</th><th>Live Now</th><th>Entered</th><th>Added to Cart</th><th>Purchased</th><th>Enter → Cart</th><th>Cart → Buy</th></tr></thead>
+            <thead><tr><th>Product</th><th>Live Now</th><th>Live In Cart</th><th>Entered</th><th>Added to Cart</th><th>Purchased</th><th>Enter → Cart</th><th>Cart → Buy</th><th>Actions</th></tr></thead>
             <tbody id="an-tbody"></tbody>
           </table>
         </div>
@@ -1228,12 +1234,13 @@ let _anPeriod = 'month';
 let _anEvents = [];      // cached product_events (views + cart adds)
 let _anPurchases = [];   // cached purchases
 let _anLiveByProduct = {};
+let _anLiveCartByProduct = {};
 let _anLiveTimer = null;
 let _anLoaded = false;
 
 async function renderAnalytics() {
   const tbody = document.getElementById('an-tbody');
-  if (!_anLoaded) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem"><i class="fa-solid fa-spinner fa-spin"></i> Loading analytics…</td></tr>`;
+  if (!_anLoaded) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem"><i class="fa-solid fa-spinner fa-spin"></i> Loading analytics…</td></tr>`;
   const [events, purchases] = await Promise.all([ Analytics.getAllEvents(), Purchases.getAll() ]);
   _anEvents = events; _anPurchases = purchases; _anLoaded = true;
   renderAnalyticsTable();
@@ -1258,8 +1265,12 @@ function setAnalyticsPeriod(period, btn) {
 
 function renderAnalyticsTable() {
   const tbody = document.getElementById('an-tbody');
-  const prods = DB.getAll('products');
-  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-box"></i><p>No products yet.</p></div></td></tr>`; return; }
+  let prods = DB.getAll('products');
+  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-box"></i><p>No products yet.</p></div></td></tr>`; return; }
+
+  const query = (document.getElementById('an-search')?.value || '').trim().toLowerCase();
+  if (query) prods = prods.filter(p => (p.name||'').toLowerCase().includes(query));
+  if (!prods.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>No products match "${query}".</p></div></td></tr>`; return; }
 
   const cutoff = _anPeriodCutoff(_anPeriod);
   const inRange = iso => { if (!cutoff) return true; const t = new Date(iso).getTime(); return t && t >= cutoff; };
@@ -1278,6 +1289,7 @@ function renderAnalyticsTable() {
     return {
       p, v, c, b,
       live: _anLiveByProduct[p.id]||0,
+      liveCart: _anLiveCartByProduct[p.id]||0,
       vc: v ? Math.round((c/v)*100)+'%' : '—',
       cb: c ? Math.round((b/c)*100)+'%' : '—',
     };
@@ -1287,32 +1299,38 @@ function renderAnalyticsTable() {
     <tr>
       <td class="td-name">${r.p.name}</td>
       <td>${r.live > 0 ? `<span class="status-badge status-done"><i class="fa-solid fa-circle" style="font-size:.45rem;margin-right:4px"></i>${r.live} now</span>` : `<span style="color:var(--text-muted)">—</span>`}</td>
+      <td>${r.liveCart > 0 ? `<span class="status-badge status-done"><i class="fa-solid fa-cart-shopping" style="font-size:.65rem;margin-right:4px"></i>${r.liveCart} now</span>` : `<span style="color:var(--text-muted)">—</span>`}</td>
       <td>${r.v}</td>
       <td>${r.c}</td>
       <td>${r.b}</td>
       <td style="color:var(--text-muted)">${r.vc}</td>
       <td style="color:var(--text-muted)">${r.cb}</td>
+      <td><button class="btn btn-sm btn-outline" title="Reset this product's Entered / Added-to-cart stats (Purchased history and live stats are untouched)" onclick="resetProductStats('${r.p.id}','${(r.p.name||'').replace(/'/g,"\\'")}')"><i class="fa-solid fa-rotate-left"></i></button></td>
     </tr>`).join('');
 }
 
 async function renderAnalyticsLive() {
   let active = [];
-  try { active = await Presence.getActive(45); } catch(e) {}
+  let cartCounts = {};
+  try { [active, cartCounts] = await Promise.all([ Presence.getActive(45), CartLive.getActiveCounts(45) ]); } catch(e) {}
   const totalSite = active.length;
   const byProduct = {};
   let onProductPages = 0;
   active.forEach(a => { if (a.productId) { byProduct[a.productId] = (byProduct[a.productId]||0) + 1; onProductPages++; } });
   _anLiveByProduct = byProduct;
+  _anLiveCartByProduct = cartCounts || {};
+  const totalInCarts = Object.values(_anLiveCartByProduct).reduce((s,n) => s+n, 0);
 
   document.getElementById('an-live-stats').innerHTML = [
-    { icon:'fa-signal', color:'#10b981',        label:'People On Site Now',      val: totalSite },
-    { icon:'fa-eye',    color:'var(--accent)',  label:'Viewing A Product Now',   val: onProductPages },
+    { icon:'fa-signal',        color:'#10b981',        label:'People On Site Now',      val: totalSite },
+    { icon:'fa-eye',           color:'var(--accent)',  label:'Viewing A Product Now',   val: onProductPages },
+    { icon:'fa-cart-shopping', color:'#F59E0B',        label:'Live Products In Carts',  val: totalInCarts },
   ].map(x => `<div class="stat-card"><div class="stat-icon" style="background:${x.color}18;color:${x.color}"><i class="fa-solid ${x.icon}"></i></div><div><div class="stat-num">${x.val}</div><div class="stat-label">${x.label}</div></div></div>`).join('');
 
   const lb = document.getElementById('live-badge');
   if (lb) { lb.textContent = totalSite; lb.style.display = totalSite ? 'inline-block' : 'none'; }
 
-  if (_anLoaded) renderAnalyticsTable(); // refresh the "Live Now" column
+  if (_anLoaded) renderAnalyticsTable(); // refresh the "Live Now" / "Live In Cart" columns
 }
 
 function startAnalyticsLive() {
@@ -1321,6 +1339,30 @@ function startAnalyticsLive() {
   _anLiveTimer = setInterval(renderAnalyticsLive, 10000);
 }
 function stopAnalyticsLive() { if (_anLiveTimer) { clearInterval(_anLiveTimer); _anLiveTimer = null; } }
+
+// Reset one product's lifetime "Entered" / "Added to Cart" (and derived
+// conversion %) numbers back to zero. Does NOT touch: the Purchased
+// column (those are real orders in the 'purchases' collection — resetting
+// stats should never erase actual sales/delivery records), nor the two
+// live stats (Live Now / Live In Cart), since those reflect what's
+// happening right now, not history to be cleared.
+function resetProductStats(productId, productName) {
+  confirmAction(
+    'Reset stats for "' + productName + '"?',
+    'This clears its Entered / Added to Cart history (and the conversion rates). Purchases and the live "now" stats are not affected. This cannot be undone.',
+    async () => {
+      try {
+        await Analytics.resetProduct(productId);
+        // Drop the now-deleted events from the local cache so the table updates instantly.
+        _anEvents = _anEvents.filter(e => e.productId !== productId);
+        renderAnalyticsTable();
+        showToast('Stats reset for "' + productName + '"');
+      } catch(e) {
+        showToast('❌ Reset failed: ' + (e.message || e));
+      }
+    }
+  );
+}
 
 // ===== PRODUCTS =====
 function renderProductsList() {
@@ -1385,10 +1427,8 @@ function loadProductForm() {
       variableGroups = [{ title: p.variantName, items: p.variants.map(v => ({ label: v.label, price: v.price })) }];
     }
     renderVariableGroups();
-    const editTitleEl = document.getElementById('add-prod-title');
-    if (editTitleEl) editTitleEl.textContent = 'Edit Product';
-    const editBtnTextEl = document.getElementById('save-prod-btn-text');
-    if (editBtnTextEl) editBtnTextEl.textContent = 'Update Product';
+    document.getElementById('add-prod-title').textContent = 'Edit Product';
+    document.getElementById('save-prod-btn-text').textContent = 'Update Product';
   }
 }
 function editProduct(id) { editProductData = DB.getById('products', id); showPanel('add-product'); }
@@ -1398,10 +1438,8 @@ function resetProductForm() {
   document.getElementById('edit-prod-id').value = '';
   document.getElementById('prod-img-previews').innerHTML = '';
   document.getElementById('variable-groups-list').innerHTML = '';
-  const resetTitleEl = document.getElementById('add-prod-title');
-  if (resetTitleEl) resetTitleEl.textContent = 'Add New Product';
-  const resetBtnTextEl = document.getElementById('save-prod-btn-text');
-  if (resetBtnTextEl) resetBtnTextEl.textContent = 'Save Product';
+  document.getElementById('add-prod-title').textContent = 'Add New Product';
+  document.getElementById('save-prod-btn-text').textContent = 'Save Product';
   document.getElementById('prod-auto-deliver').checked = false;
   clearProdDeliveryFile();
   switchProdDeliveryType('link');
@@ -1568,7 +1606,7 @@ async function saveProduct(e) {
   if (!data.name || data.price === '' || isNaN(data.price) || data.price < 0) { showToast('Please fill required fields (name and price)'); return; }
   if (autoDeliver && !deliveryLink) { showToast('Add a delivery link/file, or turn off automatic delivery.'); return; }
   const btn = document.getElementById('save-prod-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving… <span id="save-prod-btn-text" style="display:none"></span>'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
   try {
     if (id) await DB.update('products', id, data); else await DB.add('products', data);
     resetProductForm(); showPanel('products'); showToast(id ? 'Product updated!' : 'Product added!');

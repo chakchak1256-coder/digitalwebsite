@@ -476,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   updateCartBadge();
   Presence.start();
+  CartLive.start();
   window.addEventListener('auth:change', () => { initUserAuth(); onAuthChange(); });
   window.addEventListener('cart:update', updateCartBadge);
 });

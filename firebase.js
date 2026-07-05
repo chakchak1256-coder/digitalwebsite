@@ -781,6 +781,26 @@ const Analytics = {
       const snap = await _db.collection('product_events').get();
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     } catch(e) { console.error('Analytics.getAllEvents:', e); return []; }
+  },
+
+  // Admin: reset the lifetime "Entered" / "Added to Cart" counters for one
+  // product by deleting its product_events docs. This intentionally does
+  // NOT touch the 'purchases' collection (those are real orders/deliveries,
+  // not just a stat) and does NOT touch the live "Live Now" / "Live In
+  // Cart" numbers, since those are real-time presence, not history.
+  async resetProduct(productId) {
+    if (!productId) return;
+    try {
+      const snap = await _db.collection('product_events').where('productId', '==', productId).get();
+      if (snap.empty) return;
+      // Firestore batches cap at 500 writes — chunk just in case a product has a lot of history.
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 450) {
+        const batch = _db.batch();
+        docs.slice(i, i + 450).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+    } catch(e) { console.error('Analytics.resetProduct:', e); throw e; }
   }
 };
 
@@ -837,6 +857,70 @@ const Presence = {
         return t && (now - t) < windowSec * 1000;
       });
     } catch(e) { console.error('Presence.getActive:', e); return []; }
+  }
+};
+
+// ================================================================
+// CART LIVE — Firestore collection: cart_live
+// Tracks, per browser session, which products currently sit in that
+// person's cart. Unlike Analytics.logCart (a one-way lifetime counter
+// that never goes back down), this is a real-time snapshot: adding a
+// product bumps its live count, removing it drops the count right
+// back down. Each session writes ONE doc (its full list of product
+// ids currently in cart) with a heartbeat, same pattern as Presence —
+// so a closed tab/browser crash just ages out of the window instead
+// of needing explicit cleanup.
+// ================================================================
+const CartLive = {
+  _sid: null,
+  _timer: null,
+
+  _getSid() {
+    if (this._sid) return this._sid;
+    try {
+      let sid = sessionStorage.getItem('dz_sid');
+      if (!sid) { sid = 'sid_' + Date.now().toString(36) + Math.random().toString(36).slice(2); sessionStorage.setItem('dz_sid', sid); }
+      this._sid = sid;
+    } catch(e) { this._sid = 'sid_' + Date.now() + Math.random(); }
+    return this._sid;
+  },
+
+  async _beat() {
+    try {
+      const cart = Cart.get();
+      const productIds = [...new Set(cart.map(i => i.productId || i.id))];
+      await _db.collection('cart_live').doc(this._getSid()).set({
+        productIds,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { /* best-effort — never block the UI on this */ }
+  },
+
+  // Start the heartbeat loop + react instantly to cart changes. Safe to call once per page load.
+  start() {
+    if (this._timer) return;
+    this._beat();
+    this._timer = setInterval(() => this._beat(), 20000);
+    window.addEventListener('cart:update', () => this._beat());
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this._beat(); });
+  },
+
+  // Admin: live "in cart right now" count per productId, sessions with a
+  // heartbeat inside the last `windowSec` seconds only.
+  async getActiveCounts(windowSec = 45) {
+    try {
+      const snap = await _db.collection('cart_live').get();
+      const now = Date.now();
+      const counts = {};
+      snap.docs.forEach(d => {
+        const x = d.data();
+        const t = x.lastSeen && x.lastSeen.toDate ? x.lastSeen.toDate().getTime() : 0;
+        if (t && (now - t) < windowSec * 1000 && Array.isArray(x.productIds)) {
+          x.productIds.forEach(pid => { counts[pid] = (counts[pid]||0) + 1; });
+        }
+      });
+      return counts;
+    } catch(e) { console.error('CartLive.getActiveCounts:', e); return {}; }
   }
 };
 

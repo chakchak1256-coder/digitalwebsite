@@ -2699,6 +2699,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateWishlistBadge();
   initScrollSpy();
   Presence.start();
+  CartLive.start();
   // Handle ?open= param from my-products.html nav links
   (function handleOpenParam() {
     const p = new URLSearchParams(window.location.search).get('open');
