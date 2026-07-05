@@ -653,6 +653,17 @@ const Cart = {
   },
 };
 
+// Cross-tab sync: dz_cart lives in localStorage, and the browser's native
+// 'storage' event only fires in OTHER tabs/windows of the same origin —
+// never in the tab that made the change (that one already got the
+// 'cart:update' dispatch from _save() above). Without this, adding/removing
+// an item in one tab (e.g. a product page) wouldn't update the cart badge
+// or the live "in cart" heartbeat in another open tab (e.g. my-products.html)
+// until that other tab was manually refreshed.
+window.addEventListener('storage', (e) => {
+  if (e.key === 'dz_cart') { window.dispatchEvent(new Event('cart:update')); }
+});
+
 // ================================================================
 // WISHLIST SYNC — Firestore (synced per user, fallback to localStorage)
 // ================================================================
@@ -893,7 +904,7 @@ const CartLive = {
         productIds,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp()
       });
-    } catch(e) { /* best-effort — never block the UI on this */ }
+    } catch(e) { console.warn('CartLive._beat (this usually means the "cart_live" collection needs a Firestore security rule):', e.message || e); }
   },
 
   // Start the heartbeat loop + react instantly to cart changes. Safe to call once per page load.
