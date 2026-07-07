@@ -221,6 +221,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .form-section-title{font-size:.9rem;font-weight:700;margin-bottom:1.3rem;display:flex;align-items:center;gap:.45rem;color:var(--text-muted)}
 .form-section-title i{color:var(--accent)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 .form-group{display:flex;flex-direction:column;gap:.35rem}
 .form-group.full{grid-column:1/-1}
 .form-label{font-size:.78rem;font-weight:600;color:var(--text-muted)}
@@ -547,6 +548,7 @@ select.form-input option{background:var(--bg2)}
         <div class="nav-item" onclick="showPanel('reviews')"><i class="fa-solid fa-star"></i> Reviews</div>
         <div class="nav-item" onclick="showPanel('coupons')"><i class="fa-solid fa-tag"></i> Coupons</div>
         <div class="nav-item" onclick="showPanel('announcement')"><i class="fa-solid fa-bullhorn"></i> Announcement</div>
+        <div class="nav-item" onclick="showPanel('social-links')"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -920,6 +922,46 @@ select.form-input option{background:var(--bg2)}
         </div>
       </div>
 
+      <!-- SOCIAL LINKS -->
+      <div class="panel" id="panel-social-links">
+        <div class="sec-header">
+          <span class="sec-title">Social Media Links</span>
+          <button class="btn btn-primary" onclick="saveSocialLinks()"><i class="fa-solid fa-save"></i> Save</button>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title"><i class="fa-solid fa-share-nodes"></i> Contact Section Links</div>
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem">
+            These links appear under "Find us on social media" in the Contact section of your store. Leave a field empty to hide that icon.
+          </div>
+          <div class="social-grid">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-facebook" style="color:#1877f2;margin-right:.4rem"></i>Facebook</label>
+              <input class="form-input" id="soc-facebook" placeholder="https://facebook.com/yourpage"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-instagram" style="color:#e1306c;margin-right:.4rem"></i>Instagram</label>
+              <input class="form-input" id="soc-instagram" placeholder="https://instagram.com/yourpage"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-whatsapp" style="color:#25d366;margin-right:.4rem"></i>WhatsApp</label>
+              <input class="form-input" id="soc-whatsapp" placeholder="https://wa.me/2135XXXXXXXX"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-telegram" style="color:#229ed9;margin-right:.4rem"></i>Telegram</label>
+              <input class="form-input" id="soc-telegram" placeholder="https://t.me/yourchannel"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-tiktok" style="color:#ff0050;margin-right:.4rem"></i>TikTok</label>
+              <input class="form-input" id="soc-tiktok" placeholder="https://tiktok.com/@yourpage"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-youtube" style="color:#ff0000;margin-right:.4rem"></i>YouTube</label>
+              <input class="form-input" id="soc-youtube" placeholder="https://youtube.com/@yourchannel"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- REVIEWS -->
       <div class="panel" id="panel-reviews">
         <div class="sec-header">
@@ -1192,11 +1234,12 @@ function showPanel(name) {
   if (name === 'users') { renderUsersAdmin(); } // async — ok
   if (name === 'coupons') { renderCoupons(); }
   if (name === 'announcement') { loadAnnouncementForm(); }
+  if (name === 'social-links') { loadSocialLinksForm(); }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews' };
+  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews', 'social-links':'Social Media Links' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -2677,6 +2720,28 @@ async function saveAnnouncement() {
   };
   await Settings.save(patch);
   showToast(enabled ? '✅ Announcement banner enabled' : 'Announcement saved (disabled)');
+}
+
+// ================================================================
+// ===== FEATURE: SOCIAL MEDIA LINKS =====
+// ================================================================
+function loadSocialLinksForm() {
+  const s = Settings.get();
+  const social = s.social || {};
+  ['facebook','instagram','whatsapp','telegram','tiktok','youtube'].forEach(k => {
+    const el = document.getElementById('soc-' + k);
+    if (el) el.value = social[k] || '';
+  });
+}
+
+async function saveSocialLinks() {
+  const social = {};
+  ['facebook','instagram','whatsapp','telegram','tiktok','youtube'].forEach(k => {
+    const el = document.getElementById('soc-' + k);
+    social[k] = el ? el.value.trim() : '';
+  });
+  await Settings.save({ social });
+  showToast('✅ Social links updated');
 }
 
 // ================================================================
