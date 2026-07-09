@@ -840,29 +840,38 @@ function _buildAccessSection(purchase) {
   const deliveryType = purchase.deliveryType || (data && data._DeliveryType) || '';
   const isPdfDelivery = deliveryType === 'pdf' || !!(data && data._DeliveryType);
   if (isPdfDelivery && data) {
-    const downloadUrl = data['Download Link'] || legacyLink || '';
-    const fileName = data['File Name'] || 'Download File';
     const note = data['_note'] || purchase.deliverNote || '';
-    const safeUrl = escapeAttr(downloadUrl);
-    const safeName = escapeAttr(fileName);
-    return `
-    <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
-      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.85rem">
-        <i class="fa-solid fa-file-arrow-down"></i> Your File
-      </div>
-      <div style="display:flex;align-items:center;gap:.75rem;background:rgba(0,0,0,.15);border:1px solid var(--border);border-radius:8px;padding:.7rem .9rem;margin-bottom:.85rem">
+    // Multi-file delivery: use the full file list if present, otherwise fall
+    // back to the single legacy Download Link for older purchases.
+    const files = Array.isArray(data['_Files']) && data['_Files'].length
+      ? data['_Files']
+      : [{ url: data['Download Link'] || legacyLink || '', name: data['File Name'] || 'Download File' }];
+
+    const fileRows = files.filter(f => f.url).map(f => {
+      const fileName = f.name || 'Download File';
+      const downloadUrl = f.url;
+      return `
+      <div style="display:flex;align-items:center;gap:.75rem;background:rgba(0,0,0,.15);border:1px solid var(--border);border-radius:8px;padding:.7rem .9rem;margin-bottom:.6rem">
         <i class="fa-solid fa-file-pdf" style="font-size:1.4rem;color:var(--accent);flex-shrink:0"></i>
         <div style="flex:1;min-width:0">
           <div style="font-size:.88rem;font-weight:700;color:var(--text);word-break:break-word">${fileName}</div>
           <div style="font-size:.72rem;color:var(--text-muted);margin-top:.1rem">Ready to download</div>
         </div>
+        <a href="${downloadUrl}" download="${fileName}" target="_blank" rel="noopener noreferrer"
+          style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:8px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:.82rem;text-decoration:none;transition:all .18s ease"
+          onmouseover="this.style.background=\'var(--accent-dark)\';this.style.transform=\'translateY(-1px)\'"
+          onmouseout="this.style.background=\'var(--accent)\';this.style.transform=\'\'">
+          <i class="fa-solid fa-download"></i> Download
+        </a>
+      </div>`;
+    }).join('');
+
+    return `
+    <div style="background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+      <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.85rem">
+        <i class="fa-solid fa-file-arrow-down"></i> ${files.length > 1 ? 'Your Files' : 'Your File'}
       </div>
-      <a href="${downloadUrl}" download="${fileName}" target="_blank" rel="noopener noreferrer"
-        style="display:flex;align-items:center;justify-content:center;gap:.55rem;width:100%;padding:11px 0;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:.9rem;text-decoration:none;transition:all .18s ease"
-        onmouseover="this.style.background=\'var(--accent-dark)\';this.style.transform=\'translateY(-1px)\'"
-        onmouseout="this.style.background=\'var(--accent)\';this.style.transform=\'\'">
-        <i class="fa-solid fa-download"></i> Download ${fileName}
-      </a>
+      ${fileRows}
       ${note ? `<div style="margin-top:.75rem;font-size:.8rem;color:var(--text-muted);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:.6rem .8rem"><i class="fa-solid fa-circle-info" style="color:var(--accent);margin-right:.35rem"></i>${note}</div>` : ''}
     </div>`;
   }

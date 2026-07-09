@@ -2906,13 +2906,20 @@ async function claimFreeProduct(prod) {
     );
 
     if (fullProd.autoDeliver && fullProd.deliveryLink) {
+      const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : 'link';
+      const accessData = {
+        '_DeliveryType': dtype,
+        'Download Link': fullProd.deliveryLink,
+      };
+      // Multi-file delivery: attach the full file list (if any) so My Products
+      // can offer every uploaded file, not just the first one.
+      if (dtype === 'pdf' && Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
+        accessData['_Files'] = fullProd.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
+      }
       await Purchases.update(purchase.id, {
-        accessData: {
-          '_DeliveryType': fullProd.deliveryType === 'pdf' ? 'pdf' : 'link',
-          'Download Link': fullProd.deliveryLink,
-        },
+        accessData,
         accessLink:   fullProd.deliveryLink,
-        deliveryType: fullProd.deliveryType === 'pdf' ? 'pdf' : 'link',
+        deliveryType: dtype,
       });
       showToast(`✅ "${prod.name}" is free — added to My Products!`);
     } else {

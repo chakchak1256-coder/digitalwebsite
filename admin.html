@@ -657,7 +657,7 @@ select.form-input option{background:var(--bg2)}
       <!-- ADD/EDIT PRODUCT -->
       <div class="panel" id="panel-add-product">
         <div class="sec-header"><span class="sec-title" id="add-prod-title">Add New Product</span></div>
-        <form id="product-form" onsubmit="saveProduct(event)">
+        <form id="product-form" onsubmit="saveProduct(event)" novalidate>
           <input type="hidden" id="edit-prod-id"/>
           <div class="form-section">
             <div class="form-section-title"><i class="fa-solid fa-circle-info"></i> Product Information</div>
@@ -701,30 +701,26 @@ select.form-input option{background:var(--bg2)}
                   <input type="radio" name="prod-delivery-type" value="link" checked onchange="switchProdDeliveryType('link')"/> <i class="fa-solid fa-link"></i> Link / URL
                 </label>
                 <label class="co-method-card" style="flex:1;cursor:pointer;padding:.6rem .9rem;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:.5rem" id="pdtype-pdf">
-                  <input type="radio" name="prod-delivery-type" value="pdf" onchange="switchProdDeliveryType('pdf')"/> <i class="fa-solid fa-file-pdf"></i> Upload File (PDF, etc.)
+                  <input type="radio" name="prod-delivery-type" value="pdf" onchange="switchProdDeliveryType('pdf')"/> <i class="fa-solid fa-file-pdf"></i> Upload File(s) (PDF, etc.)
                 </label>
               </div>
               <div class="form-group full" id="prod-delivery-link-wrap">
                 <label class="form-label">Delivery Link</label>
-                <input class="form-input" id="prod-delivery-link" type="url" placeholder="https://... (download link, Drive link, Canva template, etc.)"/>
+                <input class="form-input" id="prod-delivery-link" type="text" placeholder="https://... (download link, Drive link, Canva template, etc.)"/>
               </div>
               <div class="form-group full" id="prod-delivery-file-wrap" style="display:none">
-                <label class="form-label">Delivery File</label>
+                <label class="form-label">Delivery Files <span style="font-weight:400;color:var(--text-muted)">(up to 4)</span></label>
                 <div class="img-upload-zone" id="prod-delivery-dropzone" style="cursor:pointer" onclick="document.getElementById('prod-delivery-file-input').click()">
-                  <input type="file" id="prod-delivery-file-input" style="display:none" onchange="handleProductDeliveryFile(this.files[0])"/>
+                  <input type="file" id="prod-delivery-file-input" style="display:none" multiple onchange="handleProductDeliveryFiles(this.files)"/>
                   <div class="img-upload-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
-                  <div class="img-upload-text"><strong>Click to upload</strong> the file to deliver</div>
-                  <div class="img-upload-sub">Any file type — max 50MB</div>
+                  <div class="img-upload-text"><strong>Click to upload</strong> the file(s) to deliver</div>
+                  <div class="img-upload-sub">Any file type — max 50MB each, up to 4 files</div>
                 </div>
                 <div id="prod-delivery-progress-wrap" style="display:none;margin-top:.6rem">
                   <div style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden"><div id="prod-delivery-progress-bar" style="height:100%;width:0%;background:var(--primary);transition:width .15s"></div></div>
                   <div id="prod-delivery-progress-text" style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem">Uploading 0%...</div>
                 </div>
-                <div id="prod-delivery-file-info" style="display:none;align-items:center;gap:.6rem;margin-top:.6rem;font-size:.85rem">
-                  <i class="fa-solid fa-circle-check" style="color:var(--primary)"></i>
-                  <span id="prod-delivery-file-name"></span>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="clearProdDeliveryFile()"><i class="fa-solid fa-xmark"></i> Remove</button>
-                </div>
+                <div id="prod-delivery-files-list" style="margin-top:.6rem;display:flex;flex-direction:column;gap:.5rem"></div>
               </div>
             </div>
           </div>
@@ -1455,11 +1451,16 @@ function loadProductForm() {
     if (dtypeRadio) dtypeRadio.checked = true;
     switchProdDeliveryType(dtype);
     toggleProdDeliveryFields();
-    if (dtype === 'pdf' && p.deliveryLink) {
-      document.getElementById('prod-delivery-dropzone').style.display = 'none';
-      document.getElementById('prod-delivery-file-info').style.display = 'flex';
-      document.getElementById('prod-delivery-file-name').textContent = 'Previously uploaded file \u2713';
+    // Load existing delivery files (new array format), falling back to the
+    // legacy single deliveryLink for products saved before multi-file support.
+    if (Array.isArray(p.deliveryFiles) && p.deliveryFiles.length) {
+      productDeliveryFiles = p.deliveryFiles.map(f => ({ url: f.url, path: f.path || '', name: f.name || 'File', size: f.size || 0 }));
+    } else if (dtype === 'pdf' && p.deliveryLink) {
+      productDeliveryFiles = [{ url: p.deliveryLink, path: '', name: 'Previously uploaded file', size: 0 }];
+    } else {
+      productDeliveryFiles = [];
     }
+    renderProdDeliveryFiles();
     // Load variable groups
     variableGroups = (p.variables || []).map(grp => ({
       title: grp.title || '',
@@ -1501,51 +1502,86 @@ function switchProdDeliveryType(type) {
   document.getElementById('prod-delivery-file-wrap').style.display = type === 'pdf' ? '' : 'none';
 }
 
+const MAX_PROD_DELIVERY_FILES = 4;
+let productDeliveryFiles = []; // [{url, path, name, size}]
 let _prodDeliveryUploadInProgress = false;
 
-async function handleProductDeliveryFile(file) {
-  if (!file) return;
-  if (file.size > 50 * 1024 * 1024) { showToast('File is too large — must be under 50MB.'); return; }
+async function handleProductDeliveryFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length) return;
 
-  const dropzone = document.getElementById('prod-delivery-dropzone');
+  const remainingSlots = MAX_PROD_DELIVERY_FILES - productDeliveryFiles.length;
+  if (remainingSlots <= 0) {
+    showToast(`You can upload up to ${MAX_PROD_DELIVERY_FILES} files. Remove one first.`);
+    document.getElementById('prod-delivery-file-input').value = '';
+    return;
+  }
+  const toUpload = files.slice(0, remainingSlots);
+  if (files.length > remainingSlots) {
+    showToast(`Only ${remainingSlots} more file(s) can be added (max ${MAX_PROD_DELIVERY_FILES}).`);
+  }
+  const tooBig = toUpload.filter(f => f.size > 50 * 1024 * 1024);
+  if (tooBig.length) showToast('Skipped ' + tooBig.length + ' file(s) over 50MB.');
+  const validFiles = toUpload.filter(f => f.size <= 50 * 1024 * 1024);
+  if (!validFiles.length) { document.getElementById('prod-delivery-file-input').value = ''; return; }
+
   const progWrap = document.getElementById('prod-delivery-progress-wrap');
   const progBar  = document.getElementById('prod-delivery-progress-bar');
   const progText = document.getElementById('prod-delivery-progress-text');
-  const fileInfo = document.getElementById('prod-delivery-file-info');
-  const fileName = document.getElementById('prod-delivery-file-name');
-
-  _prodDeliveryUploadInProgress = true;
-  dropzone.style.display = 'none';
-  fileInfo.style.display = 'none';
-  progWrap.style.display = 'block';
-  progBar.style.width = '0%';
-  progText.textContent = 'Uploading 0%...';
-
   const productId = document.getElementById('edit-prod-id').value || 'new';
 
-  try {
-    const result = await Storage.uploadFile(file, 'deliveries/product-' + productId, pct => {
-      progBar.style.width = pct + '%';
-      progText.textContent = 'Uploading ' + pct + '%...';
-    });
-    document.getElementById('prod-delivery-link').value = result.url;
-    fileName.textContent = result.name + ' (' + (result.size / 1024 / 1024).toFixed(2) + ' MB) — uploaded \u2713';
-    progWrap.style.display = 'none';
-    fileInfo.style.display = 'flex';
-  } catch (e) {
-    console.error('Delivery file upload failed:', e);
-    showToast('❌ Upload failed: ' + (e.message || String(e)));
-    progWrap.style.display = 'none';
-    dropzone.style.display = 'block';
-  } finally {
-    _prodDeliveryUploadInProgress = false;
+  _prodDeliveryUploadInProgress = true;
+  progWrap.style.display = 'block';
+
+  for (let i = 0; i < validFiles.length; i++) {
+    const file = validFiles[i];
+    progBar.style.width = '0%';
+    progText.textContent = `Uploading file ${i + 1} of ${validFiles.length}: 0%...`;
+    try {
+      const result = await Storage.uploadFile(file, 'deliveries/product-' + productId, pct => {
+        progBar.style.width = pct + '%';
+        progText.textContent = `Uploading file ${i + 1} of ${validFiles.length}: ${pct}%...`;
+      });
+      productDeliveryFiles.push({ url: result.url, path: result.path || '', name: result.name, size: result.size || 0 });
+      renderProdDeliveryFiles();
+    } catch (e) {
+      console.error('Delivery file upload failed:', e);
+      showToast('❌ Upload failed for "' + file.name + '": ' + (e.message || String(e)));
+    }
   }
+
+  progWrap.style.display = 'none';
+  _prodDeliveryUploadInProgress = false;
+  document.getElementById('prod-delivery-file-input').value = '';
+}
+
+function renderProdDeliveryFiles() {
+  const list = document.getElementById('prod-delivery-files-list');
+  const dropzone = document.getElementById('prod-delivery-dropzone');
+  if (!list) return;
+  list.innerHTML = productDeliveryFiles.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:.6rem;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.55rem .75rem">
+      <i class="fa-solid fa-circle-check" style="color:var(--primary)"></i>
+      <span style="flex:1;min-width:0;word-break:break-word">${escHtml(f.name)}${f.size ? ' (' + (f.size / 1024 / 1024).toFixed(2) + ' MB)' : ''} — uploaded \u2713</span>
+      <button type="button" class="btn btn-sm btn-outline" onclick="removeProdDeliveryFile(${i})"><i class="fa-solid fa-xmark"></i> Remove</button>
+    </div>`).join('');
+  // Hide the dropzone once the max file count is reached
+  dropzone.style.display = productDeliveryFiles.length >= MAX_PROD_DELIVERY_FILES ? 'none' : 'block';
+}
+
+function removeProdDeliveryFile(index) {
+  const f = productDeliveryFiles[index];
+  if (f && f.path) Storage.deleteFile(f.path).catch(() => {});
+  productDeliveryFiles.splice(index, 1);
+  renderProdDeliveryFiles();
 }
 
 function clearProdDeliveryFile() {
   document.getElementById('prod-delivery-link').value = '';
   document.getElementById('prod-delivery-file-input').value = '';
-  document.getElementById('prod-delivery-file-info').style.display = 'none';
+  productDeliveryFiles = [];
+  const list = document.getElementById('prod-delivery-files-list');
+  if (list) list.innerHTML = '';
   document.getElementById('prod-delivery-progress-wrap').style.display = 'none';
   document.getElementById('prod-delivery-dropzone').style.display = 'block';
 }
@@ -1629,7 +1665,12 @@ async function saveProduct(e) {
 
   const autoDeliver = document.getElementById('prod-auto-deliver').checked;
   const deliveryType = document.querySelector('input[name="prod-delivery-type"]:checked')?.value || 'link';
-  const deliveryLink = (document.getElementById('prod-delivery-link').value || '').trim();
+  // For 'pdf' type, deliveryLink is kept as the first uploaded file's URL for
+  // backward compatibility with older code paths that only read a single link.
+  const deliveryFiles = deliveryType === 'pdf' ? productDeliveryFiles.slice(0, MAX_PROD_DELIVERY_FILES) : [];
+  const deliveryLink = deliveryType === 'pdf'
+    ? (deliveryFiles[0] ? deliveryFiles[0].url : '')
+    : (document.getElementById('prod-delivery-link').value || '').trim();
 
   const data = {
     name: document.getElementById('prod-name').value.trim(),
@@ -1645,6 +1686,7 @@ async function saveProduct(e) {
     autoDeliver: autoDeliver && !!deliveryLink,
     deliveryType: deliveryType,
     deliveryLink: deliveryLink,
+    deliveryFiles: deliveryFiles.map(f => ({ url: f.url, path: f.path || '', name: f.name, size: f.size || 0 })),
   };
   if (!data.name || data.price === '' || isNaN(data.price) || data.price < 0) { showToast('Please fill required fields (name and price)'); return; }
   if (autoDeliver && !deliveryLink) { showToast('Add a delivery link/file, or turn off automatic delivery.'); return; }
