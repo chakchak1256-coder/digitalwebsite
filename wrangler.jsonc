@@ -18,7 +18,7 @@
     // Public base URL of your R2 bucket (r2.dev URL or connected custom domain,
     // NO trailing slash) — required by POST /api/upload-file in worker.js.
     // Example: "https://pub-xxxxxxxxxxxxxxxx.r2.dev"
-    "R2_PUBLIC_URL": "REPLACE_WITH_YOUR_R2_PUBLIC_URL"
+    "R2_PUBLIC_URL": "https://pub-3b114b0bb0f949b4a20eafa3911ee64c.r2.dev"
   },
 
   "r2_buckets": [
