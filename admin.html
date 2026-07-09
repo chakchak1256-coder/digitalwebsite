@@ -1472,7 +1472,8 @@ function loadProductForm() {
     }
     renderVariableGroups();
     document.getElementById('add-prod-title').textContent = 'Edit Product';
-    document.getElementById('save-prod-btn-text').textContent = 'Update Product';
+    const btnText = document.getElementById('save-prod-btn-text');
+    if (btnText) btnText.textContent = 'Update Product';
   }
 }
 function editProduct(id) { editProductData = DB.getById('products', id); showPanel('add-product'); }
@@ -1483,7 +1484,8 @@ function resetProductForm() {
   document.getElementById('prod-img-previews').innerHTML = '';
   document.getElementById('variable-groups-list').innerHTML = '';
   document.getElementById('add-prod-title').textContent = 'Add New Product';
-  document.getElementById('save-prod-btn-text').textContent = 'Save Product';
+  const btnText = document.getElementById('save-prod-btn-text');
+  if (btnText) btnText.textContent = 'Save Product';
   document.getElementById('prod-auto-deliver').checked = false;
   clearProdDeliveryFile();
   switchProdDeliveryType('link');
@@ -1691,7 +1693,7 @@ async function saveProduct(e) {
   if (!data.name || data.price === '' || isNaN(data.price) || data.price < 0) { showToast('Please fill required fields (name and price)'); return; }
   if (autoDeliver && !deliveryLink) { showToast('Add a delivery link/file, or turn off automatic delivery.'); return; }
   const btn = document.getElementById('save-prod-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span id="save-prod-btn-text">Saving…</span>'; }
   try {
     if (id) await DB.update('products', id, data); else await DB.add('products', data);
     resetProductForm(); showPanel('products'); showToast(id ? 'Product updated!' : 'Product added!');
