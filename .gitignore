@@ -5,6 +5,7 @@
 # Firebase service account key files
 serviceAccountKey.json
 *-service-account*.json
+firebase-sa.json
 
 # Node
 node_modules/
