@@ -406,24 +406,37 @@ async function deliverOrder(env, order) {
   }
 
   for (const item of items) {
-    let { autoDeliver, deliveryLink, deliveryType, images, category, name } = item;
+    let { autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles } = item;
 
     // Legacy items may not carry delivery info — fetch the product once.
     if (autoDeliver === undefined && item.productId) {
       try {
         const product = await Firestore.getDoc(env, 'products', item.productId);
         if (product) {
-          autoDeliver  = !!product.autoDeliver;
-          deliveryLink = product.deliveryLink || '';
-          deliveryType = product.deliveryType || 'link';
-          images       = product.images || [];
-          category     = product.category || '';
-          name         = name || product.name;
+          autoDeliver   = !!product.autoDeliver;
+          deliveryLink  = product.deliveryLink || '';
+          deliveryType  = product.deliveryType || 'link';
+          deliveryFiles = product.deliveryFiles || [];
+          images        = product.images || [];
+          category      = product.category || '';
+          name          = name || product.name;
         }
       } catch { /* best-effort */ }
     }
 
     const isAuto = !!(autoDeliver && deliveryLink);
+
+    // Build accessData: for PDF deliveries with multiple files, attach the
+    // full file list under `_Files` so My Products can show each one with
+    // its own download button. Falls back to the single Download Link
+    // for products with only one file (or non-PDF delivery types).
+    let accessData = {};
+    if (isAuto) {
+      accessData = { '_DeliveryType': deliveryType || 'link', 'Download Link': deliveryLink };
+      if (deliveryType === 'pdf' && Array.isArray(deliveryFiles) && deliveryFiles.length) {
+        accessData['_Files'] = deliveryFiles.map(f => ({ url: f.url, name: f.name }));
+      }
+    }
 
     const purchaseDoc = {
       userId:        order.userId,
@@ -433,7 +446,7 @@ async function deliverOrder(env, order) {
       productImage:  (images || [])[0] || '',
       productType:   category || 'Digital',
       accessLink:    isAuto ? deliveryLink : '',
-      accessData:    isAuto ? { '_DeliveryType': deliveryType || 'link', 'Download Link': deliveryLink } : {},
+      accessData,
       proofImages:   [],
       customerName:  `${order.firstname || ''} ${order.lastname || ''}`.trim(),
       customerPhone: order.phone || '',
