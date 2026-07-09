@@ -2708,6 +2708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState(null, '', window.location.pathname + window.location.hash);
     if (p === 'wishlist') { openWishlist(); }
     else if (p === 'products') { openAllProducts(); }
+    else if (p === 'my-products') { openMyProducts(); }
   })();
   window.addEventListener('cart:update', () => { updateCartBadge(); _coRefreshOrderSummary(); });
   // db:update fires when Firestore data arrives — renders happen here
@@ -4378,14 +4379,32 @@ function mpOpenDetailModal(purchase) {
     const data = purchase.accessData || {};
 
     if (dtype === 'pdf' || (dtype === 'credentials' && (data['Download Link'] || data['File']))) {
-      const url = data['Download Link'] || data['File'] || hasAccessLink;
-      const fname = data['File Name'] || '';
+      // Multi-file delivery: use the full file list if present, otherwise fall
+      // back to the single legacy Download Link for older purchases.
+      const files = Array.isArray(data['_Files']) && data['_Files'].length
+        ? data['_Files']
+        : [{ url: data['Download Link'] || data['File'] || hasAccessLink || '', name: data['File Name'] || 'Download File' }];
+
+      const fileRows = files.filter(f => f.url).map(f => {
+        const fileName = f.name || 'Download File';
+        return `<div style="display:flex;align-items:center;gap:.75rem;background:rgba(0,0,0,.15);border:1px solid var(--border);border-radius:8px;padding:.7rem .9rem;margin-bottom:.6rem">
+          <i class="fa-solid fa-file-pdf" style="font-size:1.4rem;color:#EF4444;flex-shrink:0"></i>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.88rem;font-weight:700;color:var(--text);word-break:break-word">${fileName}</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:.1rem">Ready to download</div>
+          </div>
+          <a href="${f.url}" download="${fileName}" target="_blank" rel="noopener noreferrer"
+            style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:8px 14px;border-radius:var(--radius-sm);background:#EF4444;color:#fff;font-weight:700;font-size:.82rem;text-decoration:none">
+            <i class="fa-solid fa-download"></i> Download
+          </a>
+        </div>`;
+      }).join('');
+
       accessHtml = `<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius-sm);padding:1rem">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
-          <i class="fa-solid fa-file-pdf" style="font-size:1.3rem;color:#EF4444"></i>
-          <div><div style="font-size:.75rem;color:#EF4444;font-weight:700;text-transform:uppercase;letter-spacing:.06em">PDF / File</div>${fname?`<div style="font-size:.82rem;color:var(--text-muted)">${fname}</div>`:''}</div>
+        <div style="font-size:.75rem;color:#EF4444;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">
+          <i class="fa-solid fa-file-arrow-down"></i> ${files.length > 1 ? 'Your Files' : 'PDF / File'}
         </div>
-        ${openCopyBtns(url, 'Download / Open')}
+        ${fileRows}
       </div>`;
     } else if (dtype === 'canva') {
       const url = data['Canva Template'] || data['Template Link'] || hasAccessLink;
