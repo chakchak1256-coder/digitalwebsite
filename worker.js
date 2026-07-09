@@ -125,6 +125,12 @@ function base64url(input) {
 }
 
 function pemToArrayBuffer(pem) {
+  if (!pem || typeof pem !== 'string') {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT is missing its "private_key" field (or the secret ' +
+      'was never set on this Worker). Run: npx wrangler secret put FIREBASE_SERVICE_ACCOUNT'
+    );
+  }
   const b64 = pem
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
@@ -141,7 +147,26 @@ async function getFirebaseAccessToken(env) {
     return _cachedAccessToken.token;
   }
 
-  const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  if (!env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT secret is not set on this Worker. ' +
+      'Run: npx wrangler secret put FIREBASE_SERVICE_ACCOUNT (then paste the full service-account JSON) and redeploy.'
+    );
+  }
+
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  } catch (e) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT secret is not valid JSON: ' + e.message);
+  }
+  if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT is missing required fields (private_key, client_email, or project_id). ' +
+      'Re-paste the complete service-account JSON with: npx wrangler secret put FIREBASE_SERVICE_ACCOUNT'
+    );
+  }
+
   const header  = { alg: 'RS256', typ: 'JWT' };
   const claims  = {
     iss:   serviceAccount.client_email,
