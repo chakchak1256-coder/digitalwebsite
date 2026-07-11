@@ -2494,14 +2494,14 @@ footer::before{
       <!-- Payment Method Selection -->
       <div class="form-group">
         <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Payment Method</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="co-pay-method-wrap">
-          <label class="co-method-card" id="co-method-cib">
+        <div style="display:grid;grid-template-columns:1fr;gap:.6rem" id="co-pay-method-wrap">
+          <label class="co-method-card" id="co-method-cib" style="display:none">
             <input type="radio" name="co-payment" value="cib" onchange="coShowPaymentInstructions('cib')" style="display:none"/>
             <div class="co-method-icon">💳</div>
             <div class="co-method-name">CIB / EDAHABIA</div>
           </label>
           <label class="co-method-card" id="co-method-eddahabia">
-            <input type="radio" name="co-payment" value="eddahabia" onchange="coShowPaymentInstructions('eddahabia')" style="display:none"/>
+            <input type="radio" name="co-payment" value="eddahabia" checked onchange="coShowPaymentInstructions('eddahabia')" style="display:none"/>
             <div class="co-method-icon">🏧</div>
             <div class="co-method-name">EDDAHABIA</div>
           </label>
@@ -3328,6 +3328,7 @@ function coChooseAccount(useAccount) {
   }
   // Load payment instructions from settings
   coLoadPaymentInstructions();
+  coShowPaymentInstructions('eddahabia');
   _showCoStep('form');
   _coRefreshOrderSummary();
 }
