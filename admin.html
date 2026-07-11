@@ -2246,16 +2246,16 @@ function openDeliverModal(purchaseId) {
   if (existingType === 'pdf' || existingType === 'ebook') {
     const prefillUrl = existingLink || (existingData?.['Download Link'] || existingData?.URL || existingData?.Link || '');
     if (existingType === 'pdf') {
-      document.getElementById('deliver-pdf-url').value = prefillUrl;
-      document.getElementById('deliver-pdf-name').value = existingData?.['File Name'] || '';
-      // If a file was already uploaded, show the file-info chip instead of the dropzone
-      if (prefillUrl) {
-        const existingFileName = existingData?.['File Name'] || 'Previously uploaded file';
-        document.getElementById('deliver-pdf-dropzone').style.display = 'none';
-        document.getElementById('deliver-pdf-file-info').style.display = 'flex';
-        document.getElementById('deliver-pdf-file-name').textContent = existingFileName + ' — already uploaded \u2713';
-        document.getElementById('deliver-pdf-path').value = existingData?.['_StoragePath'] || '';
+      // Multi-file format (new): existingData._Files = [{url, name, path, size}, ...]
+      // Falls back to the legacy single-file fields for older deliveries.
+      if (Array.isArray(existingData?.['_Files']) && existingData['_Files'].length) {
+        deliverPdfFiles = existingData['_Files'].map(f => ({ url: f.url, path: f.path || '', name: f.name || 'File', size: f.size || 0 }));
+      } else if (prefillUrl) {
+        deliverPdfFiles = [{ url: prefillUrl, path: existingData?.['_StoragePath'] || '', name: existingData?.['File Name'] || 'Previously uploaded file', size: 0 }];
+      } else {
+        deliverPdfFiles = [];
       }
+      renderDeliverPdfFiles();
     }
     if (existingType === 'ebook') {
       document.getElementById('deliver-ebook-url').value = prefillUrl;
@@ -2338,13 +2338,7 @@ function switchDeliverType(type, clearFields = true) {
     } else if (type === 'link') {
       document.getElementById('deliver-link-url').value = '';
     } else if (type === 'pdf') {
-      document.getElementById('deliver-pdf-url').value = '';
-      document.getElementById('deliver-pdf-name').value = '';
-      document.getElementById('deliver-pdf-path').value = '';
-      document.getElementById('deliver-pdf-file').value = '';
-      document.getElementById('deliver-pdf-dropzone').style.display = 'block';
-      document.getElementById('deliver-pdf-file-info').style.display = 'none';
-      document.getElementById('deliver-pdf-progress-wrap').style.display = 'none';
+      clearPdfFile();
     } else if (type === 'canva') {
       document.getElementById('deliver-canva-url').value = '';
       document.getElementById('deliver-canva-name').value = '';
@@ -2385,68 +2379,93 @@ function removeDeliverField(suffix, idx) {
 }
 
 // ── PDF / File upload (Firebase Storage) ───────────────────────
+
+const MAX_DELIVER_PDF_FILES = 4;
+let deliverPdfFiles = []; // [{url, path, name, size}]
 let _pdfUploadInProgress = false;
 
-async function handlePdfFileSelect(file) {
-  if (!file) return;
+async function handleDeliverPdfFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length) return;
   const errEl = document.getElementById('deliver-error');
   errEl.style.display = 'none';
 
-  if (file.size > 50 * 1024 * 1024) {
-    errEl.textContent = 'File is too large — please keep it under 50MB.';
-    errEl.style.display = 'block';
+  const remainingSlots = MAX_DELIVER_PDF_FILES - deliverPdfFiles.length;
+  if (remainingSlots <= 0) {
+    showToast(`You can upload up to ${MAX_DELIVER_PDF_FILES} files. Remove one first.`);
     document.getElementById('deliver-pdf-file').value = '';
     return;
   }
+  const toUpload = files.slice(0, remainingSlots);
+  if (files.length > remainingSlots) {
+    showToast(`Only ${remainingSlots} more file(s) can be added (max ${MAX_DELIVER_PDF_FILES}).`);
+  }
+  const tooBig = toUpload.filter(f => f.size > 50 * 1024 * 1024);
+  if (tooBig.length) showToast('Skipped ' + tooBig.length + ' file(s) over 50MB.');
+  const validFiles = toUpload.filter(f => f.size <= 50 * 1024 * 1024);
+  if (!validFiles.length) { document.getElementById('deliver-pdf-file').value = ''; return; }
 
-  const dropzone   = document.getElementById('deliver-pdf-dropzone');
-  const progWrap   = document.getElementById('deliver-pdf-progress-wrap');
-  const progBar    = document.getElementById('deliver-pdf-progress-bar');
-  const progText   = document.getElementById('deliver-pdf-progress-text');
-  const fileInfo   = document.getElementById('deliver-pdf-file-info');
-  const fileNameEl = document.getElementById('deliver-pdf-file-name');
-
-  _pdfUploadInProgress = true;
-  dropzone.style.display = 'none';
-  fileInfo.style.display = 'none';
-  progWrap.style.display = 'block';
-  progBar.style.width = '0%';
-  progText.textContent = 'Uploading 0%...';
-
+  const dropzone = document.getElementById('deliver-pdf-dropzone');
+  const progWrap = document.getElementById('deliver-pdf-progress-wrap');
+  const progBar  = document.getElementById('deliver-pdf-progress-bar');
+  const progText = document.getElementById('deliver-pdf-progress-text');
   const purchaseId = document.getElementById('deliver-purchase-id').value || 'misc';
 
-  try {
-    const result = await Storage.uploadFile(file, 'deliveries/' + purchaseId, pct => {
-      progBar.style.width = pct + '%';
-      progText.textContent = 'Uploading ' + pct + '%...';
-    });
-    document.getElementById('deliver-pdf-url').value = result.url;
-    document.getElementById('deliver-pdf-path').value = result.path;
-    if (!document.getElementById('deliver-pdf-name').value.trim()) {
-      document.getElementById('deliver-pdf-name').value = result.name;
+  _pdfUploadInProgress = true;
+  progWrap.style.display = 'block';
+
+  for (let i = 0; i < validFiles.length; i++) {
+    const file = validFiles[i];
+    progBar.style.width = '0%';
+    progText.textContent = `Uploading file ${i + 1} of ${validFiles.length}: 0%...`;
+    try {
+      const result = await Storage.uploadFile(file, 'deliveries/' + purchaseId, pct => {
+        progBar.style.width = pct + '%';
+        progText.textContent = `Uploading file ${i + 1} of ${validFiles.length}: ${pct}%...`;
+      });
+      deliverPdfFiles.push({ url: result.url, path: result.path || '', name: result.name, size: result.size || 0 });
+      renderDeliverPdfFiles();
+    } catch (e) {
+      console.error('Delivery file upload failed:', e);
+      errEl.textContent = '❌ Upload failed for "' + file.name + '": ' + (e.message || String(e));
+      errEl.style.display = 'block';
     }
-    fileNameEl.textContent = result.name + ' (' + (result.size / 1024 / 1024).toFixed(2) + ' MB) — uploaded ✓';
-    progWrap.style.display = 'none';
-    fileInfo.style.display = 'flex';
-  } catch (e) {
-    console.error('PDF upload failed:', e);
-    errEl.textContent = '❌ Upload failed: ' + (e.message || String(e));
-    errEl.style.display = 'block';
-    progWrap.style.display = 'none';
-    dropzone.style.display = 'block';
-  } finally {
-    _pdfUploadInProgress = false;
   }
+
+  progWrap.style.display = 'none';
+  _pdfUploadInProgress = false;
+  document.getElementById('deliver-pdf-file').value = '';
+}
+
+function renderDeliverPdfFiles() {
+  const list = document.getElementById('deliver-pdf-files-list');
+  const dropzone = document.getElementById('deliver-pdf-dropzone');
+  if (!list) return;
+  list.innerHTML = deliverPdfFiles.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:.6rem;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.55rem .75rem">
+      <i class="fa-solid fa-circle-check" style="color:var(--accent)"></i>
+      <span style="flex:1;min-width:0;word-break:break-word">${escHtml(f.name)}${f.size ? ' (' + (f.size / 1024 / 1024).toFixed(2) + ' MB)' : ''} — uploaded \u2713</span>
+      <button type="button" class="btn btn-sm btn-outline" onclick="removeDeliverPdfFile(${i})"><i class="fa-solid fa-xmark"></i> Remove</button>
+    </div>`).join('');
+  if (dropzone) dropzone.style.display = deliverPdfFiles.length >= MAX_DELIVER_PDF_FILES ? 'none' : 'block';
+}
+
+function removeDeliverPdfFile(index) {
+  const f = deliverPdfFiles[index];
+  if (f && f.path) Storage.deleteFile(f.path).catch(() => {});
+  deliverPdfFiles.splice(index, 1);
+  renderDeliverPdfFiles();
 }
 
 function clearPdfFile() {
-  document.getElementById('deliver-pdf-url').value = '';
-  document.getElementById('deliver-pdf-path').value = '';
+  deliverPdfFiles = [];
   document.getElementById('deliver-pdf-file').value = '';
-  document.getElementById('deliver-pdf-file-info').style.display = 'none';
+  const list = document.getElementById('deliver-pdf-files-list');
+  if (list) list.innerHTML = '';
   document.getElementById('deliver-pdf-progress-wrap').style.display = 'none';
   document.getElementById('deliver-pdf-dropzone').style.display = 'block';
 }
+
 
 async function submitDeliver() {
   const id = document.getElementById('deliver-purchase-id').value;
@@ -2479,14 +2498,11 @@ async function submitDeliver() {
 
   } else if (type === 'pdf') {
     if (_pdfUploadInProgress) { errEl.textContent = 'Please wait for the upload to finish.'; errEl.style.display = 'block'; return; }
-    const url = document.getElementById('deliver-pdf-url').value.trim();
-    if (!url) { errEl.textContent = 'Please upload a file first.'; errEl.style.display = 'block'; return; }
-    const name = document.getElementById('deliver-pdf-name').value.trim();
-    const path = document.getElementById('deliver-pdf-path').value.trim();
-    accessData = { '_DeliveryType': 'pdf', 'Download Link': url };
-    if (name) accessData['File Name'] = name;
-    if (path) accessData['_StoragePath'] = path;
-    accessLink = url;
+    if (!deliverPdfFiles.length) { errEl.textContent = 'Please upload at least one file.'; errEl.style.display = 'block'; return; }
+    const filesPayload = deliverPdfFiles.slice(0, MAX_DELIVER_PDF_FILES).map(f => ({ url: f.url, name: f.name, path: f.path || '', size: f.size || 0 }));
+    accessData = { '_DeliveryType': 'pdf', '_Files': filesPayload, 'Download Link': filesPayload[0].url, 'File Name': filesPayload[0].name };
+    if (filesPayload[0].path) accessData['_StoragePath'] = filesPayload[0].path;
+    accessLink = filesPayload[0].url;
 
   } else if (type === 'canva') {
     const url = document.getElementById('deliver-canva-url').value.trim();
@@ -3211,15 +3227,13 @@ async function saveAdminReview() {
 
     <!-- PDF section -->
     <div id="deliver-section-pdf" style="display:none;margin-bottom:1rem">
-      <label class="form-label">Upload File</label>
-      <input type="hidden" id="deliver-pdf-url" value=""/>
-      <input type="hidden" id="deliver-pdf-path" value=""/>
-      <input type="file" id="deliver-pdf-file" style="display:none" onchange="handlePdfFileSelect(this.files[0])"/>
+      <label class="form-label">Upload File(s) <span style="font-weight:400;color:var(--text-muted)">(up to 4)</span></label>
+      <input type="file" id="deliver-pdf-file" style="display:none" multiple onchange="handleDeliverPdfFiles(this.files)"/>
       <div id="deliver-pdf-dropzone" onclick="document.getElementById('deliver-pdf-file').click()"
            style="margin-top:.35rem;border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:1.3rem 1rem;text-align:center;cursor:pointer;transition:all .15s ease">
         <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.4rem;color:var(--text-muted);margin-bottom:.4rem;display:block"></i>
-        <div style="font-size:.85rem;color:var(--text-muted)">Click to choose a file to upload</div>
-        <div style="font-size:.72rem;color:var(--text-muted);opacity:.7;margin-top:.2rem">PDF, ZIP, or any file — up to 50MB</div>
+        <div style="font-size:.85rem;color:var(--text-muted)">Click to choose file(s) to upload</div>
+        <div style="font-size:.72rem;color:var(--text-muted);opacity:.7;margin-top:.2rem">PDF, ZIP, or any file — up to 50MB each, up to 4 files</div>
       </div>
       <div id="deliver-pdf-progress-wrap" style="display:none;margin-top:.6rem">
         <div style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
@@ -3227,16 +3241,8 @@ async function saveAdminReview() {
         </div>
         <div id="deliver-pdf-progress-text" style="font-size:.72rem;color:var(--text-muted);margin-top:.35rem">Uploading 0%...</div>
       </div>
-      <div id="deliver-pdf-file-info" style="display:none;align-items:center;gap:.6rem;margin-top:.6rem;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:.6rem .8rem">
-        <i class="fa-solid fa-file-pdf" style="color:var(--accent)"></i>
-        <span id="deliver-pdf-file-name" style="flex:1;font-size:.82rem;font-weight:600;word-break:break-all"></span>
-        <button type="button" onclick="clearPdfFile()" title="Remove file" style="width:26px;height:26px;flex-shrink:0;border-radius:6px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#EF4444;cursor:pointer;display:flex;align-items:center;justify-content:center">
-          <i class="fa-solid fa-xmark" style="font-size:.7rem"></i>
-        </button>
-      </div>
-      <label class="form-label" style="margin-top:.7rem">File Name <span style="font-weight:400;opacity:.6">(shown to customer)</span></label>
-      <input class="form-input" id="deliver-pdf-name" placeholder="e.g. Course Guide.pdf" style="margin-top:.35rem"/>
-      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> The file is uploaded and stored for you — the customer will see a Download button in "My Products", no link to manage.</div>
+      <div id="deliver-pdf-files-list" style="margin-top:.6rem;display:flex;flex-direction:column;gap:.5rem"></div>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem"><i class="fa-solid fa-lightbulb" style="color:#F59E0B"></i> Files are uploaded and stored for you — the customer will see Download buttons in "My Products", no link to manage.</div>
     </div>
 
     <!-- CANVA section -->
