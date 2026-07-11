@@ -933,7 +933,7 @@ async function openDetailModal(purchase) {
     canceled_by_admin: { bg:'rgba(239,68,68,.08)', color:'#EF4444', border:'rgba(239,68,68,.2)', icon:'fa-ban', label:'Canceled by admin' },
   };
   const sc = statusColors[effStatus] || statusColors.pending;
-  const pmLabel = purchase.paymentMethod === 'flexy' ? '📱 Flexy' : purchase.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (purchase.paymentMethod || null);
+  const pmLabel = purchase.paymentMethod === 'eddahabia' ? '🏧 EDDAHABIA' : purchase.paymentMethod === 'cib' ? '💳 CIB / EDAHABIA' : purchase.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (purchase.paymentMethod || null);
 
   document.getElementById('detail-content').innerHTML = `
     <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1rem">

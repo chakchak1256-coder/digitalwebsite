@@ -1924,7 +1924,7 @@ function _renderPurchasesTable(all) {
     const sc = statusCfg[orderStatus] || statusCfg.pending;
     const statusBadge = `<span class="status-badge ${sc.cls}" ${sc.extra?`style="${sc.extra}"`:''}><i class="fa-solid ${sc.icon}" style="font-size:.63rem"></i> ${sc.label}</span>`;
 
-    const pmLabel = first.paymentMethod === 'flexy' ? '📱 Flexy' : first.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (first.paymentMethod||'');
+    const pmLabel = first.paymentMethod === 'eddahabia' ? '🏧 EDDAHABIA' : first.paymentMethod === 'cib' ? '💳 CIB / EDAHABIA' : first.paymentMethod === 'baridimob' ? '🏦 BaridiMob' : (first.paymentMethod||'');
     const pmBadge = pmLabel ? `<span class="status-badge" style="background:rgba(59,130,246,.08);color:#60A5FA;border:1px solid rgba(59,130,246,.2)">${pmLabel}</span>` : '';
     const itemsCountBadge = items.length > 1 ? `<span class="status-badge" style="background:rgba(var(--accent-rgb),.08);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2)">${items.length} items</span>` : '';
 

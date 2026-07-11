@@ -2494,11 +2494,12 @@ footer::before{
             <div class="co-method-icon">💳</div>
             <div class="co-method-name">CIB / EDAHABIA</div>
           </label>
-          <label class="co-method-card" id="co-method-flexy">
-            <input type="radio" name="co-payment" value="flexy" onchange="coShowPaymentInstructions('flexy')" style="display:none"/>
-            <div class="co-method-icon">📱</div>
-            <div class="co-method-name">Flexy</div>
+          <label class="co-method-card" id="co-method-eddahabia">
+            <input type="radio" name="co-payment" value="eddahabia" onchange="coShowPaymentInstructions('eddahabia')" style="display:none"/>
+            <div class="co-method-icon">🏧</div>
+            <div class="co-method-name">EDDAHABIA</div>
           </label>
+
         </div>
       </div>
 
@@ -3367,35 +3368,23 @@ function coShowPaymentInstructions(method) {
     return;
   }
 
-  // Default numbers (used for copy buttons)
-  const flexyNumbers    = [
-    s.flexyNumber1    || '0540431312',
-    s.flexyNumber2    || '0793051230'
+  // EDDAHABIA manual transfer — single fixed account/card number, no fees
+  const eddahabiaNumbers = [
+    s.eddahabiaNumber || '00799999004421651019'
   ].filter(Boolean);
 
-  const defaultFlexyText = `يرجى تحويل المبلغ المطلوب عبر خدمة فليكسي إلى أحد الأرقام التالية:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
+  const defaultEddahabiaText = `يرجى تحويل المبلغ المطلوب عبر بطاقة EDDAHABIA إلى الرقم التالي:\n\nبعد إتمام التحويل، قم برفع صورة أو لقطة شاشة تثبت عملية الدفع حتى يتم التحقق من طلبك ومعالجته بسرعة.`;
 
-  const baseTotal  = Cart.total();
-  const flexyFee   = Math.round(baseTotal * 0.20);
-  const finalTotal = baseTotal + flexyFee;
-  const currency   = s.currency || 'DA';
+  const text = (s.eddahabiaInstructions || defaultEddahabiaText);
 
-  const flexyNote =
-    `\n\n⚠️ ملاحظة: يُضاف رسم خدمة 20% عند الدفع عبر فليكسي.\nالمبلغ الأصلي: ${baseTotal.toLocaleString()} ${currency} + رسوم: ${flexyFee.toLocaleString()} ${currency} = المجموع: ${finalTotal.toLocaleString()} ${currency}`;
-
-  const flexyRestrictionNote =
-    `\n\n🚫 تنبيه هام: هذه الخدمة تقبل فقط رصيد الفليكسي العادي (الرصيد القياسي المحلي).\nغير مقبول: رصيد الفليكسي الدولي (International Flexy)، ولا عروض الفليكسي الخاصة (العروض/البكتات الترويجية).\nيرجى التحويل من رصيد عادي فقط، وإلا لن يتم قبول الدفعة.`;
-
-  const text = (s.flexyInstructions || defaultFlexyText) + flexyNote + flexyRestrictionNote;
-
-  titleEl.textContent = '📱 تعليمات الدفع عبر فليكسي';
+  titleEl.textContent = '🏧 تعليمات الدفع عبر EDDAHABIA';
   textEl.textContent  = text;
 
-  // Update the order summary total to reflect flexy surcharge
-  _coRefreshOrderSummary(0.20);
+  // No fees for EDDAHABIA manual transfer
+  _coRefreshOrderSummary(0);
 
   // Build copy-number rows
-  const numbers = flexyNumbers;
+  const numbers = eddahabiaNumbers;
   if (copyEl) {
     copyEl.innerHTML = '';
     numbers.forEach((num, i) => {
@@ -3470,7 +3459,7 @@ function buildOrderSummaryHTML(surchargeRate) {
   const finalTotal = baseTotal + feeAmount;
   const feeRow = rate > 0 ? `
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.45rem">
-      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> Flexy fee (+${Math.round(rate*100)}%)</span>
+      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> Service fee (+${Math.round(rate*100)}%)</span>
       <span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#F59E0B">+${feeAmount.toLocaleString()} ${s.currency||'DA'}</span>
     </div>` : '';
   // Coupon discount row (if a coupon has been applied)
@@ -3507,7 +3496,7 @@ function coRemoveFromSummary(itemId) {
 }
 
 // Inject/refresh order summary into co-form-wrap
-let _coSurchargeRate = 0; // 0 = none, 0.20 = flexy +20%
+let _coSurchargeRate = 0; // 0 = none (EDDAHABIA and CIB both have no surcharge)
 
 function _coRefreshOrderSummary(surchargeRate) {
   if (surchargeRate !== undefined) _coSurchargeRate = surchargeRate;
@@ -4355,6 +4344,13 @@ function mpCopyAccess(id, link) {
     showToast('Copied to clipboard!');
   }).catch(() => showToast('Copy failed.'));
 }
+function mpPaymentLabel(method) {
+  if (method === 'eddahabia') return '🏧 EDDAHABIA';
+  if (method === 'cib')       return '💳 CIB / EDAHABIA';
+  if (method === 'baridimob') return '🏦 BaridiMob';
+  if (method === 'free')      return '🎁 Free';
+  return method || null;
+}
 function mpOpenDetailModal(purchase) {
   const ts = purchase.purchaseDate?.toDate?.() || purchase.purchaseDate || purchase.createdAt;
   const date = ts ? new Date(ts).toLocaleString('en-DZ') : '—';
@@ -4480,6 +4476,7 @@ function mpOpenDetailModal(purchase) {
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem">
       <div style="font-size:.75rem;color:var(--text-muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Purchase Info</div>
       <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
+      ${mpPaymentLabel(purchase.paymentMethod) ? `<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Payment</span><span style="font-size:.83rem;font-weight:600">${mpPaymentLabel(purchase.paymentMethod)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace;color:var(--text-muted)">${purchase.id}</span></div>
     </div>
     ${accessHtml}`;
@@ -4775,7 +4772,7 @@ async function trackOrder() {
         <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace">${raw}</span></div>
         <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
         <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Items</span><span style="font-size:.83rem;font-weight:600">${docs.length}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Payment</span><span style="font-size:.83rem;font-weight:600;text-transform:capitalize">${first.paymentMethod||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Payment</span><span style="font-size:.83rem;font-weight:600">${mpPaymentLabel(first.paymentMethod)||'—'}</span></div>
       </div>
       <div class="tracking-steps">${stepsHtml}</div>`;
   } catch(e) {
