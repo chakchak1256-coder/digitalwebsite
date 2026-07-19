@@ -1851,8 +1851,10 @@ footer::before{
   </div>
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
-    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
+    <a href="#products" data-section="new-arrivals" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">New Arrivals</a>
     <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
+    <a href="#best-sellers" data-section="best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
+    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
     <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Warranty</a>
     <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Contact</a>
     <a href="#" id="my-products-link" onclick="closeWishlist();openMyProducts();return false;">My Products</a>
@@ -1917,8 +1919,10 @@ footer::before{
 
 <div id="mobile-nav">
   <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
+  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">New Arrivals</a>
+  <a href="#" onclick="closeMobileNav();closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
+  <a href="#best-sellers" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Best Sellers</a>
   <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
-  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Products</a>
   <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Warranty</a>
   <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Contact</a>
   <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();closeWishlist();openMyProducts();return false;">My Products</a>
@@ -1937,7 +1941,7 @@ footer::before{
       </h1>
       <p class="hero-sub">Discover premium digital products and services designed to help your business grow and succeed.</p>
       <div class="hero-btns">
-        <button class="btn btn-primary" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">
+        <button class="btn btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
           Explore Products <i class="fa-solid fa-arrow-right"></i>
         </button>
         <button class="btn btn-outline" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
@@ -2009,6 +2013,38 @@ footer::before{
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ===== PRODUCTS ===== -->
+<section id="products">
+  <div class="container">
+    <div class="products-hdr">
+      <div>
+        <div class="section-tag">Latest</div>
+        <h2 class="section-title" style="margin-bottom:0">New Arrivals</h2>
+      </div>
+      <button class="btn btn-outline" onclick="openAllProducts()">
+        View All <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="products-grid" id="products-grid"></div>
+  </div>
+</section>
+
+<!-- ===== BEST SELLERS ===== -->
+<section id="best-sellers">
+  <div class="container">
+    <div class="products-hdr">
+      <div>
+        <div class="section-tag"><i class="fa-solid fa-trophy"></i> Top Rated</div>
+        <h2 class="section-title" style="margin-bottom:0">Best Sellers</h2>
+      </div>
+      <button class="btn btn-outline" onclick="openAllProducts()">
+        View All <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="bs-list" id="best-sellers-list"></div>
   </div>
 </section>
 
@@ -2157,79 +2193,6 @@ footer::before{
   </div>
 </section>
 
-<!-- ===== CATEGORIES ===== -->
-<section id="categories">
-  <div class="dig-scene">
-    <div class="dig-orb dig-orb-deep" style="width:440px;height:440px;top:-150px;right:-160px;animation-delay:-4s"></div>
-    <div class="dig-orb dig-orb-bright" style="width:400px;height:400px;bottom:-160px;left:-140px;animation-delay:-9s"></div>
-    <div class="dig-ring" style="width:230px;height:230px;bottom:-80px;right:6%"></div>
-    <div class="dig-dotgrid" style="bottom:40px;right:5%"></div>
-    <div class="dig-dotgrid" style="width:80px;height:80px;top:30px;left:38%;opacity:.4"></div>
-    <div class="dig-sphere dig-sphere-b" style="width:18px;height:18px;top:20%;right:14%"></div>
-    <div class="dig-sphere dig-sphere-a" style="width:13px;height:13px;bottom:24%;left:18%;animation-delay:-2s"></div>
-    <div class="dig-sphere dig-sphere-a" style="width:9px;height:9px;top:58%;right:30%;animation-delay:-4.5s"></div>
-    <div class="dig-twinkle" style="top:10%;left:20%"></div>
-    <div class="dig-twinkle" style="bottom:16%;right:34%;animation-delay:-2s"></div>
-    <div class="dig-twinkle" style="top:42%;right:6%;animation-delay:-3.1s"></div>
-    <div class="dig-ringdot" style="bottom:36%;left:10%"></div>
-    <div class="dig-cross" style="top:24%;left:32%"></div>
-    <svg class="dig-star" style="top:16%;right:42%;width:14px;height:14px" viewBox="0 0 24 24"><path d="M12 0C12 6 14 10 18 12C14 14 12 18 12 24C12 18 10 14 6 12C10 10 12 6 12 0Z"/></svg>
-    <svg class="dig-star" style="bottom:20%;right:10%;width:18px;height:18px;animation-delay:-2.6s" viewBox="0 0 24 24"><path d="M12 0C12 6 14 10 18 12C14 14 12 18 12 24C12 18 10 14 6 12C10 10 12 6 12 0Z"/></svg>
-    <svg class="dig-sparkline" viewBox="0 0 1600 700" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="digLineCats" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#34D399" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#6EE7B7" stop-opacity=".9"/>
-          <stop offset="100%" stop-color="#34D399" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <path class="dig-glowpath" d="M0,300 C200,260 380,340 620,250" stroke="url(#digLineCats)" stroke-width="4" fill="none"/>
-      <path d="M0,300 C200,260 380,340 620,250" stroke="url(#digLineCats)" stroke-width="1.4" fill="none"/>
-      <circle class="dig-spark" cx="420" cy="290" r="2.4" fill="#eafff5"/>
-    </svg>
-  </div>
-  <div class="container">
-    <div class="section-header">
-      <div class="section-tag">Browse</div>
-      <h2 class="section-title">Shop by Category</h2>
-      <p class="section-sub">Browse our curated catalog by category.</p>
-    </div>
-    <div class="cats-grid" id="cats-grid"></div>
-  </div>
-</section>
-
-<!-- ===== PRODUCTS ===== -->
-<section id="products">
-  <div class="container">
-    <div class="products-hdr">
-      <div>
-        <div class="section-tag">Latest</div>
-        <h2 class="section-title" style="margin-bottom:0">New Arrivals</h2>
-      </div>
-      <button class="btn btn-outline" onclick="openAllProducts()">
-        View All <i class="fa-solid fa-arrow-right"></i>
-      </button>
-    </div>
-    <div class="products-grid" id="products-grid"></div>
-  </div>
-</section>
-
-<!-- ===== BEST SELLERS ===== -->
-<section id="best-sellers">
-  <div class="container">
-    <div class="products-hdr">
-      <div>
-        <div class="section-tag"><i class="fa-solid fa-trophy"></i> Top Rated</div>
-        <h2 class="section-title" style="margin-bottom:0">Best Sellers</h2>
-      </div>
-      <button class="btn btn-outline" onclick="openAllProducts()">
-        View All <i class="fa-solid fa-arrow-right"></i>
-      </button>
-    </div>
-    <div class="bs-list" id="best-sellers-list"></div>
-  </div>
-</section>
-
 <!-- ===== WARRANTY ===== -->
 <section id="warranty">
   <div class="warranty-bg"></div>
@@ -2346,8 +2309,10 @@ footer::before{
     <div class="footer-logo store-name">DIGITCH</div>
     <div class="footer-links">
       <a href="#hero" onclick="showMain()">Home</a>
+      <a href="#products" onclick="closeMyProducts();closeAllProducts();">New Arrivals</a>
+      <a href="#" onclick="closeMyProducts();closeAllProducts();openAllProducts();return false;">Products</a>
+      <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();">Best Sellers</a>
       <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
-      <a href="#products" onclick="closeMyProducts();closeAllProducts();">Products</a>
       <a href="#warranty" onclick="closeMyProducts();closeAllProducts();">Warranty</a>
       <a href="#contact" onclick="closeMyProducts();closeAllProducts();">Contact</a>
       <a href="#" onclick="openTracking();return false;">Track Order</a>
@@ -2800,10 +2765,10 @@ window.addEventListener('scroll', () => {
 
 // ===== SCROLLSPY — active nav link ====
 function initScrollSpy() {
-  const sections = ['hero','about','categories','products','warranty','contact'];
+  const sections = ['hero','products','best-sellers','about','warranty','contact'];
   const navLinks = document.querySelectorAll('.nav-links a[data-section]');
-  // Map section ids to nav link data-section (categories maps to nothing visible, products maps to products)
-  const map = { hero:'hero', about:'about', categories:'products', products:'products', warranty:'warranty', contact:'contact' };
+  // Map section ids to nav link data-section (the "products" section shows New Arrivals content)
+  const map = { hero:'hero', products:'new-arrivals', 'best-sellers':'best-sellers', about:'about', warranty:'warranty', contact:'contact' };
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
