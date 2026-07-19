@@ -3525,9 +3525,46 @@ function coValidatePhone(input) {
   }
 }
 
+// Returns the cart items (if any) the signed-in user already owns, by
+// cross-checking against their existing "My Products" purchase records
+// (same product id + variant). Used to stop someone from re-buying
+// something they already have.
+async function coGetAlreadyOwnedCartItems(userId) {
+  try {
+    const owned = await Purchases.forUser(userId);
+    const cartItems = Cart.get();
+    return cartItems.filter(item =>
+      owned.some(p =>
+        p.productId === (item.productId || item.id) &&
+        (p.variantLabel || '') === (item.variantLabel || '')
+      )
+    );
+  } catch (e) {
+    console.warn('[Checkout] ownership check failed:', e);
+    return []; // fail open — a transient read error shouldn't block a legitimate purchase
+  }
+}
+
+// Shows the "you already have this" warning in the checkout form.
+// One owned item → names it. More than one → a single summary message,
+// since listing every duplicate gets noisy.
+function coShowAlreadyOwnedError(ownedItems) {
+  const errEl = document.getElementById('co-form-err');
+  if (!errEl) return;
+  errEl.textContent = ownedItems.length === 1
+    ? `⚠️ You already have "${ownedItems[0].name}" — check My Products.`
+    : `⚠️ You already have ${ownedItems.length} of the products in your cart — check My Products. Please remove them before continuing.`;
+  errEl.style.display = 'block';
+}
+
 // STEP 1 → STEP 2: validate info, then show proof upload
 // Route the "Next" button based on selected payment method
-function coHandleNextStep() {
+async function coHandleNextStep() {
+  const currentUser = UserAuth.current();
+  if (currentUser) {
+    const owned = await coGetAlreadyOwnedCartItems(currentUser.id);
+    if (owned.length) { coShowAlreadyOwnedError(owned); return; }
+  }
   const method = document.querySelector('input[name="co-payment"]:checked')?.value || '';
   if (method === 'cib') {
     coInitiateSlickPayCheckout();
@@ -3853,6 +3890,9 @@ async function coSimulateTestPayment() {
 
   const errEl = document.getElementById('co-form-err');
   errEl.style.display = 'none';
+
+  const owned = await coGetAlreadyOwnedCartItems(currentUser.id);
+  if (owned.length) { coShowAlreadyOwnedError(owned); return; }
 
   const name  = (document.getElementById('co-name')?.value || currentUser.name || 'Test Customer').trim();
   const email = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
