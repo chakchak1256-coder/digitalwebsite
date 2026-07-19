@@ -3246,8 +3246,20 @@ function _showCoStep(step) {
     // Wire up buttons here so they always work regardless of DOM state
     const myProdsBtn = document.getElementById('co-success-myprods-btn');
     const continueBtn = document.getElementById('co-success-continue-btn');
-    if (myProdsBtn) myProdsBtn.onclick = () => { _doCloseCheckout(); openMyProducts(); };
-    if (continueBtn) continueBtn.onclick = () => { _doCloseCheckout(); };
+    // Safety net: whichever flow got us here (proof order, SlickPay return,
+    // or the test-payment simulator) already empties the cart, but make sure
+    // the cart drawer is fully closed and cleared before moving on — it
+    // shouldn't still be sitting open with old items in it.
+    const closeCartDrawer = () => {
+      const cartOverlay = document.getElementById('cart-overlay');
+      const cartDrawer = document.getElementById('cart-drawer');
+      if (cartDrawer) cartDrawer.classList.remove('open');
+      if (cartOverlay) cartOverlay.classList.remove('open');
+      document.body.classList.remove('no-scroll');
+      Cart.clear();
+    };
+    if (myProdsBtn) myProdsBtn.onclick = () => { _doCloseCheckout(); closeCartDrawer(); openMyProducts(); };
+    if (continueBtn) continueBtn.onclick = () => { _doCloseCheckout(); closeCartDrawer(); };
   }
 }
 
@@ -3869,8 +3881,8 @@ async function placeOrderWithProof() {
   // Success — close cart first so nothing sits on top
   const cartOverlay = document.getElementById('cart-overlay');
   const cartDrawer = document.getElementById('cart-drawer');
-  if (cartDrawer) { cartDrawer.classList.remove('open'); }
-  if (cartOverlay) { cartOverlay.classList.remove('open'); }
+  if (cartDrawer) cartDrawer.classList.remove('open');
+  if (cartOverlay) cartOverlay.classList.remove('open');
   Cart.clear();
   _showCoStep('success');
 }
@@ -3952,11 +3964,13 @@ async function coSimulateTestPayment() {
     return;
   }
 
+  const cartOverlay = document.getElementById('cart-overlay');
+  const cartDrawer = document.getElementById('cart-drawer');
+  if (cartDrawer) cartDrawer.classList.remove('open');
+  if (cartOverlay) cartOverlay.classList.remove('open');
   Cart.clear();
   _showCoStep('success');
 }
-
-// Helper: show error inside checkout info form (legacy, now using co-form-err)
 function showCheckoutError(msg) {
   const errEl = document.getElementById('co-form-err');
   if (errEl) { errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block'; }
