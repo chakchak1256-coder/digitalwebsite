@@ -470,6 +470,15 @@ function generatePlaceholder(text, w = 400, h = 300) {
 // ================================================================
 const AUTH_KEY   = 'dz_admin_auth';
 const ADMIN_PASS = '121212';
+
+// Shared secret sent to the Worker on admin-only routes (upload/delete
+// file). This is separate from ADMIN_PASS above — it's what actually
+// protects /api/upload-file and /api/delete-file server-side, since a
+// client-side password check alone can't stop someone from calling the
+// Worker's API directly. Set the exact same value on the Worker with:
+//   npx wrangler secret put ADMIN_API_KEY
+const ADMIN_API_KEY_HEADER = 'fSkGsXIzV_F2Zhr3P6ro9ZKaLHI4sLTLol5SPMgSke0';
+
 const Auth = {
   isLoggedIn() { return sessionStorage.getItem(AUTH_KEY) === 'ok'; },
   login(pass)  { if (pass !== ADMIN_PASS) return false; try { sessionStorage.setItem(AUTH_KEY,'ok'); } catch(e){} return true; },
@@ -658,7 +667,7 @@ const Cart = {
 // never in the tab that made the change (that one already got the
 // 'cart:update' dispatch from _save() above). Without this, adding/removing
 // an item in one tab (e.g. a product page) wouldn't update the cart badge
-// or the live "in cart" heartbeat in another open tab (e.g. my-products.html)
+// or the live "in cart" heartbeat in another open tab
 // until that other tab was manually refreshed.
 window.addEventListener('storage', (e) => {
   if (e.key === 'dz_cart') { window.dispatchEvent(new Event('cart:update')); }
@@ -962,6 +971,7 @@ const Storage = {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${backendUrl}/api/upload-file`, true);
+      xhr.setRequestHeader('X-Admin-Key', ADMIN_API_KEY_HEADER);
 
       xhr.upload.onprogress = e => {
         if (onProgress && e.lengthComputable) {
@@ -1005,7 +1015,7 @@ const Storage = {
     try {
       const res = await fetch(`${backendUrl}/api/delete-file`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_API_KEY_HEADER },
         body: JSON.stringify({ path }),
       });
       if (!res.ok) {

@@ -2745,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollSpy();
   Presence.start();
   CartLive.start();
-  // Handle ?open= param from my-products.html nav links
+  // Handle ?open= param (e.g. redirects from payment-return.html)
   (function handleOpenParam() {
     const p = new URLSearchParams(window.location.search).get('open');
     if (!p) return;

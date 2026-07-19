@@ -18,6 +18,33 @@
 // ================================================================
 
 // ---------------------------------------------------------------
+// Admin-only route protection
+// ---------------------------------------------------------------
+// Routes that let the caller write/delete storage (upload-file,
+// delete-file) must never be reachable by an anonymous visitor —
+// only the admin panel should be able to call them. The admin panel
+// itself already gates its UI with a password (see firebase.js /
+// admin.html), but that only hides the *page*; it does nothing to
+// protect the API if someone calls it directly. This shared-secret
+// header is the actual server-side lock.
+//
+// Set the matching value on the Worker with:
+//   npx wrangler secret put ADMIN_API_KEY
+// and keep the exact same string in firebase.js (ADMIN_API_KEY_HEADER).
+function requireAdminKey(request, env) {
+  if (!env.ADMIN_API_KEY) {
+    // Fail closed: if the secret was never configured, refuse rather
+    // than silently allowing unauthenticated access.
+    return { ok: false, status: 500, error: 'ADMIN_API_KEY is not configured on this Worker.' };
+  }
+  const provided = request.headers.get('X-Admin-Key') || '';
+  if (provided !== env.ADMIN_API_KEY) {
+    return { ok: false, status: 401, error: 'Unauthorized.' };
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------
 // SlickPay config
 // ---------------------------------------------------------------
 const SLICKPAY_BASE_URL = {
@@ -490,7 +517,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
       'Access-Control-Max-Age':       '86400',
     };
 
@@ -517,6 +544,8 @@ export default {
     // binding and returns its public URL.
     // ============================================================
     if (path === '/api/upload-file' && method === 'POST') {
+      const auth = requireAdminKey(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
       try {
         let form;
         try {
@@ -583,6 +612,8 @@ export default {
     // Deletes the object from R2 via the native `env.BUCKET` binding.
     // ============================================================
     if (path === '/api/delete-file' && method === 'POST') {
+      const auth = requireAdminKey(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
       try {
         let body;
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
