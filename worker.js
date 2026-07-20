@@ -655,12 +655,18 @@ export default {
         let body;
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
 
-        // Optional signature check, if a webhook secret is configured.
-        if (env.SLICKPAY_WEBHOOK_SIG) {
-          const sig = body.webhook_signature || body.signature || request.headers.get('x-webhook-signature') || '';
-          const ok = await constantTimeEqual(String(sig), String(env.SLICKPAY_WEBHOOK_SIG));
-          if (!ok) return json({ error: 'Invalid webhook signature.' }, 403);
+        // Signature verification is REQUIRED, not optional. Without it, anyone
+        // who finds this URL can POST a fake "payment completed" event for any
+        // order and get a product delivered for free. If this 500s, set the
+        // secret with: npx wrangler secret put SLICKPAY_WEBHOOK_SIG
+        // (use the same value passed as webhookSignature when creating invoices).
+        if (!env.SLICKPAY_WEBHOOK_SIG) {
+          console.error('[webhook] rejected: SLICKPAY_WEBHOOK_SIG is not configured on this Worker.');
+          return json({ error: 'Webhook secret not configured on server.' }, 500);
         }
+        const sig = body.webhook_signature || body.signature || request.headers.get('x-webhook-signature') || '';
+        const sigOk = await constantTimeEqual(String(sig), String(env.SLICKPAY_WEBHOOK_SIG));
+        if (!sigOk) return json({ error: 'Invalid webhook signature.' }, 403);
 
         const invoice   = body.data || body.invoice || body;
         const completed = (invoice.completed === 1 || body.completed === 1) ? 1 : 0;
@@ -713,37 +719,43 @@ export default {
         try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
 
         const {
-          product_id, product_name, amount, firstname, lastname, email, phone, address,
+          product_id, product_name, firstname, lastname, email, phone, address,
           items: rawItems, user_id, user_email,
         } = body || {};
+        // NOTE: a client-supplied `amount` field, if present in the request body,
+        // is intentionally ignored below. Price is ALWAYS re-derived server-side
+        // from product IDs looked up in Firestore — never trust a client-computed
+        // total, or anyone can pay whatever they want for a product.
         const safeAddress = (address && address.trim().length >= 5) ? address.trim() : 'Algérie - Livraison numérique';
 
         if (!firstname || !lastname || (!email && !phone)) {
           return json({ error: 'Missing required fields: firstname, lastname, and email or phone.' }, 400);
         }
 
-        // If the client sent the full cart, re-derive pricing server-side —
-        // never trust the client-computed `amount`. This also lets us know
-        // exactly which products/variants were bought so the order can be
-        // auto-delivered once paid.
-        let pricedItems = null;
-        let computedAmount = Number(amount) || 0;
-        if (Array.isArray(rawItems) && rawItems.length) {
-          try {
-            pricedItems = await priceCartItems(env, rawItems.map(it => ({
+        // Build a normalized items list whether the client sent a full cart
+        // or a single product_id (legacy/buy-now flow) — either way, pricing
+        // is looked up server-side from the product DB, never from the client.
+        const normalizedItems = (Array.isArray(rawItems) && rawItems.length)
+          ? rawItems.map(it => ({
               productId:    it.product_id || it.productId || it.id,
               variantLabel: it.variant_label || it.variantLabel || null,
               qty:          it.qty || 1,
-            })));
-          } catch (err) {
-            return json({ error: 'Failed to price cart items: ' + err.message }, 400);
-          }
-          computedAmount = pricedItems.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
+            }))
+          : (product_id ? [{ productId: product_id, variantLabel: null, qty: 1 }] : []);
+
+        if (!normalizedItems.length) {
+          return json({ error: 'Missing required fields: items or product_id.' }, 400);
         }
 
-        const finalProductName = product_name || (pricedItems
-          ? (pricedItems.length === 1 ? pricedItems[0].name : `Order (${pricedItems.length} items)`)
-          : '');
+        let pricedItems;
+        try {
+          pricedItems = await priceCartItems(env, normalizedItems);
+        } catch (err) {
+          return json({ error: 'Failed to price cart items: ' + err.message }, 400);
+        }
+        const computedAmount = pricedItems.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
+
+        const finalProductName = product_name || (pricedItems.length === 1 ? pricedItems[0].name : `Order (${pricedItems.length} items)`);
 
         if (!finalProductName || !computedAmount) {
           return json({ error: 'Missing required fields: product_name/items and amount.' }, 400);

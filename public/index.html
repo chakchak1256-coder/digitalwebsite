@@ -677,15 +677,6 @@
         <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
         <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coHandleNextStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next</button>
       </div>
-
-      <!-- TEST-ONLY: simulate a successful payment so you can confirm products
-           actually land in "My Products" without going through real SlickPay.
-           Remove this button before sharing the store publicly. -->
-      <button type="button" id="co-test-pay-btn" onclick="coSimulateTestPayment()"
-        style="width:100%;margin-top:.6rem;padding:.65rem 1rem;border-radius:9px;border:1px dashed rgba(var(--accent-rgb),.4);
-        background:rgba(var(--accent-rgb),.06);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer">
-        <i class="fa-solid fa-flask"></i> Simulate Test Payment (Dev Only)
-      </button>
     </div>
 
     <!-- Proof of payment upload step -->

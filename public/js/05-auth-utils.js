@@ -16,6 +16,15 @@ function renderContactSocials() {
 }
 
 // ===== UTILS =====
+// Escapes text before it's inserted via innerHTML. REQUIRED for any
+// user-submitted content (review names/comments, etc.) — never interpolate
+// user text into an HTML template without passing it through this first,
+// or a malicious reviewer can run script in every visitor's browser.
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
 function updateFooter() { const el=document.getElementById('footer-copy'); if(el) el.textContent=`© ${new Date().getFullYear()} DIGITCH · All rights reserved`; }
 function handleContact(e) { e.preventDefault(); document.getElementById('contact-form').style.display='none'; document.getElementById('form-ok').style.display='block'; }
 function showToast(msg) { document.getElementById('toast-msg').textContent=msg; const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }

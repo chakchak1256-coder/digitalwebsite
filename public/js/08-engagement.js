@@ -308,7 +308,8 @@ async function renderProductReviews(productId) {
 
   if (list) {
     list.innerHTML = reviews.map(r => {
-      const initials = (r.userName||'U').slice(0,2).toUpperCase();
+      const safeName = escapeHtml(r.userName || 'Customer');
+      const initials = escapeHtml((r.userName||'U').slice(0,2).toUpperCase());
       const date = new Date(r.createdAt).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' });
       const stars = Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star${i<r.stars?'':' empty'}"></i>`).join('');
       return `<div class="pd-review-card">
@@ -316,13 +317,13 @@ async function renderProductReviews(productId) {
           <div class="pd-review-user">
             <div class="pd-review-avatar">${initials}</div>
             <div>
-              <div class="pd-review-name">${r.userName||'Customer'}</div>
+              <div class="pd-review-name">${safeName}</div>
               <div class="pd-review-date">${date}</div>
             </div>
           </div>
           <div class="pd-review-stars">${stars}</div>
         </div>
-        ${r.comment ? `<div class="pd-review-text">${r.comment}</div>` : ''}
+        ${r.comment ? `<div class="pd-review-text">${escapeHtml(r.comment)}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -437,16 +438,16 @@ async function renderSocialProof() {
   const cardHTML = (r) => {
     const stars = Array.from({length:5}, (_, i) =>
       `<i class="fa-solid fa-star${i < r.stars ? '' : ' empty'}"></i>`).join('');
-    const initials = (r.userName || 'Customer').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
-    const comment = (r.comment || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const product = (r.productName || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const initials = escapeHtml((r.userName || 'Customer').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase());
+    const comment = escapeHtml(r.comment || '');
+    const product = escapeHtml(r.productName || '');
     return `<div class="testi-card">
       <div class="testi-stars">${stars}</div>
       <p class="testi-text">"${comment}"</p>
       <div class="testi-author">
         <div class="testi-avatar">${initials || 'C'}</div>
         <div>
-          <div class="testi-name">${(r.userName || 'Customer').replace(/</g,'&lt;')}</div>
+          <div class="testi-name">${escapeHtml(r.userName || 'Customer')}</div>
           <div class="testi-role">${product || 'Verified Buyer'}</div>
         </div>
       </div>
