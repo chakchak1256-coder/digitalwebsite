@@ -492,6 +492,15 @@ const DB = {
   // --- Internal cache to allow sync-like reads after first load ---
   _cache: {},
 
+  // How many docs to pull per collection on the initial load. `null` = no limit
+  // (fetch everything, the old behavior). Set a number for collections that
+  // can grow large — this is what keeps the storefront fast as the catalog grows.
+  _LOAD_LIMITS: {
+    products:   150,   // newest 150 products; raise this or add pagination in the UI if you need more
+    categories: null,  // small collection, fine to load in full
+    orders:     null,  // only ever loaded in the admin panel
+  },
+
   // Load a collection into cache (call once on init)
   async _load(col) {
     // 1. Read from localStorage cache instantly (zero delay)
@@ -502,14 +511,56 @@ const DB = {
         window.dispatchEvent(new CustomEvent('db:update', { detail: col }));
       }
     } catch(e) {}
-    // 2. Fetch from Firestore in background, update if changed
+    // 2. Fetch from Firestore in background, update if changed.
+    // Use a bounded query where possible instead of pulling the whole
+    // collection — this is the single biggest lever for keeping page loads
+    // fast as products/orders accumulate over time.
     try {
-      const snap = await _db.collection(col).get();
+      let query = _db.collection(col);
+      const limit = this._LOAD_LIMITS[col];
+      if (limit) {
+        // Requires a `createdAt` field on documents in this collection
+        // (already set by DB.add()). Newest-first also matches what most
+        // storefronts want to show by default.
+        query = query.orderBy('createdAt', 'desc').limit(limit);
+      }
+      const snap = await query.get();
       const fresh = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       this._cache[col] = fresh;
       try { localStorage.setItem('dz_fc_' + col, JSON.stringify(fresh)); } catch(e) {}
       window.dispatchEvent(new CustomEvent('db:update', { detail: col }));
-    } catch(e) { if (!this._cache[col]) this._cache[col] = []; }
+    } catch(e) {
+      // Common failure mode here: Firestore complains it needs a composite
+      // index for orderBy+limit on a collection that doesn't have one yet.
+      // If that happens, click the link Firestore prints in the browser
+      // console to auto-create the index, or set this collection's limit
+      // to null above until you do.
+      console.error(`DB._load(${col}) failed (check console for a Firestore index link if this mentions an index):`, e);
+      if (!this._cache[col]) this._cache[col] = [];
+    }
+  },
+
+  // Fetch older products beyond the initial _LOAD_LIMITS window — call this
+  // from a "Load more" button in the storefront UI instead of raising the
+  // limit above indefinitely.
+  async loadMoreProducts(pageSize = 60) {
+    try {
+      const current = this._cache.products || [];
+      const oldestLoaded = current[current.length - 1];
+      let query = _db.collection('products').orderBy('createdAt', 'desc').limit(pageSize);
+      if (oldestLoaded && oldestLoaded.createdAt) {
+        query = query.startAfter(oldestLoaded.createdAt);
+      }
+      const snap = await query.get();
+      const more = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      this._cache.products = [...current, ...more];
+      try { localStorage.setItem('dz_fc_products', JSON.stringify(this._cache.products)); } catch(e) {}
+      this._emit('products');
+      return more.length; // caller can check if 0 came back to hide the "Load more" button
+    } catch(e) {
+      console.error('DB.loadMoreProducts:', e);
+      return 0;
+    }
   },
 
   // Sync read from cache (returns [] if not loaded yet)
