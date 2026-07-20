@@ -374,14 +374,16 @@ function resolveVariantPrice(product, variantLabel) {
 }
 
 async function priceCartItems(env, cartItems) {
-  const priced = [];
-  for (const item of cartItems) {
+  // Fetch every product in the cart concurrently instead of one at a time —
+  // a 5-item cart used to mean 5 sequential Firestore round-trips before
+  // checkout could even create the invoice. Promise.all fires them together.
+  const priced = await Promise.all(cartItems.map(async (item) => {
     const productId = item.productId || item.id;
     const product = await Firestore.getDoc(env, 'products', productId);
     if (!product) throw new Error(`Product not found: ${productId}`);
     const unitPrice = resolveVariantPrice(product, item.variantLabel);
     const qty = Math.max(1, parseInt(item.qty, 10) || 1);
-    priced.push({
+    return {
       productId,
       name: item.variantLabel ? `${product.name} — ${item.variantLabel}` : product.name,
       images: product.images || [],
@@ -393,8 +395,8 @@ async function priceCartItems(env, cartItems) {
       autoDeliver:   !!product.autoDeliver,
       deliveryLink:  product.deliveryLink  || '',
       deliveryType:  product.deliveryType  || 'link',
-    });
-  }
+    };
+  }));
   return priced;
 }
 
@@ -432,10 +434,12 @@ async function deliverOrder(env, order) {
     }];
   }
 
-  for (const item of items) {
+  // Legacy items may not carry delivery info — resolve all of those product
+  // lookups concurrently up front rather than one-by-one inside the loop
+  // below (this only ever affects old orders created before cart items
+  // carried their own delivery info, but no reason to make it sequential).
+  const resolvedItems = await Promise.all(items.map(async (item) => {
     let { autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles } = item;
-
-    // Legacy items may not carry delivery info — fetch the product once.
     if (autoDeliver === undefined && item.productId) {
       try {
         const product = await Firestore.getDoc(env, 'products', item.productId);
@@ -450,7 +454,11 @@ async function deliverOrder(env, order) {
         }
       } catch { /* best-effort */ }
     }
+    return { ...item, autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles };
+  }));
 
+  for (const item of resolvedItems) {
+    const { autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles } = item;
     const isAuto = !!(autoDeliver && deliveryLink);
 
     // Build accessData: for PDF deliveries with multiple files, attach the

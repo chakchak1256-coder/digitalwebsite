@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    // Theme — before paint, no flash
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('dz_theme') || 'light');
+    // Auth state — CSS will show/hide correct buttons before paint
+    var authed = localStorage.getItem('dz_auth') === '1';
+    document.documentElement.setAttribute('data-authed', authed ? 'true' : 'false');
+  })();
+</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="page-title">DIGITCH</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+<!-- Ambient decorative gradient blobs — purely visual, non-interactive -->
+<div class="dz-ambient" aria-hidden="true">
+  <div class="dz-blob dz-b1"></div>
+  <div class="dz-blob dz-b2"></div>
+  <div class="dz-blob dz-b3"></div>
+</div>
+
+<!-- ===== FLASH SALE BANNER ===== -->
+<div id="flash-banner">
+  <i class="fa-solid fa-bolt"></i>
+  <span id="flash-banner-text">Flash Sale!</span>
+  <span id="flash-countdown"></span>
+  <button id="flash-banner-close" onclick="document.getElementById('flash-banner').classList.remove('visible');document.body.classList.remove('flash-on')"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<!-- ===== NAV ===== -->
+<nav id="nav">
+  <div class="nav-logo" onclick="showMain()">
+    <img class="nav-logo-img" src="/logo.png" alt="logo"/>
+    <span class="nav-logo-text store-name">DIGITCH</span>
+  </div>
+  <div class="nav-links">
+    <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
+    <a href="#products" data-section="new-arrivals" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">New Arrivals</a>
+    <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
+    <a href="#best-sellers" data-section="best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
+    <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
+    <a href="#warranty" data-section="warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Warranty</a>
+    <a href="#contact" data-section="contact" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Contact</a>
+    <a href="#" id="my-products-link" onclick="closeWishlist();openMyProducts();return false;">My Products</a>
+  </div>
+  <div class="nav-actions">
+    <!-- Nav Search -->
+    <div id="nav-search-wrap">
+      <button id="nav-search-btn" onclick="toggleNavSearch()" title="Search products"><i class="fa-solid fa-magnifying-glass"></i></button>
+      <div id="nav-search-panel">
+        <div id="nav-search-input-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="nav-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value)" autocomplete="off"/>
+        </div>
+        <div id="nav-search-results"><div class="ns-empty">Start typing to search…</div></div>
+      </div>
+    </div>
+    <!-- Wishlist -->
+    <button id="wishlist-nav-btn" onclick="toggleWishlistPanel()" title="Wishlist">
+      <i class="fa-regular fa-heart"></i>
+      <span id="wishlist-badge"></span>
+    </button>
+    <button id="user-btn" onclick="toggleUserMenu()" style="position:relative;width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);align-items:center;justify-content:center;font-size:1rem;transition:all var(--transition)">
+      <i class="fa-solid fa-user" id="user-icon"></i>
+    </button>
+    <div id="user-menu" style="display:none;position:absolute;top:92px;right:5vw;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;min-width:200px;z-index:1000;box-shadow:0 12px 35px rgba(0,0,0,.5)">
+      <div id="user-menu-info" style="padding:.6rem .9rem;margin-bottom:.3rem;border-bottom:1px solid var(--border)"></div>
+      <button onclick="openMyProducts();document.getElementById('user-menu').style.display='none';" style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;width:100%;transition:background var(--transition)" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''"><i class="fa-solid fa-box-archive" style="color:var(--primary)"></i> My Products</button>
+      <button onclick="doUserLogout()" style="width:100%;display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;color:var(--text-muted);transition:all var(--transition);text-align:left" onmouseover="this.style.color='#ff4d6d'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+    <button id="login-nav-btn" onclick="openLoginModal()" style="padding:8px 16px;border-radius:var(--radius-sm);background:rgba(var(--primary-rgb),.12);border:1px solid rgba(var(--primary-rgb),.3);color:var(--primary);font-size:.83rem;font-weight:700;transition:all var(--transition);white-space:nowrap"><i class="fa-solid fa-user"></i> Sign In</button>
+    <div id="history-wrap" style="position:relative">
+      <button id="history-btn" onclick="toggleHistoryPanel()" title="Recently viewed">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span id="history-badge"></span>
+      </button>
+      <div id="history-panel">
+        <div id="history-panel-hdr">
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Recently Viewed</span>
+          <button id="history-clear-btn" onclick="clearHistory()" title="Clear history"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+        <div id="history-panel-body">
+          <div id="rv-grid"></div>
+          <div id="history-empty" style="display:none">
+            <i class="fa-regular fa-clock"></i>
+            <p>Products you view will show up here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">
+      <i class="fa-solid fa-sun" id="theme-icon"></i>
+    </button>
+    <button id="cart-btn" onclick="toggleCart()">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span id="cart-badge">0</span>
+    </button>
+    <button class="hamburger" onclick="toggleMobileNav()" id="hamburger-btn">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div id="mobile-nav">
+  <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
+  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">New Arrivals</a>
+  <a href="#" onclick="closeMobileNav();closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
+  <a href="#best-sellers" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Best Sellers</a>
+  <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
+  <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Warranty</a>
+  <a href="#contact" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Contact</a>
+  <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();closeWishlist();openMyProducts();return false;">My Products</a>
+</div>
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span class="hero-dot"></span>
+        Premium Digital Solutions
+      </div>
+      <h1 class="hero-title">
+        Elevate Your Digital<span class="accent">Experience</span>
+      </h1>
+      <p class="hero-sub">Discover premium digital products and services designed to help your business grow and succeed.</p>
+      <div class="hero-btns">
+        <button class="btn btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
+          Explore Products <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
+          Our Services <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-devices">
+        <div class="hero-plinth"></div>
+        <div class="hero-plant">
+          <div class="hero-leaves">
+            <div class="hero-leaf" style="left:50%;transform:rotate(-4deg) scaleY(1)"></div>
+            <div class="hero-leaf" style="left:42%;transform:rotate(-22deg) scaleY(.92)"></div>
+            <div class="hero-leaf" style="left:58%;transform:rotate(20deg) scaleY(.9)"></div>
+            <div class="hero-leaf" style="left:35%;transform:rotate(-38deg) scaleY(.7)"></div>
+            <div class="hero-leaf" style="left:65%;transform:rotate(36deg) scaleY(.7)"></div>
+          </div>
+          <div class="hero-pot"></div>
+        </div>
+        <div class="hero-laptop">
+          <div class="hero-laptop-screen">
+            <div class="hero-laptop-inner">
+              <div class="hl-topbar">
+                <div class="hl-logo">DIGI<span>TCH</span></div>
+                <div class="hl-nav"><span>Dashboard</span><span>Overview</span><span>Analytics</span><span>Projects</span></div>
+                <div class="hl-icons"><i class="fa-solid fa-magnifying-glass"></i><i class="fa-solid fa-bell"></i><i class="fa-solid fa-circle-user"></i></div>
+              </div>
+              <div class="hl-body">
+                <div>
+                  <div class="hl-headline">Digital Solutions<span>That Drive Results</span></div>
+                  <span class="hl-pill">Get Started</span>
+                </div>
+                <div class="hl-card">
+                  <div class="hl-chart">
+                    <i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i>
+                    <i style="height:60%"></i><i style="height:52%"></i><i style="height:78%"></i>
+                    <i style="height:90%"></i>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:0 12px 10px">
+                <div class="hl-stats-row">
+                  <div class="hl-stat"><b>81</b><span>Clients</span></div>
+                  <div class="hl-stat"><b>29</b><span>Projects</span></div>
+                  <div class="hl-stat"><b>35</b><span>Reviews</span></div>
+                  <div class="hl-stat"><b>98</b><span>Rating</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-laptop-base"></div>
+        </div>
+        <div class="hero-phone">
+          <div class="hero-phone-screen">
+            <div class="hp-status"><span>9:41</span><span>●●●</span></div>
+            <div class="hp-headline">Digital<span>Excellence Made Simple</span></div>
+            <span class="hp-pill">Get Started</span>
+            <div class="hp-badges">
+              <div class="hp-badge"><i class="fa-solid fa-shield"></i><b>250+</b><span>Projects</span></div>
+              <div class="hp-badge"><i class="fa-solid fa-star"></i><b>99%</b><span>Rating</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURE STRIP ===== -->
+<section id="feature-strip">
+  <div class="feature-strip-card">
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-star"></i></div>
+      <div><div class="feature-strip-title">Premium Quality</div><div class="feature-strip-desc">Top-notch digital products crafted with excellence</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-bolt"></i></div>
+      <div><div class="feature-strip-title">Instant Access</div><div class="feature-strip-desc">Get your digital products delivered instantly</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><div class="feature-strip-title">Secure &amp; Safe</div><div class="feature-strip-desc">Your security is our priority with secure transactions</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-headset"></i></div>
+      <div><div class="feature-strip-title">Expert Support</div><div class="feature-strip-desc">24/7 customer support whenever you need it</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DIGITAL TOOLS CAROUSEL ===== -->
+<section id="game-carousel-section">
+  <div class="carousel-label">
+    <div class="carousel-label-inner">Digital Tools &amp; Platforms</div>
+  </div>
+  <div class="carousel-track-wrap">
+    <div class="carousel-track" id="game-carousel-track">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRODUCTS ===== -->
+<section id="products">
+  <div class="container">
+    <div class="products-hdr">
+      <div>
+        <div class="section-tag">Latest</div>
+        <h2 class="section-title" style="margin-bottom:0">New Arrivals</h2>
+      </div>
+      <button class="btn btn-outline" onclick="openAllProducts()">
+        View All <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="products-grid" id="products-grid"></div>
+  </div>
+</section>
+
+<!-- ===== BEST SELLERS ===== -->
+<section id="best-sellers">
+  <div class="container">
+    <div class="products-hdr">
+      <div>
+        <div class="section-tag"><i class="fa-solid fa-trophy"></i> Top Rated</div>
+        <h2 class="section-title" style="margin-bottom:0">Best Sellers</h2>
+      </div>
+      <button class="btn btn-outline" onclick="openAllProducts()">
+        View All <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="bs-list" id="best-sellers-list"></div>
+  </div>
+</section>
+
+<!-- ===== ABOUT ===== -->
+<section id="about">
+  <div class="dig-scene">
+    <div class="dig-orb dig-orb-bright" style="width:460px;height:460px;top:-180px;right:-150px"></div>
+    <div class="dig-orb dig-orb-deep" style="width:420px;height:420px;bottom:-170px;left:-150px;animation-delay:-6s"></div>
+    <div class="dig-ring" style="width:200px;height:200px;top:-60px;left:-60px"></div>
+    <div class="dig-ring dig-ring-soft" style="width:280px;height:280px;top:-100px;left:-100px"></div>
+    <div class="dig-dotgrid" style="top:40px;left:4%"></div>
+    <div class="dig-dotgrid" style="width:90px;height:90px;bottom:60px;left:42%;opacity:.4"></div>
+    <div class="dig-sphere dig-sphere-a" style="width:16px;height:16px;top:22%;left:16%"></div>
+    <div class="dig-sphere dig-sphere-b" style="width:12px;height:12px;bottom:18%;right:20%;animation-delay:-3s"></div>
+    <div class="dig-sphere dig-sphere-b" style="width:8px;height:8px;top:62%;left:6%;animation-delay:-5s"></div>
+    <div class="dig-twinkle" style="top:14%;right:30%"></div>
+    <div class="dig-twinkle" style="top:48%;left:8%;animation-delay:-1.2s"></div>
+    <div class="dig-twinkle" style="bottom:30%;right:8%;animation-delay:-2.4s"></div>
+    <div class="dig-ringdot" style="top:34%;right:14%"></div>
+    <div class="dig-cross" style="top:64%;right:30%"></div>
+    <svg class="dig-star" style="top:10%;left:46%;width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 0C12 6 14 10 18 12C14 14 12 18 12 24C12 18 10 14 6 12C10 10 12 6 12 0Z"/></svg>
+    <svg class="dig-star" style="bottom:12%;left:30%;width:11px;height:11px;animation-delay:-1.8s" viewBox="0 0 24 24"><path d="M12 0C12 6 14 10 18 12C14 14 12 18 12 24C12 18 10 14 6 12C10 10 12 6 12 0Z"/></svg>
+    <svg class="dig-sparkline" viewBox="0 0 1600 700" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="digLineAbout" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#34D399" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#6EE7B7" stop-opacity=".9"/>
+          <stop offset="100%" stop-color="#34D399" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path class="dig-glowpath" d="M1000,640 C1150,600 1300,520 1600,420" stroke="url(#digLineAbout)" stroke-width="4" fill="none"/>
+      <path d="M1000,640 C1150,600 1300,520 1600,420" stroke="url(#digLineAbout)" stroke-width="1.4" fill="none"/>
+      <circle class="dig-spark" cx="1180" cy="588" r="2.4" fill="#eafff5"/>
+    </svg>
+  </div>
+  <div class="container">
+    <div class="about-grid">
+      <div>
+        <div class="section-tag">About Us</div>
+        <h2 class="about-title">Your Hub for <span>Premium Digital</span> Products</h2>
+        <p class="about-desc">DIGITCH is your destination for premium digital products — handpicked, verified, and ready to use.</p>
+        <div class="about-feats">
+          <div class="about-feat"><div class="feat-icon">⚡</div><div class="feat-body"><h4>Quality First</h4><p>Every product is handpicked and verified before listing.</p></div></div>
+          <div class="about-feat"><div class="feat-icon">🔒</div><div class="feat-body"><h4>100% Secure</h4><p>All transactions protected. Verified products.</p></div></div>
+          <div class="about-feat"><div class="feat-icon">💰</div><div class="feat-body"><h4>Fair Pricing</h4><p>Transparent pricing. No hidden fees.</p></div></div>
+          <div class="about-feat"><div class="feat-icon">🎯</div><div class="feat-body"><h4>Curated Catalog</h4><p>Every product hand-picked and verified.</p></div></div>
+        </div>
+      </div>
+      <div class="about-right">
+        <div class="about-card"><div class="stat-icon grad-1"><i class="fa-solid fa-shield"></i></div><div class="about-card-num">100%</div><div class="about-card-lbl">Verified</div></div>
+        <div class="about-card"><div class="stat-icon grad-2"><i class="fa-solid fa-lock"></i></div><div class="about-card-num">Secure</div><div class="about-card-lbl">Payments</div></div>
+        <div class="about-card"><div class="stat-icon grad-3"><i class="fa-solid fa-bullseye"></i></div><div class="about-card-num">Curated</div><div class="about-card-lbl">Catalog</div></div>
+        <div class="about-card"><div class="stat-icon grad-4"><i class="fa-solid fa-headset"></i></div><div class="about-card-num">Support</div><div class="about-card-lbl">Always Here</div></div>
+        <div class="about-card span2">
+          <div class="stat-icon grad-1"><i class="fa-solid fa-globe"></i></div>
+          <div><div style="font-weight:700;font-size:.95rem;margin-bottom:.2rem">Quality You Can Trust</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Every product verified · Reliable support · Simple experience</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== WARRANTY ===== -->
+<section id="warranty">
+  <div class="warranty-bg"></div>
+  <div class="container">
+    <div class="warranty-inner">
+      <div class="warranty-shield">🛡️</div>
+      <div class="section-tag">Warranty & Trust</div>
+      <h2 class="warranty-title">We Stand Behind <br/><span class="highlight">Every Product We Sell</span></h2>
+      <p class="warranty-lead">At DIGITCH, our commitment doesn't end at checkout. Every product is verified and every customer is protected. Your satisfaction isn't just a promise — it's our policy.</p>
+      <div class="warranty-cards">
+        <div class="warranty-card">
+          <div class="warranty-card-icon">✅</div>
+          <div class="warranty-card-title">Verified Products</div>
+          <div class="warranty-card-text">Every account and digital product is tested and verified before being listed on our store.</div>
+        </div>
+        <div class="warranty-card">
+          <div class="warranty-card-icon">🔄</div>
+          <div class="warranty-card-title">Replacement Guarantee</div>
+          <div class="warranty-card-text">If your product stops working within the validity period, we replace it — no questions asked.</div>
+        </div>
+        <div class="warranty-card">
+          <div class="warranty-card-icon">⚡</div>
+          <div class="warranty-card-title">Responsive Support</div>
+          <div class="warranty-card-text">Our team responds within hours via WhatsApp and Telegram. You're never left waiting.</div>
+        </div>
+        <div class="warranty-card">
+          <div class="warranty-card-icon">🔒</div>
+          <div class="warranty-card-title">Secure Transactions</div>
+          <div class="warranty-card-text">Your personal information and order details are always kept private and secure.</div>
+        </div>
+        <div class="warranty-card">
+          <div class="warranty-card-icon">💯</div>
+          <div class="warranty-card-title">Authenticity Promise</div>
+          <div class="warranty-card-text">We only sell genuine products. No fakes, no recycled accounts, no compromised credentials.</div>
+        </div>
+        <div class="warranty-card">
+          <div class="warranty-card-icon">🇩🇿</div>
+          <div class="warranty-card-title">Customer First</div>
+          <div class="warranty-card-text">We listen, we support, and we stand behind every product we sell — always.</div>
+        </div>
+      </div>
+      <div class="warranty-banner">
+        <div class="warranty-banner-icon">💬</div>
+        <div class="warranty-banner-text">
+          <h4>Something went wrong with your order?</h4>
+          <p>Contact us directly on WhatsApp or Telegram and we'll make it right — guaranteed.</p>
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">
+          <i class="fa-solid fa-headset"></i> Contact Support
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section id="contact">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Contact</div>
+      <h2 class="section-title">Get in Touch</h2>
+      <p class="section-sub">Have a question? We're here to help on any platform.</p>
+    </div>
+    <div class="contact-grid">
+      <div>
+        <h3 style="font-size:1.1rem;margin-bottom:.4rem">Find us on social media</h3>
+        <p style="color:var(--text-muted);font-size:.88rem">We're active on all major platforms.</p>
+        <div class="contact-socials" id="contact-socials"></div>
+      </div>
+      <div class="contact-form-box">
+        <h3 class="form-title">Send a Message</h3>
+        <form id="contact-form" onsubmit="handleContact(event)">
+          <div class="form-row">
+            <div class="form-group"><label>Full Name</label><input class="form-input" type="text" placeholder="Your name" required/></div>
+            <div class="form-group"><label>Email</label><input class="form-input" type="email" placeholder="your@email.com" required/></div>
+          </div>
+          <div class="form-group"><label>Phone</label><input class="form-input" type="tel" placeholder="+213 xxx xxx xxx"/></div>
+          <div class="form-group"><label>Message</label><textarea class="form-input" placeholder="How can we help you?"></textarea></div>
+          <button type="submit" class="form-submit"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
+        </form>
+        <div class="form-ok" id="form-ok">
+          <i class="fa-solid fa-circle-check"></i>
+          Message sent! We'll reply shortly.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS / SOCIAL PROOF ===== -->
+<section id="testimonials">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Social Proof</div>
+      <h2 class="section-title">What Our Customers Say</h2>
+      <p class="section-sub">Real feedback from real customers — nothing staged.</p>
+    </div>
+    <div id="testi-carousel-wrap">
+      <div id="testi-track" class="testi-track">
+        <div class="testi-empty" id="testi-empty">
+          <i class="fa-regular fa-comments"></i>
+          <p>No reviews yet. Be the first to share your experience!</p>
+        </div>
+      </div>
+    </div>
+    <div class="testi-cta">
+      <button class="btn btn-primary" onclick="openReviewModal()"><i class="fa-solid fa-star"></i> Add a Review</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-logo store-name">DIGITCH</div>
+    <div class="footer-links">
+      <a href="#hero" onclick="showMain()">Home</a>
+      <a href="#products" onclick="closeMyProducts();closeAllProducts();">New Arrivals</a>
+      <a href="#" onclick="closeMyProducts();closeAllProducts();openAllProducts();return false;">Products</a>
+      <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();">Best Sellers</a>
+      <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
+      <a href="#warranty" onclick="closeMyProducts();closeAllProducts();">Warranty</a>
+      <a href="#contact" onclick="closeMyProducts();closeAllProducts();">Contact</a>
+      <a href="#" onclick="openTracking();return false;">Track Order</a>
+      <a href="admin.html">Admin</a>
+    </div>
+    <p class="footer-copy" id="footer-copy">© 2025 DIGITCH · All rights reserved</p>
+  </div>
+</footer>
+
+<!-- ===== WISHLIST PAGE ===== -->
+<div id="wishlist-page">
+  <div class="wishlist-inner">
+    <button class="back-btn" onclick="closeWishlist()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+    <div style="margin-bottom:2rem">
+      <div class="section-tag">Saved</div>
+      <h2 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800">Wishlist</h2>
+    </div>
+    <div class="products-grid" id="wishlist-grid"></div>
+  </div>
+</div>
+
+<!-- ===== ORDER TRACKING PAGE ===== -->
+<div id="tracking-page">
+  <div class="tracking-inner">
+    <button class="back-btn" onclick="closeTracking()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+    <div style="margin-bottom:2rem">
+      <div class="section-tag">Support</div>
+      <h2 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800">Track Your Order</h2>
+      <p style="color:var(--text-muted);font-size:.9rem;margin-top:.4rem">Enter your order ID to check status.</p>
+    </div>
+    <div class="tracking-card">
+      <div style="display:flex;gap:.6rem;margin-bottom:1rem">
+        <input class="form-input" id="tracking-input" type="text" placeholder="e.g. ORD-1234567890-ABCDE" style="flex:1;text-transform:uppercase;letter-spacing:.04em;font-family:monospace"/>
+        <button class="btn btn-primary" onclick="trackOrder()"><i class="fa-solid fa-magnifying-glass"></i> Track</button>
+      </div>
+      <div id="tracking-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.7rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
+      <div id="tracking-result" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div id="auth-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1200;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;width:100%;max-width:400px;position:relative">
+    <button onclick="closeLoginModal()" style="position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:.8rem"><i class="fa-solid fa-xmark"></i></button>
+
+    <div id="am-checkout-note" style="display:none;align-items:center;gap:.6rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#10B981;margin-bottom:1rem">
+      <i class="fa-solid fa-box-archive" style="flex-shrink:0"></i>
+      <span>Sign in so your purchase is saved to <strong>My Products</strong> forever.</span>
+    </div>
+    <div id="am-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
+
+    <!-- ── Google Sign In ── -->
+    <div id="am-login">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto .9rem">🔐</div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.35rem">Welcome to DIGITCH</h3>
+        <p style="font-size:.83rem;color:var(--text-muted)">Sign in with your Google account to continue</p>
+      </div>
+      <button onclick="doGoogleSignIn()" style="width:100%;padding:13px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.92rem;display:flex;align-items:center;justify-content:center;gap:.7rem;cursor:pointer;transition:all var(--transition)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- ── New User: choose username + phone ── -->
+    <div id="am-google-step" style="display:none">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.3rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(var(--accent-rgb),.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">👋</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text)">Almost there!</div>
+          <div id="am-gs-email-display" style="font-size:.78rem;color:var(--text-muted)"></div>
+        </div>
+      </div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.6">Choose a username and enter your phone number to complete your account.</p>
+      <div id="am-gs-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
+      <div style="margin-bottom:1rem">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Username</label>
+        <input class="form-input" id="am-gs-username" type="text" placeholder="Choose a username"/>
+      </div>
+      <div style="margin-bottom:1.4rem">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <select id="am-gs-phone-prefix" style="padding:10px 8px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:.875rem;outline:none;cursor:pointer;flex-shrink:0;font-weight:700;transition:border-color var(--transition)">
+            <option value="07">07</option>
+            <option value="06">06</option>
+            <option value="05">05</option>
+          </select>
+          <div style="position:relative;flex:1">
+            <input class="form-input" id="am-gs-phone" type="tel" placeholder="XXXXXXXX" maxlength="8" oninput="gsValidatePhone(this)" style="padding-right:2.2rem;letter-spacing:.04em"/>
+            <span id="am-gs-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+          </div>
+        </div>
+        <span id="am-gs-phone-hint" style="font-size:.73rem;margin-top:.3rem;display:block;color:var(--text-muted)">Enter 8 digits after the prefix</span>
+      </div>
+      <button onclick="doCompleteGoogleSignup()" id="am-gs-submit-btn" style="width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-weight:700;font-size:.9rem;transition:all var(--transition)"><i class="fa-solid fa-user-plus"></i> Complete Sign Up</button>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== CART DRAWER ===== -->
+<div id="cart-overlay" onclick="toggleCart()"></div>
+<div id="cart-drawer">
+  <div class="cart-hdr">
+    <h3><i class="fa-solid fa-bag-shopping"></i> Your Cart</h3>
+    <button class="cart-close" onclick="toggleCart()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="cart-body" id="cart-body"></div>
+  <div class="cart-foot" id="cart-foot" style="display:none">
+    <div class="cart-total-row">
+      <span class="cart-total-lbl">Total</span>
+      <span class="cart-total-val" id="cart-total-val">0 DA</span>
+    </div>
+    <button class="btn-checkout" onclick="openCheckout()"><i class="fa-solid fa-lock"></i> Checkout</button>
+    <button class="btn-checkout" id="wa-order-btn" onclick="waOrderCart()" style="background:transparent;border:1px solid #25D366;color:#25D366;margin-top:.45rem">
+      <i class="fa-brands fa-whatsapp"></i> Order via WhatsApp
+    </button>
+  </div>
+</div>
+
+<!-- ===== CHECKOUT MODAL ===== -->
+<div id="checkout-modal">
+  <div class="checkout-box">
+    <div class="checkout-box-inner">
+
+    <!-- STEP 0: Use account info? (hidden — skipped automatically) -->
+    <div id="co-step-account" style="display:none">
+      <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.6rem;text-align:center">Would you like to use your account information for this order?</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(true)">
+          <div class="co-pay-icon" style="background:rgba(var(--accent-rgb),.12);color:var(--accent)"><i class="fa-solid fa-user-check"></i></div>
+          <div class="co-pay-info"><strong>Yes, use my account info</strong><span>Auto-fill name, email &amp; phone</span></div>
+          <i class="fa-solid fa-chevron-right co-pay-arrow"></i>
+        </button>
+        <button type="button" class="co-pay-method-btn" onclick="coChooseAccount(false)">
+          <div class="co-pay-icon" style="background:rgba(255,255,255,.06);color:var(--text-muted)"><i class="fa-solid fa-pen-to-square"></i></div>
+          <div class="co-pay-info"><strong>No, enter manually</strong><span>Fill in your details by hand</span></div>
+          <i class="fa-solid fa-chevron-right co-pay-arrow"></i>
+        </button>
+      </div>
+      <div style="display:flex;gap:.7rem;margin-top:1.2rem">
+        <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1">Cancel</button>
+      </div>
+    </div>
+
+    <!-- STEP 1: Customer info form -->
+    <div id="co-form-wrap" style="display:none">
+      <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
+      <div id="co-form-err" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
+
+      <div class="form-group" id="co-name-group">
+        <label>Full Name</label>
+        <input class="form-input" id="co-name" type="text" required placeholder="Your name"/>
+      </div>
+
+      <div class="form-group" id="co-email-group">
+        <label>Email</label>
+        <input class="form-input" id="co-email" type="email" placeholder="your@email.com" required/>
+      </div>
+
+      <!-- Phone field — same design as signup -->
+      <div class="form-group">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Phone Number</label>
+        <div class="co-phone-wrap">
+          <select id="co-phone-prefix" class="co-phone-prefix">
+            <option value="07">07</option>
+            <option value="06">06</option>
+            <option value="05">05</option>
+          </select>
+          <div class="co-phone-digits-wrap">
+            <input class="form-input" id="co-phone" type="tel" placeholder="XXXXXXXX" maxlength="8" oninput="coValidatePhone(this)" style="padding-right:2.2rem;letter-spacing:.04em"/>
+            <span id="co-phone-icon" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none"></span>
+          </div>
+        </div>
+        <span id="co-phone-hint" style="font-size:.73rem;margin-top:.3rem;display:none;color:var(--text-muted)"></span>
+      </div>
+
+      <!-- Payment Method Selection -->
+      <div class="form-group">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Payment Method</label>
+        <div style="display:grid;grid-template-columns:1fr;gap:.6rem" id="co-pay-method-wrap">
+          <label class="co-method-card" id="co-method-cib">
+            <input type="radio" name="co-payment" value="cib" checked onchange="coShowPaymentInstructions('cib')" style="display:none"/>
+            <div class="co-method-icon">💳</div>
+            <div class="co-method-name">CIB / EDAHABIA</div>
+          </label>
+          <label class="co-method-card" id="co-method-eddahabia" style="display:none">
+            <input type="radio" name="co-payment" value="eddahabia" onchange="coShowPaymentInstructions('eddahabia')" style="display:none"/>
+            <div class="co-method-icon">🏧</div>
+            <div class="co-method-name">EDDAHABIA</div>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- Premium payment instruction card -->
+      <div id="co-payment-instructions" style="display:none" class="co-pay-instr-card">
+        <div class="co-pay-instr-header">
+          <span class="co-pay-instr-header-icon" id="co-instr-icon">📱</span>
+          <span class="co-pay-instr-header-title" id="co-instr-title">Payment Instructions</span>
+        </div>
+        <div class="co-pay-instr-body">
+          <p id="co-instr-text" class="co-pay-instr-text"></p>
+          <div id="co-copy-numbers" class="co-copy-numbers"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label>
+        <textarea class="form-input" id="co-notes" rows="2" placeholder="Special requests..."></textarea>
+      </div>
+
+      <!-- Coupon / Promo Code -->
+      <div id="co-coupon-wrap">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Promo Code <span style="font-size:.74rem;font-weight:400">(optional)</span></label>
+        <div class="co-coupon-row">
+          <input class="co-coupon-input" id="co-coupon-input" type="text" placeholder="ENTER CODE"/>
+          <button class="co-coupon-apply" onclick="applyCoupon()">Apply</button>
+        </div>
+        <div id="co-coupon-feedback"></div>
+      </div>
+
+      <div style="display:flex;gap:.7rem;margin-top:1rem">
+        <button type="button" class="btn btn-outline" onclick="closeCheckout()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coHandleNextStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next</button>
+      </div>
+
+      <!-- TEST-ONLY: simulate a successful payment so you can confirm products
+           actually land in "My Products" without going through real SlickPay.
+           Remove this button before sharing the store publicly. -->
+      <button type="button" id="co-test-pay-btn" onclick="coSimulateTestPayment()"
+        style="width:100%;margin-top:.6rem;padding:.65rem 1rem;border-radius:9px;border:1px dashed rgba(var(--accent-rgb),.4);
+        background:rgba(var(--accent-rgb),.06);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer">
+        <i class="fa-solid fa-flask"></i> Simulate Test Payment (Dev Only)
+      </button>
+    </div>
+
+    <!-- Proof of payment upload step -->
+    <div id="co-payment-step" style="display:none">
+      <h3 class="co-title"><i class="fa-solid fa-camera"></i> Upload Payment Proof</h3>
+      <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1.1rem;text-align:center">Send your payment, then upload screenshot(s) as proof. The admin will verify and deliver your product.</p>
+      <div id="co-proof-zone" style="border:2px dashed var(--border-strong);border-radius:var(--radius);padding:1.4rem;text-align:center;cursor:pointer;transition:border-color .18s;position:relative;margin-bottom:.9rem" onclick="document.getElementById('co-proof-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="coHandleProofDrop(event)">
+        <input type="file" id="co-proof-input" accept="image/*" multiple style="display:none" onchange="coHandleProofFiles(this.files)"/>
+        <i class="fa-solid fa-images" style="font-size:1.8rem;color:var(--text-muted);margin-bottom:.5rem;display:block"></i>
+        <div style="font-size:.88rem;color:var(--text-muted)"><strong style="color:var(--accent)">Click to upload</strong> or drag &amp; drop</div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem">JPG, PNG, WEBP — multiple screenshots allowed</div>
+      </div>
+      <div id="co-proof-previews" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.9rem"></div>
+      <div id="co-proof-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.8rem"></div>
+      <div style="display:flex;gap:.6rem">
+        <button type="button" class="btn btn-outline" style="flex:1" onclick="coBackToInfoStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-primary" style="flex:2" id="co-proof-submit-btn" onclick="placeOrderWithProof()"><i class="fa-solid fa-paper-plane"></i> Submit Order</button>
+      </div>
+    </div>
+
+    <div class="co-success" id="co-success">
+      <div style="font-size:2.4rem;margin-bottom:.6rem">🎉</div>
+      <i class="fa-solid fa-circle-check" style="color:var(--accent);font-size:2rem;display:block;margin-bottom:.7rem"></i>
+      <h3>Order Placed!</h3>
+      <p>Your purchase has been saved.<br/>Check <strong>My Products</strong> for your access link once delivered.</p>
+      <div style="display:flex;gap:.6rem;justify-content:center;margin-top:1.4rem;flex-wrap:wrap">
+        <button class="btn btn-primary" id="co-success-myprods-btn"><i class="fa-solid fa-box-archive"></i> My Products</button>
+        <button class="btn btn-outline" id="co-success-continue-btn">Continue Shopping</button>
+      </div>
+    </div>
+
+    </div><!-- /checkout-box-inner -->
+  </div>
+</div>
+
+<!-- ===== ALL PRODUCTS PAGE ===== -->
+<div id="all-products-page">
+  <div class="all-products-inner">
+    <button class="back-btn" onclick="closeAllProducts()"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
+    <div class="all-hdr">
+      <h2 style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800">All Products</h2>
+      <div class="search-bar">
+        <i class="fa-solid fa-search" style="color:var(--text-muted)"></i>
+        <input type="text" id="search-input" placeholder="Search products..." oninput="renderAllProducts()"/>
+      </div>
+    </div>
+    <div class="filter-chips" id="filter-chips"></div>
+    <div class="products-grid" id="all-products-grid"></div>
+  </div>
+</div>
+
+
+<!-- ===== MY PRODUCTS PAGE ===== -->
+<div id="my-products-page">
+  <div class="mp-inner">
+    <button class="back-btn" onclick="closeMyProducts()"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
+    <div class="mp-hdr">
+      <div class="mp-hdr-left">
+        <div class="mp-badge"><i class="fa-solid fa-box-archive"></i> My Library</div>
+        <h2>My Products</h2>
+        <p id="mp-hdr-sub">Your purchased digital products</p>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="closeMyProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-store"></i> Browse Store</button>
+        <button class="btn btn-primary" onclick="openReviewModal()"><i class="fa-solid fa-star"></i> Write a Review</button>
+      </div>
+    </div>
+    <div class="mp-stats" id="mp-stats-row"></div>
+    <div class="mp-filter" id="mp-filter-bar">
+      <button class="chip active" data-filter="all" onclick="mpSetFilter(this,'all')">All Products</button>
+      <div id="mp-type-chips"></div>
+      <div class="mp-search">
+        <i class="fa-solid fa-search" style="color:var(--text-muted);font-size:.85rem"></i>
+        <input type="text" id="mp-search-input" placeholder="Search products..." oninput="mpRenderList()"/>
+      </div>
+    </div>
+    <div class="mp-grid" id="mp-products-grid"></div>
+  </div>
+</div>
+
+<!-- My Products Detail Modal -->
+<div id="mp-detail-modal">
+  <div class="modal-box">
+    <button onclick="document.getElementById('mp-detail-modal').classList.remove('open')" style="position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:.8rem"><i class="fa-solid fa-xmark"></i></button>
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem;color:var(--text)"><i class="fa-solid fa-box-open" style="color:var(--accent)"></i> Product Details</h3>
+    <div id="mp-detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== PRODUCT DETAIL PAGE ===== -->
+<div id="product-page">
+  <div class="product-page-inner">
+    <button class="back-btn" id="pd-back"><i class="fa-solid fa-arrow-left"></i> Back</button>
+    <div class="detail-grid">
+      <div>
+        <div class="gallery-main"><img id="gal-main" src="" alt=""/></div>
+        <div class="gallery-thumbs" id="gal-thumbs"></div>
+      </div>
+      <div>
+        <div class="pd-cat" id="pd-cat"></div>
+        <h1 class="pd-name" id="pd-name"></h1>
+        <div class="pd-prices">
+          <span class="pd-price" id="pd-price"></span>
+          <span class="pd-old" id="pd-old" style="display:none"></span>
+          <span class="pd-disc" id="pd-disc" style="display:none"></span>
+        </div>
+        <div class="pd-badges" id="pd-badges"></div>
+        <div id="pd-stars-row"></div>
+        <p class="pd-desc" id="pd-desc"></p>
+        <!-- Variant selector — shown only if product has variants -->
+        <div class="pd-variant-wrap" id="pd-variant-wrap" style="display:none">
+          <div id="pd-variant-groups"></div>
+        </div>
+        <div class="pd-actions">
+          <button class="btn-add-cart" id="pd-add-btn"><i class="fa-solid fa-bag-shopping"></i> Add to Cart</button>
+          <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
+          <button class="btn-buy-now" id="pd-free-btn" style="display:none"><i class="fa-solid fa-gift"></i> Add to My Products</button>
+          <button class="pd-wish-btn" id="pd-wish-btn" title="Add to Wishlist"><i class="fa-regular fa-heart"></i></button>
+        </div>
+        <div class="pd-meta" id="pd-meta"></div>
+      </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <div class="pd-reviews-section" id="pd-reviews-section">
+      <div class="pd-reviews-hdr">
+        <h3>Customer Reviews</h3>
+        <button class="btn btn-outline btn-sm" id="pd-reviews-write-btn" style="display:none"><i class="fa-solid fa-pen"></i> Write a Review</button>
+      </div>
+      <div class="pd-reviews-summary" id="pd-reviews-summary" style="display:none"></div>
+      <div class="pd-reviews-list" id="pd-reviews-list">
+        <div class="pd-reviews-empty">Loading reviews…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="firebase.js"></script>
+<script src="js/01-state-nav.js"></script>
+<script src="js/02-products-catalog.js"></script>
+<script src="js/03-cart.js"></script>
+<script src="js/04-checkout.js"></script>
+<script src="js/05-auth-utils.js"></script>
+<script src="js/06-my-products.js"></script>
+<script src="js/07-reviews-wishlist-search.js"></script>
+<script src="js/08-engagement.js"></script>
+
+
+
+<!-- ===== REVIEW MODAL ===== -->
+<div id="review-modal">
+  <div class="review-box">
+    <button class="review-box-close" onclick="closeReviewModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="review-box-inner">
+      <div class="review-title"><i class="fa-solid fa-star"></i> Write a Review</div>
+
+      <!-- Step 1: Choose product -->
+      <div id="rv-step-product">
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem">Select a product you've purchased to review:</p>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Product</label>
+          <select id="rv-product-select" class="form-input" style="width:100%">
+            <option value="">— Select a product —</option>
+          </select>
+        </div>
+        <div id="rv-already-reviewed" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#F59E0B;margin-bottom:.9rem">
+          <i class="fa-solid fa-circle-info"></i> You've already reviewed this product.
+        </div>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.45rem">Rating</label>
+          <div class="rv-star-picker" id="rv-star-picker">
+            <i class="fa-solid fa-star empty" data-star="1" onclick="rvSetStar(1)"></i>
+            <i class="fa-solid fa-star empty" data-star="2" onclick="rvSetStar(2)"></i>
+            <i class="fa-solid fa-star empty" data-star="3" onclick="rvSetStar(3)"></i>
+            <i class="fa-solid fa-star empty" data-star="4" onclick="rvSetStar(4)"></i>
+            <i class="fa-solid fa-star empty" data-star="5" onclick="rvSetStar(5)"></i>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Comment <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <textarea id="rv-comment" class="form-input" rows="3" placeholder="Share your experience with this product..." style="resize:none"></textarea>
+        </div>
+        <div id="rv-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.65rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-outline" onclick="closeReviewModal()" style="flex:1"><i class="fa-solid fa-xmark"></i> Cancel</button>
+          <button class="btn btn-primary" id="rv-submit-btn" onclick="submitReview()" style="flex:2"><i class="fa-solid fa-paper-plane"></i> Submit Review</button>
+        </div>
+      </div>
+
+      <!-- Step: not logged in -->
+      <div id="rv-step-login" style="display:none">
+        <div class="review-empty">
+          <i class="fa-solid fa-lock"></i>
+          <p>You need to be signed in to leave a review.</p>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="closeReviewModal();openLoginModal()"><i class="fa-solid fa-user"></i> Sign In</button>
+      </div>
+
+      <!-- Step: no purchases -->
+      <div id="rv-step-no-purchases" style="display:none">
+        <div class="review-empty">
+          <i class="fa-solid fa-box-open"></i>
+          <p>Only customers who have purchased a product can leave a review. Buy something first!</p>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="closeReviewModal();openAllProducts()"><i class="fa-solid fa-store"></i> Browse Store</button>
+      </div>
+
+      <!-- Step: success -->
+      <div id="rv-step-success" style="display:none;text-align:center;padding:1.5rem 0">
+        <div style="font-size:2.5rem;margin-bottom:.8rem">🎉</div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.4rem">Review Submitted!</h3>
+        <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.2rem">Your review is pending admin approval. Thank you!</p>
+        <button class="btn btn-primary" onclick="closeReviewModal()" style="width:100%">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WhatsApp Float Button -->
+<div id="wa-float">
+  <a id="wa-float-link" href="#" target="_blank" rel="noopener" title="Chat on WhatsApp">
+    <i class="fa-brands fa-whatsapp"></i>
+  </a>
+</div>
+<!-- ── Backend URL configuration ──────────────────────────────────────
+     Change this to your actual backend URL before deploying.
+     Development:  http://localhost:3001
+     Production:   https://yourdomain.com
+     ─────────────────────────────────────────────────────────────── -->
+<script src="js/09-config.js"></script>
+
+<!-- ===== PREMIUM POLISH: scroll-reveal (visual only, no logic touched) ===== -->
+<script src="js/10-scroll-reveal.js"></script>
+
+</body>
+</html>
