@@ -18,5 +18,5 @@ jobs:
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.cfut_4YRIQNA55GopRVCMFzUwCaMoAoM8hLSA8XJw9h9y126c495b }}
+          accountId: ${{ secrets.82c0f07d1f11ca93959f3e28a5ad2ef8 }}
