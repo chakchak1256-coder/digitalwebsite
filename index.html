@@ -892,6 +892,18 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 }
 .chip:hover,.chip.active{background:rgba(var(--accent-rgb),.1);border-color:var(--accent);color:var(--accent)}
 
+/* ===== DEEP-LINK LOADER =====
+   Shown briefly while we wait for Firestore data so a shared ?product=
+   link opens straight into the product instead of flashing the homepage
+   first. See the inline bootstrap script right after <body>. */
+#deep-link-loader{
+  display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);
+  flex-direction:column;align-items:center;justify-content:center;gap:.9rem;
+}
+#deep-link-loader.visible{display:flex}
+#deep-link-loader i{font-size:1.6rem;color:var(--accent)}
+#deep-link-loader span{font-size:.85rem;color:var(--text-muted);font-family:'DM Sans',sans-serif}
+
 /* ===== PRODUCT DETAIL ===== */
 #product-page{
   display:none;position:fixed;inset:0;z-index:810;
@@ -1840,6 +1852,20 @@ footer::before{
 </style>
 </head>
 <body>
+<!-- Deep-link loader: if this page was opened via a shared ?product=<id>
+     link, cover the screen immediately so the visitor sees a spinner
+     instead of a flash of the homepage before the product opens. This
+     script runs synchronously as the very first thing in <body>, before
+     anything else below it paints. It's hidden again once the product
+     actually opens (or after a timeout / if the product can't be found) —
+     see the _pendingProductOpen handling further down. -->
+<div id="deep-link-loader"><i class="fa-solid fa-spinner fa-spin"></i><span>Opening product…</span></div>
+<script>
+  if (new URLSearchParams(window.location.search).get('product')) {
+    document.getElementById('deep-link-loader').classList.add('visible');
+  }
+</script>
+
 <!-- Ambient decorative gradient blobs — purely visual, non-interactive -->
 <div class="dz-ambient" aria-hidden="true">
   <div class="dz-blob dz-b1"></div>
@@ -2626,7 +2652,6 @@ footer::before{
           <button class="btn-buy-now" id="pd-buy-btn"><i class="fa-solid fa-bolt"></i> Buy Now</button>
           <button class="btn-buy-now" id="pd-free-btn" style="display:none"><i class="fa-solid fa-gift"></i> Add to My Products</button>
           <button class="pd-wish-btn" id="pd-wish-btn" title="Add to Wishlist"><i class="fa-regular fa-heart"></i></button>
-          <button class="pd-wish-btn" id="pd-share-btn" title="Copy product link"><i class="fa-solid fa-link"></i></button>
         </div>
         <div class="pd-meta" id="pd-meta"></div>
       </div>
@@ -2670,6 +2695,17 @@ let _pendingHashScroll = window.location.hash || '';
 // If the page was loaded via a shared per-product link (?product=<id>),
 // open that product's detail page once the catalog has loaded.
 let _pendingProductOpen = new URLSearchParams(window.location.search).get('product') || '';
+
+function _hideDeepLinkLoader() {
+  const el = document.getElementById('deep-link-loader');
+  if (el) el.classList.remove('visible');
+}
+// Safety net: if Firestore data never arrives (offline, permissions issue,
+// etc.) don't leave the visitor staring at a spinner forever — fall back
+// to showing the homepage as-is after a few seconds.
+if (_pendingProductOpen) {
+  setTimeout(_hideDeepLinkLoader, 8000);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -2729,6 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const sharedProd = DB.getById('products', _pendingProductOpen);
       if (sharedProd) openProductDetail(sharedProd.id, false);
       _pendingProductOpen = ''; // only try once — catalog is fully loaded by the first db:update
+      _hideDeepLinkLoader();
     }
   });
 });
@@ -3033,6 +3070,9 @@ function openProductDetail(id, fromAllPage = true) {
   document.getElementById('product-page').classList.add('active');
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
+  // Don't leave "Home" (or whichever section is behind the overlay) looking
+  // active in the navbar while the product detail page is open on top of it.
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 
   // Give this product its own shareable URL in the address bar
   // (replaceState so opening/closing products doesn't spam browser history)
@@ -3179,7 +3219,6 @@ function openProductDetail(id, fromAllPage = true) {
   };
   updateWBtn();
   wBtn.onclick = () => { toggleWishlist(activeProd.id, wBtn); updateWBtn(); };
-  document.getElementById('pd-share-btn').onclick = () => copyProductLink(prod.id);
   document.getElementById('pd-back').onclick = closeProductDetail;
 
   // Load reviews
