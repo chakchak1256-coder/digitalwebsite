@@ -12,6 +12,9 @@ window.addEventListener('auth:change', () => {
 });
 
 let _pendingHashScroll = window.location.hash || '';
+// If the page was loaded via a shared per-product link (?product=<id>),
+// open that product's detail page once the catalog has loaded.
+let _pendingProductOpen = new URLSearchParams(window.location.search).get('product') || '';
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -65,6 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(() => target.scrollIntoView());
       }
       _pendingHashScroll = '';
+    }
+    // Deep link to a single product (e.g. someone opened a shared product link)
+    if (_pendingProductOpen) {
+      const sharedProd = DB.getById('products', _pendingProductOpen);
+      if (sharedProd) openProductDetail(sharedProd.id, false);
+      _pendingProductOpen = ''; // only try once — catalog is fully loaded by the first db:update
     }
   });
 });

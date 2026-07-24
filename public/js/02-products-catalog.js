@@ -37,6 +37,22 @@ function makeCatCard(cat, allProds) {
   return d;
 }
 
+// ===== SHAREABLE PER-PRODUCT LINKS =====
+// Every product gets its own bookmarkable/shareable URL: ?product=<id>
+// Opening a product's detail page updates the address bar to this URL
+// (via replaceState, so it doesn't spam browser history), and loading
+// the site with that URL directly re-opens the same product — see the
+// _pendingProductOpen handling in 01-state-nav.js.
+function productShareUrl(id) {
+  return window.location.origin + window.location.pathname + '?product=' + encodeURIComponent(id);
+}
+function copyProductLink(id) {
+  const url = productShareUrl(id);
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('🔗 Product link copied!');
+  }).catch(() => showToast('Copy failed — link: ' + url));
+}
+
 // ===== PRODUCTS (last added) =====
 function renderProducts() {
   const prods = DB.getAll('products'); // already sorted newest first (unshift on add)
@@ -62,6 +78,9 @@ function makeProductCard(prod) {
       ${prod.badge ? `<span class="prod-badge ${badgeCls}">${prod.badge}</span>` : ''}
       ${discountPct > 0 ? `<span class="prod-discount">-${discountPct}%</span>` : ''}
       <img src="${img}" alt="${prod.name}" loading="lazy"/>
+      <button class="prod-share" onclick="event.stopPropagation();copyProductLink('${prod.id}')" title="Copy link to this product">
+        <i class="fa-solid fa-link"></i>
+      </button>
       <button class="prod-heart ${wishlisted?'active':''}" onclick="event.stopPropagation();toggleWishlist('${prod.id}',this)" title="${wishlisted?'Remove from wishlist':'Add to wishlist'}">
         <i class="${wishlisted?'fa-solid':'fa-regular'} fa-heart"></i>
       </button>
@@ -262,6 +281,10 @@ function openProductDetail(id, fromAllPage = true) {
   document.getElementById('product-page').scrollTo(0, 0);
   if (!fromAll) document.body.classList.add('no-scroll');
 
+  // Give this product its own shareable URL in the address bar
+  // (replaceState so opening/closing products doesn't spam browser history)
+  history.replaceState(null, '', '?product=' + encodeURIComponent(prod.id));
+
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
   document.getElementById('pd-price').textContent = formatPrice(prod.price, s.currency);
@@ -403,6 +426,7 @@ function openProductDetail(id, fromAllPage = true) {
   };
   updateWBtn();
   wBtn.onclick = () => { toggleWishlist(activeProd.id, wBtn); updateWBtn(); };
+  document.getElementById('pd-share-btn').onclick = () => copyProductLink(prod.id);
   document.getElementById('pd-back').onclick = closeProductDetail;
 
   // Load reviews
@@ -413,6 +437,10 @@ function closeProductDetail() {
   document.getElementById('product-page').classList.remove('active');
   document.body.classList.remove('no-scroll');
   Presence.setProduct(null);
+  // Drop the ?product= param when leaving the detail page
+  if (new URLSearchParams(window.location.search).has('product')) {
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }
 }
 
 // ===== SHOW MAIN =====

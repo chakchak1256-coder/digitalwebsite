@@ -4,6 +4,13 @@
 let _coProofFiles = []; // proof screenshots (File objects or data URLs)
 let _coUseAccount = false;
 
+// SlickPay (the CIB/EDDAHABIA card gateway) always deducts a flat 40 DA
+// commission from every transaction. We pass that on to the customer as a
+// visible "payment processing fee" line at checkout — rather than eating it
+// silently, which would just mean each sale nets less than the sticker price.
+// This must match SLICKPAY_GATEWAY_FEE_DA in worker.js.
+const SLICKPAY_FEE_DA = 40;
+
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
@@ -135,10 +142,11 @@ function coShowPaymentInstructions(method) {
     }
   }
 
-  // CIB online payment — no instruction card needed
+  // CIB online payment — no instruction card needed, but SlickPay's flat
+  // gateway fee applies (charged transparently, not hidden in the price)
   if (method === 'cib') {
     if (instrEl) instrEl.style.display = 'none';
-    _coRefreshOrderSummary(0);
+    _coRefreshOrderSummary(0, SLICKPAY_FEE_DA);
     return;
   }
 
@@ -155,7 +163,7 @@ function coShowPaymentInstructions(method) {
   textEl.textContent  = text;
 
   // No fees for EDDAHABIA manual transfer
-  _coRefreshOrderSummary(0);
+  _coRefreshOrderSummary(0, 0);
 
   // Build copy-number rows
   const numbers = eddahabiaNumbers;
@@ -206,11 +214,12 @@ function coShowPaymentInstructions(method) {
 }
 
 // ── Build order summary HTML ───────────────────────────────────
-function buildOrderSummaryHTML(surchargeRate) {
+function buildOrderSummaryHTML(surchargeRate, surchargeFlat) {
   const items = Cart.get();
   const s = Settings.get();
   if (!items.length) return '';
   const rate = surchargeRate != null ? surchargeRate : (_coSurchargeRate || 0);
+  const flat = surchargeFlat != null ? surchargeFlat : (_coSurchargeFlat || 0);
   let rows = items.map((item, idx) => {
     const variant = item.variantLabel ? `<div style="font-size:.74rem;color:var(--text-muted);margin-top:.1rem">Variant: ${item.variantLabel}</div>` : '';
     // Use data-cartid attribute — avoids any quote/injection issues with the id string
@@ -229,11 +238,16 @@ function buildOrderSummaryHTML(surchargeRate) {
     </div>`;
   }).join('');
   const baseTotal = Cart.total();
-  const feeAmount = rate > 0 ? Math.round(baseTotal * rate) : 0;
+  const pctFeeAmount = rate > 0 ? Math.round(baseTotal * rate) : 0;
+  const flatFeeAmount = flat > 0 ? flat : 0;
+  const feeAmount = pctFeeAmount + flatFeeAmount;
   const finalTotal = baseTotal + feeAmount;
-  const feeRow = rate > 0 ? `
+  const feeLabel = flatFeeAmount > 0
+    ? 'Payment processing fee'
+    : `Service fee (+${Math.round(rate*100)}%)`;
+  const feeRow = feeAmount > 0 ? `
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.45rem">
-      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> Service fee (+${Math.round(rate*100)}%)</span>
+      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> ${feeLabel}</span>
       <span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#F59E0B">+${feeAmount.toLocaleString()} ${s.currency||'DA'}</span>
     </div>` : '';
   // Coupon discount row (if a coupon has been applied)
@@ -254,7 +268,7 @@ function buildOrderSummaryHTML(surchargeRate) {
     ${rows}
     ${feeRow}
     ${couponRow}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem;${(rate>0||couponDiscount>0)?'border-top:1px solid var(--border);':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem;${(feeAmount>0||couponDiscount>0)?'border-top:1px solid var(--border);':''}">
       <span style="font-size:.88rem;font-weight:700;color:var(--text)">Total</span>
       <span style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent)">${grandTotal.toLocaleString()} ${s.currency||'DA'}</span>
     </div>
@@ -270,15 +284,17 @@ function coRemoveFromSummary(itemId) {
 }
 
 // Inject/refresh order summary into co-form-wrap
-let _coSurchargeRate = 0; // 0 = none (EDDAHABIA and CIB both have no surcharge)
+let _coSurchargeRate = 0; // 0 = none (percentage-based fee, currently unused)
+let _coSurchargeFlat = 0; // 0 = none (flat DA fee — used for the SlickPay/CIB gateway fee)
 
-function _coRefreshOrderSummary(surchargeRate) {
+function _coRefreshOrderSummary(surchargeRate, surchargeFlat) {
   if (surchargeRate !== undefined) _coSurchargeRate = surchargeRate;
+  if (surchargeFlat !== undefined) _coSurchargeFlat = surchargeFlat;
   const wrap = document.getElementById('co-form-wrap');
   if (!wrap) return;
   const old = document.getElementById('co-order-summary-block');
   if (old) old.remove();
-  const html = buildOrderSummaryHTML(_coSurchargeRate);
+  const html = buildOrderSummaryHTML(_coSurchargeRate, _coSurchargeFlat);
   if (!html) return;
   const block = document.createElement('div');
   block.id = 'co-order-summary-block';
@@ -448,7 +464,7 @@ async function coInitiateSlickPayCheckout() {
         user_email:   currentUser.email || email,
         product_id:   cartItems[0]?.productId || cartItems[0]?.id || '',
         product_name: productName,
-        amount:       total,
+        amount:       total + SLICKPAY_FEE_DA,
         firstname,
         lastname,
         email,
@@ -520,6 +536,7 @@ function _doCloseCheckout() {
   const instrEl = document.getElementById('co-payment-instructions');
   if (instrEl) instrEl.style.display = 'none';
   _coSurchargeRate = 0;
+  _coSurchargeFlat = 0;
   const phoneHint = document.getElementById('co-phone-hint');
   if (phoneHint) phoneHint.style.display = 'none';
   const phoneInput = document.getElementById('co-phone');
