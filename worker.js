@@ -99,6 +99,14 @@ async function slickpayRequest(env, path, { method = 'GET', body } = {}) {
   return data;
 }
 
+// SlickPay deducts a flat commission from every transaction regardless of
+// amount (currently 40 DA). Rather than silently eating that fee (which
+// just makes each sale net less than the listed price), we add it on top
+// of the products' price so the customer pays it transparently and the
+// merchant still receives the full listed amount. Kept as a single
+// constant so it's easy to update if SlickPay's fee ever changes.
+const SLICKPAY_GATEWAY_FEE_DA = 40;
+
 const SlickPay = {
   async createInvoice(env, { amount, items, firstname, lastname, email, phone, address, returnUrl, webhookUrl, webhookSignature, webhookMetaData, fees = 100 }) {
     const payload = {
@@ -764,6 +772,12 @@ export default {
           return json({ error: 'Amount must be greater than 100 DZD.' }, 400);
         }
 
+        // The customer is charged the products total PLUS SlickPay's flat
+        // commission — see SLICKPAY_GATEWAY_FEE_DA above. This is the actual
+        // amount charged on the invoice, itemized as its own line so it's
+        // never hidden inside the product price.
+        const chargeAmount = Number(computedAmount) + SLICKPAY_GATEWAY_FEE_DA;
+
         const appUrl = env.APP_URL || 'https://digital-website.chakchak1256.workers.dev';
         const returnUrl = `${appUrl}/payment-return.html`;
 
@@ -773,10 +787,13 @@ export default {
         let invoiceData;
         try {
           invoiceData = await SlickPay.createInvoice(env, {
-            amount: Number(computedAmount),
-            items: pricedItems
-              ? pricedItems.map(it => ({ name: it.name, price: it.unitPrice, quantity: it.qty }))
-              : [{ name: finalProductName, price: Number(computedAmount), quantity: 1 }],
+            amount: chargeAmount,
+            items: [
+              ...(pricedItems
+                ? pricedItems.map(it => ({ name: it.name, price: it.unitPrice, quantity: it.qty }))
+                : [{ name: finalProductName, price: Number(computedAmount), quantity: 1 }]),
+              { name: 'Payment processing fee', price: SLICKPAY_GATEWAY_FEE_DA, quantity: 1 },
+            ],
             firstname,
             lastname,
             email: email || undefined,
@@ -812,7 +829,9 @@ export default {
             invoiceId: String(invoiceId),
             product_id:   product_id       || (pricedItems && pricedItems.length === 1 ? pricedItems[0].productId : ''),
             product_name: finalProductName || '',
-            amount:       Number(computedAmount),
+            amount:       Number(chargeAmount),      // total actually charged to the customer (products + gateway fee)
+            productsAmount: Number(computedAmount),  // products-only subtotal, for reference
+            gatewayFee:   SLICKPAY_GATEWAY_FEE_DA,
             items:        pricedItems || null,
             userId:       user_id    || '',
             userEmail:    user_email || email || '',
@@ -830,7 +849,7 @@ export default {
           console.error('[checkout] Firestore write failed:', fsErr.message);
         }
 
-        return json({ order_id: orderId, payment_url: paymentUrl, amount: Number(computedAmount), invoice_id: invoiceId });
+        return json({ order_id: orderId, payment_url: paymentUrl, amount: Number(chargeAmount), invoice_id: invoiceId });
 
       } catch (err) {
         console.error('[checkout] unexpected error:', err.message);
