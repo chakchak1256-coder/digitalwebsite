@@ -2715,6 +2715,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollSpy();
   Presence.start();
   CartLive.start();
+  // Apply store branding (logo, store name, brand colors) from Settings —
+  // once immediately with whatever's cached in localStorage/defaults, and
+  // again every time Settings.load() resolves fresh data from Firestore
+  // (settings:update fires on both the initial load and any admin edit).
+  Settings.applyTheme();
+  window.addEventListener('settings:update', () => Settings.applyTheme());
   // Handle ?open= param (e.g. redirects from payment-return.html)
   (function handleOpenParam() {
     const p = new URLSearchParams(window.location.search).get('open');
@@ -3292,12 +3298,9 @@ function updateCartBadge() { const c=Cart.count(); const b=document.getElementBy
 let _coProofFiles = []; // proof screenshots (File objects or data URLs)
 let _coUseAccount = false;
 
-// SlickPay (the CIB/EDDAHABIA card gateway) always deducts a flat 40 DA
-// commission from every transaction. We pass that on to the customer as a
-// visible "payment processing fee" line at checkout — rather than eating it
-// silently, which would just mean each sale nets less than the sticker price.
-// This must match SLICKPAY_GATEWAY_FEE_DA in worker.js.
-const SLICKPAY_FEE_DA = 40;
+// SLICKPAY_FEE_DA (the flat 40 DA gateway commission) is declared once in
+// firebase.js — which loads before this script — and reused here. Must
+// match SLICKPAY_GATEWAY_FEE_DA in worker.js.
 
 function openCheckout() {
   const user = UserAuth.current();
@@ -4862,7 +4865,7 @@ function initFlashBanner() {
     tick();
   }
 }
-// (initFlashBanner is already wired to settings:update in DOMContentLoaded)
+// (initFlashBanner is called from the db:update handler above)
 
 // ================================================================
 // ===== FEATURE: COUPON / PROMO CODE =====
