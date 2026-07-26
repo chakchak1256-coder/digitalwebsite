@@ -3307,7 +3307,7 @@ function renderCartItems() {
       <div class="cart-item-img"><img src="${img}" alt=""/></div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${formatPrice(item.price*item.qty, s.currency)}</div>
+        <div class="cart-item-price">${(() => { const lt = item.price*item.qty; return lt > 0 ? lt.toLocaleString()+' '+(s.currency||'DA') : 'FREE'; })()}</div>
         <div class="cart-item-row">
           <button class="qty-btn" onclick="changeQty('${item.id}',-1)"><i class="fa-solid fa-minus"></i></button>
           <span class="qty-num">${item.qty}</span>
