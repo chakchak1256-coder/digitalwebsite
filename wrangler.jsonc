@@ -11,7 +11,7 @@
 },
 
   "vars": {
-    "APP_URL": "https://digital-website.chakchak1256.workers.dev",
+    "APP_URL": "https://digital-website.digitch.workers.dev",
     "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
     "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com",
     // "sandbox" uses devapi.slick-pay.com  |  "production" uses prodapi.slick-pay.com

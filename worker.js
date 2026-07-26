@@ -62,7 +62,7 @@ function slickpayHeaders(env) {
     'Authorization': `Bearer ${env.SLICKPAY_KEY}`,
     'Content-Type':  'application/json',
     'Accept':        'application/json',
-    'User-Agent':    'DigiStoreDZ/1.0 (+https://digital-website.chakchak1256.workers.dev)',
+    'User-Agent':    'DigiStoreDZ/1.0 (+https://digital-website.digitch.workers.dev)',
   };
 }
 
@@ -778,7 +778,7 @@ export default {
         // never hidden inside the product price.
         const chargeAmount = Number(computedAmount) + SLICKPAY_GATEWAY_FEE_DA;
 
-        const appUrl = env.APP_URL || 'https://digital-website.chakchak1256.workers.dev';
+        const appUrl = env.APP_URL || 'https://digital-website.digitch.workers.dev';
         const returnUrl = `${appUrl}/payment-return.html`;
 
         // Generate a short order ID stored in webhook meta
