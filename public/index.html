@@ -1106,6 +1106,20 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   display:flex;flex-direction:column;overflow:hidden;
   transform:scale(.97);transition:transform .18s ease;position:relative}
 #mp-detail-modal.open .modal-box{transform:scale(1)}
+/* "You already own this" alert popup — always centered & on top, so it
+   can never be missed by being scrolled out of view inside the checkout box */
+#co-owned-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity var(--transition)}
+#co-owned-modal.open{opacity:1;pointer-events:all}
+#co-owned-modal .co-owned-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.8rem;width:100%;max-width:380px;text-align:center;
+  transform:scale(.97);transition:transform .18s ease}
+#co-owned-modal.open .co-owned-box{transform:scale(1)}
+#co-owned-modal .co-owned-icon{font-size:2.2rem;margin-bottom:.7rem}
+#co-owned-modal h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.5rem}
+#co-owned-modal p{font-size:.86rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.3rem}
+#co-owned-modal .co-owned-actions{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
 #mp-detail-content{overflow-y:auto;flex:1;min-height:0;padding-right:.5rem;margin-right:-.5rem}
 #mp-detail-content::-webkit-scrollbar{width:6px}
 #mp-detail-content::-webkit-scrollbar-track{background:transparent}
@@ -2674,6 +2688,22 @@ footer::before{
 <!-- TOAST -->
 <div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
 
+<!-- "You already own this" popup — replaces the old inline banner, which
+     could scroll out of view inside the checkout form and go unnoticed. -->
+<div id="co-owned-modal">
+  <div class="co-owned-box">
+    <div class="co-owned-icon">⚠️</div>
+    <h3>Already Purchased</h3>
+    <p id="co-owned-msg"></p>
+    <div class="co-owned-actions">
+      <button class="btn btn-primary" onclick="closeCoOwnedModal();openMyProducts();closeCheckout()">
+        <i class="fa-solid fa-box-archive"></i> My Products
+      </button>
+      <button class="btn btn-outline" onclick="closeCoOwnedModal()">OK</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -3679,16 +3709,24 @@ async function coGetAlreadyOwnedCartItems(userId) {
   }
 }
 
-// Shows the "you already have this" warning in the checkout form.
+// Shows the "you already have this" warning as a popup, always centered
+// on screen — not the inline banner, which lived at the top of a scrollable
+// form and could be scrolled out of view (so it sometimes went unnoticed).
 // One owned item → names it. More than one → a single summary message,
 // since listing every duplicate gets noisy.
 function coShowAlreadyOwnedError(ownedItems) {
-  const errEl = document.getElementById('co-form-err');
-  if (!errEl) return;
-  errEl.textContent = ownedItems.length === 1
-    ? `⚠️ You already have "${ownedItems[0].name}" — check My Products.`
-    : `⚠️ You already have ${ownedItems.length} of the products in your cart — check My Products. Please remove them before continuing.`;
-  errEl.style.display = 'block';
+  const msgEl = document.getElementById('co-owned-msg');
+  const modal = document.getElementById('co-owned-modal');
+  if (!msgEl || !modal) return;
+  msgEl.textContent = ownedItems.length === 1
+    ? `You already have "${ownedItems[0].name}". Check My Products before buying it again.`
+    : `You already have ${ownedItems.length} of the products in your cart. Check My Products, then remove them before continuing.`;
+  modal.classList.add('open');
+}
+
+function closeCoOwnedModal() {
+  const modal = document.getElementById('co-owned-modal');
+  if (modal) modal.classList.remove('open');
 }
 
 // STEP 1 → STEP 2: validate info, then show proof upload
