@@ -1151,8 +1151,12 @@ const Storage = {
 // INIT — load all data from Firestore on startup
 // ================================================================
 async function initFirestoreData() {
-  // Step 1: load from localStorage cache instantly (synchronous, zero delay)
-  const COLS = ['products', 'categories', 'orders'];
+  // The storefront (index.html) never reads the `orders` collection — only
+  // the admin panel does. `orders` also has no _LOAD_LIMITS cap (it can grow
+  // to be the largest collection in the whole app), so pulling it into every
+  // customer's page load was adding a large, completely unused payload to
+  // every single storefront visit. Only fetch it where it's actually used.
+  const COLS = window.__IS_ADMIN ? ['products', 'categories', 'orders'] : ['products', 'categories'];
   COLS.forEach(col => {
     try {
       const cached = localStorage.getItem('dz_fc_' + col);

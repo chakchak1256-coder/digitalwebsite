@@ -1140,6 +1140,7 @@ select.form-input option{background:var(--bg2)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script>
   window.DIGISTORE_BACKEND_URL = 'https://digital-website.digitch.workers.dev';
+  window.__IS_ADMIN = true; // tells firebase.js to also load the (unbounded) orders collection — the storefront never needs it
 </script>
 <script src="firebase.js"></script>
 <script>
