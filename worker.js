@@ -803,7 +803,15 @@ export default {
             webhookUrl:       env.SLICKPAY_WEBHOOK_URL || undefined,
             webhookSignature: env.SLICKPAY_WEBHOOK_SIG || undefined,
             webhookMetaData:  { order_id: orderId, product_id: product_id || '' },
-            fees: 100, // client pays commission
+            // We already fold SlickPay's flat commission into `chargeAmount`
+            // above (as its own "Payment processing fee" line item), so the
+            // customer is already paying it there. Passing fees: 100 here
+            // tells SlickPay's own API to ALSO add its commission on top at
+            // the CIB payment page, which is what was stacking a second
+            // 40 DA on the total (500 -> 540). fees: 0 = merchant absorbs
+            // SlickPay's cut out of the chargeAmount we already collected,
+            // instead of it being charged to the customer a second time.
+            fees: 0,
           });
         } catch (err) {
           console.error('[checkout] SlickPay error:', err.message);
