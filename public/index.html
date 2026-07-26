@@ -3454,7 +3454,7 @@ function coShowPaymentInstructions(method) {
   textEl.textContent  = text;
 
   // No fees for EDDAHABIA manual transfer
-  _coRefreshOrderSummary(0);
+  _coRefreshOrderSummary(0, 0);
 
   // Build copy-number rows
   const numbers = eddahabiaNumbers;
@@ -3579,7 +3579,22 @@ let _coSurchargeRate = 0; // 0 = none (EDDAHABIA and CIB both have no surcharge)
 let _coSurchargeFlat = 0; // 0 = none (flat DA fee — used for the SlickPay/CIB gateway fee)
 
 function _coRefreshOrderSummary(surchargeRate, surchargeFlat) {
-  if (surchargeRate !== undefined) _coSurchargeRate = surchargeRate;
+  // Previously, the fee only got (re)computed when explicitly passed in by
+  // coShowPaymentInstructions() — every other call site (cart updates,
+  // reopening the form, resuming checkout after login) just trusted
+  // whatever was last remembered in these module vars. Any gap between
+  // those calls could leave a stale/zeroed fee showing. To make this
+  // bulletproof, whenever no explicit override is passed, we now derive
+  // the fee straight from whichever payment method radio is actually
+  // checked on the page right now — so the total on screen can never
+  // drift from what's really selected.
+  if (surchargeRate !== undefined) {
+    _coSurchargeRate = surchargeRate;
+  } else {
+    const checkedMethod = document.querySelector('input[name="co-payment"]:checked')?.value;
+    _coSurchargeRate = 0; // neither method currently uses a percentage fee
+    _coSurchargeFlat = checkedMethod === 'cib' ? SLICKPAY_FEE_DA : 0;
+  }
   if (surchargeFlat !== undefined) _coSurchargeFlat = surchargeFlat;
   const wrap = document.getElementById('co-form-wrap');
   if (!wrap) return;
@@ -4016,6 +4031,9 @@ async function coSimulateTestPayment() {
 
   const name  = (document.getElementById('co-name')?.value || currentUser.name || 'Test Customer').trim();
   const email = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
+  const _testPhonePfx    = (document.getElementById('co-phone-prefix')?.value || '07');
+  const _testPhoneDigits = (document.getElementById('co-phone')?.value || '').trim();
+  const phone = currentUser.phone || (_testPhoneDigits ? (_testPhonePfx + _testPhoneDigits) : '');
   const products = DB.getAll ? DB.getAll('products') : [];
   const orderId = 'TEST-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
 
@@ -4037,6 +4055,7 @@ async function coSimulateTestPayment() {
         {
           customerName:  name,
           customerEmail: email,
+          customerPhone: phone,
           paymentMethod: 'test-simulated',
           orderNotes:    '⚠️ TEST PAYMENT — simulated, no real charge was made',
           orderId,
