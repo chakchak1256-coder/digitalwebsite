@@ -1545,6 +1545,11 @@ function switchProdDeliveryType(type) {
 const MAX_PROD_DELIVERY_FILES = 4;
 let productDeliveryFiles = []; // [{url, path, name, size}]
 let _prodDeliveryUploadInProgress = false;
+// Paths removed via the "Remove" button are queued here and only actually
+// deleted from R2 once the product save succeeds — deleting immediately on
+// click meant an unsaved/failed edit could permanently destroy the file a
+// live product (and any purchases already sold) still pointed to.
+let _pendingDeliveryFileDeletions = [];
 
 async function handleProductDeliveryFiles(fileList) {
   const files = [...(fileList || [])];
@@ -1611,7 +1616,7 @@ function renderProdDeliveryFiles() {
 
 function removeProdDeliveryFile(index) {
   const f = productDeliveryFiles[index];
-  if (f && f.path) Storage.deleteFile(f.path).catch(() => {});
+  if (f && f.path) _pendingDeliveryFileDeletions.push(f.path);
   productDeliveryFiles.splice(index, 1);
   renderProdDeliveryFiles();
 }
@@ -1620,6 +1625,7 @@ function clearProdDeliveryFile() {
   document.getElementById('prod-delivery-link').value = '';
   document.getElementById('prod-delivery-file-input').value = '';
   productDeliveryFiles = [];
+  _pendingDeliveryFileDeletions = [];
   const list = document.getElementById('prod-delivery-files-list');
   if (list) list.innerHTML = '';
   document.getElementById('prod-delivery-progress-wrap').style.display = 'none';
@@ -1733,6 +1739,13 @@ async function saveProduct(e) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span id="save-prod-btn-text">Saving…</span>'; }
   try {
     if (id) await DB.update('products', id, data); else await DB.add('products', data);
+    // Only now that the new deliveryLink/deliveryFiles are safely persisted
+    // is it safe to actually remove the old files from R2.
+    if (_pendingDeliveryFileDeletions.length) {
+      const toDelete = [..._pendingDeliveryFileDeletions];
+      _pendingDeliveryFileDeletions = [];
+      toDelete.forEach(p => Storage.deleteFile(p).catch(() => {}));
+    }
     resetProductForm(); showPanel('products'); showToast(id ? 'Product updated!' : 'Product added!');
   } catch(err) {
     showToast('❌ Save failed: ' + (err.message || err));
