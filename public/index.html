@@ -12,7 +12,45 @@
 </script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title id="page-title">DIGITCH</title>
+<title id="page-title">DIGITCH — Digital Products Store in Algeria</title>
+
+<!-- ===== SEO ===== -->
+<meta name="description" content="DIGITCH — buy digital products online in Algeria: subscriptions, software, templates and more, with secure CIB/EDAHABIA payment and instant delivery."/>
+<meta name="keywords" content="digital products Algeria, DIGITCH, buy subscriptions Algeria, CIB payment, EDAHABIA, digital store DZ"/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://digital-website.digitch.workers.dev/"/>
+<link rel="icon" type="image/png" href="/logo.png"/>
+<meta name="theme-color" content="#10B981"/>
+
+<!-- Open Graph -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="DIGITCH"/>
+<meta property="og:title" content="DIGITCH — Digital Products Store in Algeria"/>
+<meta property="og:description" content="Buy digital products online in Algeria: subscriptions, software, templates and more, with secure payment and instant delivery."/>
+<meta property="og:image" content="https://digital-website.digitch.workers.dev/logo.png"/>
+<meta property="og:url" content="https://digital-website.digitch.workers.dev/"/>
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="DIGITCH — Digital Products Store in Algeria"/>
+<meta name="twitter:description" content="Buy digital products online in Algeria: subscriptions, software, templates and more, with secure payment and instant delivery."/>
+<meta name="twitter:image" content="https://digital-website.digitch.workers.dev/logo.png"/>
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "OnlineStore",
+  "name": "DIGITCH",
+  "url": "https://digital-website.digitch.workers.dev/",
+  "logo": "https://digital-website.digitch.workers.dev/logo.png",
+  "image": "https://digital-website.digitch.workers.dev/logo.png",
+  "description": "DIGITCH — buy digital products online in Algeria with secure CIB/EDAHABIA payment and instant delivery.",
+  "priceRange": "DZD",
+  "paymentAccepted": "CIB, EDAHABIA"
+}
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
@@ -422,54 +460,6 @@ body{background:var(--bg2)}
   border-color:rgba(var(--accent-rgb),.2);
 }
 .about-card.span2 .stat-icon{width:54px;height:54px;font-size:1.4rem;border-radius:16px}
-
-/* ===== CATEGORIES ===== */
-#categories{padding:130px 0;position:relative;overflow:hidden}
-.cats-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1.85rem}
-.cat-card{
-  position:relative;border-radius:26px;overflow:hidden;cursor:pointer;
-  border:1px solid var(--glass-border);background:var(--glass-bg);
-  -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
-  display:flex;flex-direction:column;align-items:center;
-  text-align:center;padding:2.15rem 1.2rem 1.75rem;gap:.85rem;
-  box-shadow:0 1px 2px rgba(0,0,0,.05);
-  transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s ease,border-color .4s ease;
-}
-.cat-card::before{
-  content:'';position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(160deg,var(--glass-shine),transparent 55%);
-  opacity:0;transition:opacity .4s ease;pointer-events:none;
-}
-.cat-card:hover,.cat-card.active{
-  transform:translateY(-8px);border-color:rgba(var(--accent-rgb),.4);
-  box-shadow:0 22px 48px -12px rgba(0,0,0,.28),0 0 0 1px rgba(var(--accent-rgb),.14),0 0 34px -4px rgba(var(--accent-rgb),.35);
-}
-.cat-card:hover::before{opacity:1}
-.cat-bg{
-  width:64px;height:64px;border-radius:18px;position:relative;flex-shrink:0;
-  background:linear-gradient(140deg,#6366F1,#8B5CF6);
-  border:1px solid rgba(255,255,255,.18);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-  box-shadow:0 10px 24px -8px rgba(99,102,241,.55);
-  transition:transform var(--transition);
-}
-.cat-card:nth-child(4n+2) .cat-bg{background:linear-gradient(140deg,#10B981,#06B6D4);box-shadow:0 10px 24px -8px rgba(16,185,129,.5)}
-.cat-card:nth-child(4n+3) .cat-bg{background:linear-gradient(140deg,#F59E0B,#F97316);box-shadow:0 10px 24px -8px rgba(245,158,11,.5)}
-.cat-card:nth-child(4n+4) .cat-bg{background:linear-gradient(140deg,#EC4899,#8B5CF6);box-shadow:0 10px 24px -8px rgba(236,72,153,.5)}
-.cat-card:hover .cat-bg{transform:scale(1.08) rotate(-3deg)}
-.cat-card img.cat-cover{
-  position:absolute;inset:0;width:100%;height:100%;
-  object-fit:cover;opacity:1;transition:opacity var(--transition)
-}
-.cat-card:hover .cat-cover{opacity:.9}
-.cat-card-body{position:relative;z-index:2;display:flex;align-items:center;justify-content:center}
-.cat-emoji{font-size:1.6rem;display:block;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.22))}
-.cat-name{
-  font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;
-  color:var(--text);display:block;position:relative;z-index:1;
-}
-.cat-count{font-size:.7rem;color:var(--text-muted);position:relative;z-index:1;display:inline-flex;align-items:center;gap:.4rem}
-.cat-count::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);display:inline-block;opacity:.7}
 
 
 /* ===== PRODUCTS ===== */
@@ -1027,7 +1017,6 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   .about-right{grid-template-columns:1fr 1fr}
   .about-card.span2{grid-column:span 2}
   .form-row{grid-template-columns:1fr}
-  .cats-grid{grid-template-columns:repeat(3,1fr);gap:.6rem}
   .products-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .warranty-cards{grid-template-columns:1fr 1fr}
   .bs-row{padding:.7rem .8rem;gap:.7rem}
@@ -1605,7 +1594,7 @@ body.flash-on #mobile-nav{top:130px}
 
 /* ---- global motion defaults ---- */
 *{ scroll-behavior:smooth; }
-a,button,.btn,.cat-card,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
+a,button,.btn,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
 .soc-link,.warranty-card,.purchase-card,.feature-strip-item,.trust-item,
 .prod-add,.qty-btn,.cart-close,.theme-btn,#cart-btn,.cart-del,.pc-access-btn,.pc-copy-btn{
   transition:transform .4s cubic-bezier(.22,.85,.32,1),
@@ -1739,7 +1728,7 @@ a,button,.btn,.cat-card,.product-card,.about-card,.testi-card,.bs-row,.about-fea
 
 /* ---- section separators (soft gradient dividers) ---- */
 section{ position:relative; }
-#about::before,#categories::before,#products::before,#best-sellers::before,
+#about::before,#products::before,#best-sellers::before,
 #warranty::before,#contact::before,#testimonials::before{
   content:'';position:absolute;top:0;left:8%;right:8%;height:1px;z-index:1;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(var(--accent-rgb),.35),transparent);
@@ -1753,15 +1742,15 @@ section{ position:relative; }
 }
 
 /* ---- glass depth upgrade for existing glass cards ---- */
-.about-card,.cat-card{
+.about-card{
   position:relative; isolation:isolate;
 }
-.about-card::after,.cat-card::after{
+.about-card::after{
   content:'';position:absolute;inset:0;border-radius:inherit;z-index:-1;
   background:linear-gradient(135deg,rgba(var(--accent-rgb),.16),transparent 60%);
   opacity:0; filter:blur(18px); transition:opacity .45s ease;
 }
-.about-card:hover::after,.cat-card:hover::after{ opacity:1; }
+.about-card:hover::after{ opacity:1; }
 
 /* product / purchase card depth + image zoom (image zoom already present; reinforce w/ shadow lift) */
 .product-card,.purchase-card{ will-change:transform; }
@@ -1778,10 +1767,6 @@ section{ position:relative; }
 .prod-add{ position:relative; }
 .prod-add:hover{ box-shadow:0 6px 16px -6px rgba(var(--accent-rgb),.6); }
 .qty-btn:hover{ transform:translateY(-1px); }
-
-/* category icon micro-bounce already scales/rotates on hover — add subtle glow */
-.cat-bg{ box-shadow:0 10px 24px -8px rgba(99,102,241,.55),0 0 0 0 rgba(99,102,241,0); }
-.cat-card:hover .cat-bg{ box-shadow:0 14px 30px -8px rgba(99,102,241,.6),0 0 26px -6px rgba(99,102,241,.55); }
 
 /* best-seller rows: shine sweep on hover */
 .bs-row{ position:relative; overflow:hidden; }
@@ -2792,7 +2777,6 @@ document.addEventListener('DOMContentLoaded', () => {
       Wishlist.prune(validIds);
     }
     renderProducts();
-    renderStats();
     renderBestSellers();
     renderContactSocials();
     updateFooter();
@@ -2839,43 +2823,6 @@ function initScrollSpy() {
     });
   }, { rootMargin: '-40% 0px -55% 0px' });
   sections.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
-}
-
-// ===== STATS =====
-function renderStats() {
-  const p = DB.getAll('products').length, c = DB.getAll('categories').length;
-  ['stat-prods','ab-prods'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = p; });
-  ['stat-cats','ab-cats'].forEach(id =>  { const el = document.getElementById(id); if(el) el.textContent = c; });
-  const heroP = document.getElementById('hero-stat-prods'); if (heroP) heroP.textContent = (p || 0) + '+ Products';
-}
-
-// ===== CATEGORIES =====
-function renderCats() {
-  const cats = DB.getAll('categories');
-  const allProds = DB.getAll('products');
-  const g = document.getElementById('cats-grid'); g.innerHTML = '';
-  cats.forEach(c => g.appendChild(makeCatCard(c, allProds)));
-}
-
-function makeCatCard(cat, allProds) {
-  const d = document.createElement('div');
-  d.className = 'cat-card';
-  const hasBg = cat.image && cat.image.length > 50;
-  const count = (allProds || DB.getAll('products')).filter(p => cat._all || p.category === cat.name).length;
-  d.innerHTML = `
-    <div class="cat-bg">
-      ${hasBg ? `<img class="cat-cover" src="${cat.image}" alt="" loading="lazy"/>` : ''}
-      <div class="cat-card-body">
-        ${!hasBg ? `<span class="cat-emoji">${cat.emoji||'📦'}</span>` : ''}
-      </div>
-    </div>
-    <span class="cat-name">${cat.name}</span>
-    <span class="cat-count">${count} Product${count === 1 ? '' : 's'}</span>`;
-  // Clicking a category → opens all products page filtered to that category
-  d.onclick = () => {
-    openAllProducts(cat._all ? 'all' : cat.name);
-  };
-  return d;
 }
 
 // ===== PRODUCTS (last added) =====
@@ -3110,6 +3057,14 @@ function openProductDetail(id, fromAllPage = true) {
   // (replaceState so opening/closing products doesn't spam browser history)
   history.replaceState(null, '', '?product=' + encodeURIComponent(prod.id));
 
+  // SEO: reflect the open product in the tab title + description so a
+  // bookmark or a browser-native share sheet shows something useful.
+  // (This runs client-side only — it doesn't help search engine indexing
+  // since the page is a single-page app; see notes on structured data.)
+  document.title = `${prod.name} — DIGITCH`;
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', (prod.description || `Buy ${prod.name} on DIGITCH.`).slice(0, 160));
+
   document.getElementById('pd-cat').textContent = prod.category||'';
   document.getElementById('pd-name').textContent = prod.name;
   document.getElementById('pd-price').textContent = formatPrice(prod.price, s.currency);
@@ -3264,6 +3219,9 @@ function closeProductDetail() {
   if (new URLSearchParams(window.location.search).has('product')) {
     history.replaceState(null, '', window.location.pathname + window.location.hash);
   }
+  document.title = 'DIGITCH — Digital Products Store in Algeria';
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', 'DIGITCH — buy digital products online in Algeria: subscriptions, software, templates and more, with secure CIB/EDAHABIA payment and instant delivery.');
 }
 
 // ===== SHOW MAIN =====
@@ -3421,10 +3379,6 @@ function coChooseAccount(useAccount) {
   coShowPaymentInstructions('cib');
   _showCoStep('form');
   _coRefreshOrderSummary();
-}
-
-function coBackToAccountStep() {
-  _showCoStep('account');
 }
 
 function coBackToInfoStep() {
@@ -3598,14 +3552,6 @@ function buildOrderSummaryHTML(surchargeRate, surchargeFlat) {
   </div>`;
 }
 
-function coRemoveFromSummary(itemId) {
-  Cart.remove(itemId);
-  updateCartBadge();
-  _coRefreshOrderSummary();
-  // If cart is now empty, close checkout
-  if (!Cart.get().length) closeCheckout();
-}
-
 // Inject/refresh order summary into co-form-wrap
 let _coSurchargeRate = 0; // 0 = none (EDDAHABIA and CIB both have no surcharge)
 let _coSurchargeFlat = 0; // 0 = none (flat DA fee — used for the SlickPay/CIB gateway fee)
@@ -3659,11 +3605,6 @@ function _coRefreshOrderSummary(surchargeRate, surchargeFlat) {
       _coRefreshOrderSummary();
     });
   });
-}
-
-// Phone validation — 10 digits, starts with 05/06/07
-function isValidAlgerianPhone(val) {
-  return /^(05|06|07)\d{8}$/.test(val);
 }
 
 function coValidatePhone(input) {
@@ -4138,10 +4079,6 @@ async function coSimulateTestPayment() {
   Cart.clear();
   _showCoStep('success');
 }
-function showCheckoutError(msg) {
-  coShowFormError(msg);
-}
-
 // Old proceedToProofStep kept for compatibility
 function proceedToProofStep(e) {
   if (e) e.preventDefault();
@@ -4300,62 +4237,6 @@ async function doCompleteGoogleSignup() {
   // Same fix as doGoogleSignIn() above — reopen via openCheckout() so the
   // modal's internal steps actually get populated, not just made visible.
   if (wasCheckout) setTimeout(() => openCheckout(), 300);
-}
-
-// ── Validation helpers ────────────────────────────────────────────
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
-}
-function isValidPhone(digits8) {
-  // Only 8 digits allowed (prefix is separate) — for signup form with prefix dropdown
-  return /^\d{8}$/.test(digits8);
-}
-// Full Algerian phone (10 digits, starts with 05/06/07) — used in checkout
-function isValidAlgerianPhoneFull(val) {
-  return /^(05|06|07)\d{8}$/.test(val);
-}
-
-function validateEmailField(input, hintId, iconId) {
-  const val   = input.value.trim();
-  const hint  = document.getElementById(hintId);
-  const icon  = iconId ? document.getElementById(iconId) : null;
-  if (!val) { hint.style.display = 'none'; if (icon) icon.textContent = ''; input.style.borderColor = ''; return; }
-  if (isValidEmail(val)) {
-    hint.style.display = 'none';
-    input.style.borderColor = 'rgba(16,185,129,.6)';
-    if (icon) { icon.textContent = '✓'; icon.style.color = '#10B981'; }
-  } else {
-    hint.textContent = 'Enter a valid email (e.g. you@example.com)';
-    hint.style.display = 'block'; hint.style.color = '#EF4444';
-    input.style.borderColor = 'rgba(239,68,68,.5)';
-    if (icon) { icon.textContent = '✗'; icon.style.color = '#EF4444'; }
-  }
-}
-
-function validatePhoneField(input, hintId, iconId) {
-  // Strip non-digits
-  input.value = input.value.replace(/\D/g, '').slice(0, 8);
-  const val  = input.value;
-  const hint = document.getElementById(hintId);
-  const icon = iconId ? document.getElementById(iconId) : null;
-  if (!val) {
-    hint.textContent = 'Enter 8 digits after the prefix (e.g. 07 12345678)';
-    hint.style.color = 'var(--text-muted)';
-    if (icon) icon.textContent = '';
-    input.style.borderColor = '';
-    return;
-  }
-  if (isValidPhone(val)) {
-    hint.style.display = 'none';
-    input.style.borderColor = 'rgba(16,185,129,.6)';
-    if (icon) { icon.textContent = '✓'; icon.style.color = '#10B981'; }
-  } else {
-    hint.style.display = 'none'; // no inline counter hint
-    hint.style.display = 'block'; hint.style.color = '#F59E0B';
-    input.style.borderColor = 'rgba(245,158,11,.5)';
-    if (icon) { icon.textContent = ''; }
-    if (otpRow) otpRow.style.display = 'none';
-  }
 }
 
 function doUserLogout() {
@@ -4612,16 +4493,6 @@ function mpGetTypeIcon(type) {
 }
 function mpGetAccessLabel(type) {
   return 'Download';
-}
-function mpOpenAccess(link) {
-  if (link.startsWith('http')) window.open(link, '_blank');
-}
-function mpCopyAccess(id, link) {
-  navigator.clipboard.writeText(link).then(() => {
-    const btn = document.getElementById('copy-' + id);
-    if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!'; setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy'; }, 2000); }
-    showToast('Copied to clipboard!');
-  }).catch(() => showToast('Copy failed.'));
 }
 function mpPaymentLabel(method) {
   if (method === 'eddahabia') return '🏧 EDDAHABIA';
@@ -5218,7 +5089,7 @@ async function renderProductReviews(productId) {
 
   if (list) {
     list.innerHTML = reviews.map(r => {
-      const initials = (r.userName||'U').slice(0,2).toUpperCase();
+      const initials = escapeHtml((r.userName||'U').slice(0,2).toUpperCase());
       const date = new Date(r.createdAt).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' });
       const stars = Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star${i<r.stars?'':' empty'}"></i>`).join('');
       return `<div class="pd-review-card">
@@ -5226,13 +5097,13 @@ async function renderProductReviews(productId) {
           <div class="pd-review-user">
             <div class="pd-review-avatar">${initials}</div>
             <div>
-              <div class="pd-review-name">${r.userName||'Customer'}</div>
+              <div class="pd-review-name">${escapeHtml(r.userName||'Customer')}</div>
               <div class="pd-review-date">${date}</div>
             </div>
           </div>
           <div class="pd-review-stars">${stars}</div>
         </div>
-        ${r.comment ? `<div class="pd-review-text">${r.comment}</div>` : ''}
+        ${r.comment ? `<div class="pd-review-text">${escapeHtml(r.comment)}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -5579,7 +5450,7 @@ function updateWaFloat() {
     // Tag visual containers for fade-up reveal; skip anything already tagged.
     var selectors = [
       '#about .about-title','#about .about-desc','#about .about-feat',
-      '#about .about-card','.cat-card','.product-card','.purchase-card',
+      '#about .about-card','.product-card','.purchase-card',
       '#warranty .warranty-title','#warranty .warranty-lead','.warranty-card','.warranty-banner',
       '.feature-strip-item','.trust-item','.bs-row','.testi-card',
       '#contact .contact-form-box','#contact .soc-link','#contact .section-header',

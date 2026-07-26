@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<meta name="robots" content="noindex, nofollow"/>
 <script>
   document.documentElement.setAttribute("data-theme",localStorage.getItem("dz_admin_theme")||"light");
   try {
@@ -665,6 +666,7 @@ select.form-input option{background:var(--bg2)}
             <div class="form-grid">
               <div class="form-group full"><label class="form-label">Product Name</label><input class="form-input" id="prod-name" placeholder="e.g. Netflix Premium 4K" required/></div>
               <div class="form-group"><label class="form-label">Category <span>(optional)</span></label><select class="form-input" id="prod-cat"><option value="">No category</option></select></div>
+              <div class="form-group"><label class="form-label">Language <span>(optional)</span></label><input class="form-input" id="prod-lang" placeholder="e.g. Arabic, English"/></div>
               <div class="form-group"><label class="form-label">Price (DA)</label><input class="form-input" id="prod-price" type="number" min="0" placeholder="1500" required/></div>
               <div class="form-group"><label class="form-label">Old Price (DA) <span>(optional)</span></label><input class="form-input" id="prod-old-price" type="number" min="0" placeholder="2500"/></div>
               <div class="form-group"><label class="form-label">Badge <span>(optional)</span></label><input class="form-input" id="prod-badge" type="text" placeholder="e.g. HOT, NEW, SALE, PROMO... (leave empty for none)"/></div>
@@ -1160,12 +1162,6 @@ select.form-input option{background:var(--bg2)}
 // ===== AUTH =====
 // AUTH_KEY and ADMIN_PASS are defined in firebase.js — do not redeclare here
 
-function checkAuth() {
-  if (sessionStorage.getItem(AUTH_KEY) === 'ok') {
-    showAdminShell();
-  }
-}
-
 function doLogin() {
   const pass = document.getElementById('login-pass').value;
   const remember = document.getElementById('remember-me') && document.getElementById('remember-me').checked;
@@ -1479,6 +1475,7 @@ function loadProductForm() {
     document.getElementById('edit-prod-id').value = p.id;
     document.getElementById('prod-name').value = p.name||'';
     document.getElementById('prod-cat').value = p.category||'';
+    document.getElementById('prod-lang').value = p.language||'';
     document.getElementById('prod-price').value = p.price||'';
     document.getElementById('prod-old-price').value = p.oldPrice||'';
     document.getElementById('prod-badge').value = p.badge||'';
@@ -1720,6 +1717,7 @@ async function saveProduct(e) {
   const data = {
     name: document.getElementById('prod-name').value.trim(),
     category: document.getElementById('prod-cat').value,
+    language: document.getElementById('prod-lang').value.trim(),
     price: parseFloat(document.getElementById('prod-price').value)||0,
     oldPrice: parseFloat(document.getElementById('prod-old-price').value)||null,
     badge: document.getElementById('prod-badge').value||null,
@@ -1971,7 +1969,7 @@ function _renderPurchasesTable(all) {
     const itemsCountBadge = items.length > 1 ? `<span class="status-badge" style="background:rgba(var(--accent-rgb),.08);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.2)">${items.length} items</span>` : '';
 
     const displayName = first.customerName || first.userEmail || 'Unknown';
-    const initials = displayName.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
+    const initials = escapeHtml(displayName.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?');
 
     // Proof images
     const proofImages = first.proofImages || [];
@@ -1989,7 +1987,7 @@ function _renderPurchasesTable(all) {
     const notesHtml = notes ? `<div class="pur-section">
       <div class="pur-section-title"><i class="fa-solid fa-note-sticky"></i> Customer Notes</div>
       <div class="pur-notes-box">
-        <div class="pur-notes-truncated" id="notes-txt-${safeKey}">${notes.replace(/</g,'&lt;')}</div>
+        <div class="pur-notes-truncated" id="notes-txt-${safeKey}">${escapeHtml(notes)}</div>
         ${notes.length > 180 ? `<button class="pur-read-more" id="notes-btn-${safeKey}" onclick="_toggleNotes('${safeKey}')"><i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i> Read More</button>` : ''}
       </div>
     </div>` : '';
@@ -2032,9 +2030,9 @@ function _renderPurchasesTable(all) {
       <div class="pur-card-header" onclick="_togglePurCard(this.closest('.pur-card'))">
         <div class="pur-card-avatar">${initials}</div>
         <div class="pur-card-meta">
-          <div class="pur-card-name">${displayName}</div>
-          <div class="pur-card-email">${first.userEmail||''}</div>
-          <div class="pur-card-date">${date}${first.customerPhone ? ' · ' + first.customerPhone : ''}</div>
+          <div class="pur-card-name">${escapeHtml(displayName)}</div>
+          <div class="pur-card-email">${escapeHtml(first.userEmail||'')}</div>
+          <div class="pur-card-date">${date}${first.customerPhone ? ' · ' + escapeHtml(first.customerPhone) : ''}</div>
         </div>
         <div class="pur-card-badges">${statusBadge}${pmBadge}${itemsCountBadge}</div>
         <div class="pur-card-chevron"><i class="fa-solid fa-chevron-down"></i></div>
@@ -2044,10 +2042,10 @@ function _renderPurchasesTable(all) {
           <div class="pur-section">
             <div class="pur-section-title"><i class="fa-solid fa-user"></i> Customer Info</div>
             <div class="pur-info-grid">
-              <div><div class="pur-info-lbl">Name</div><div class="pur-info-val">${first.customerName||'—'}</div></div>
-              <div><div class="pur-info-lbl">Email</div><div class="pur-info-val" style="font-family:monospace;font-size:.78rem">${first.userEmail||'—'}</div></div>
-              ${first.customerPhone ? `<div><div class="pur-info-lbl">Phone</div><div class="pur-info-val">${first.customerPhone}</div></div>` : ''}
-              ${first.orderId ? `<div><div class="pur-info-lbl">Order ID</div><div class="pur-info-val" style="font-family:monospace;font-size:.72rem;opacity:.7">${first.orderId}</div></div>` : ''}
+              <div><div class="pur-info-lbl">Name</div><div class="pur-info-val">${escapeHtml(first.customerName||'—')}</div></div>
+              <div><div class="pur-info-lbl">Email</div><div class="pur-info-val" style="font-family:monospace;font-size:.78rem">${escapeHtml(first.userEmail||'—')}</div></div>
+              ${first.customerPhone ? `<div><div class="pur-info-lbl">Phone</div><div class="pur-info-val">${escapeHtml(first.customerPhone)}</div></div>` : ''}
+              ${first.orderId ? `<div><div class="pur-info-lbl">Order ID</div><div class="pur-info-val" style="font-family:monospace;font-size:.72rem;opacity:.7">${escapeHtml(first.orderId)}</div></div>` : ''}
             </div>
           </div>
           ${notesHtml}
@@ -2075,14 +2073,6 @@ function _toggleNotes(safeKey) {
     : '<i class="fa-solid fa-chevron-up" style="font-size:.6rem"></i> Read Less';
 }
 
-function _toggleOrderItems(id) {
-  const el = document.getElementById(id);
-  const chev = document.getElementById('chev-' + id);
-  if (!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
-}
 function openAddPurchaseModal() {
   document.getElementById('pur-edit-id').value = '';
   document.getElementById('pur-modal-title').textContent = 'Add Purchase';

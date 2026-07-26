@@ -2,6 +2,22 @@
 // FIREBASE.JS — Firebase Auth + Firestore (fully synced)
 // ================================================================
 
+// Escapes HTML special characters in untrusted text (customer names,
+// emails, phone numbers, review comments, order notes, etc.) before it's
+// interpolated into innerHTML anywhere in index.html / admin.html. This
+// exists to prevent stored XSS from user-submitted data (e.g. a malicious
+// checkout name or product review) executing script in another visitor's
+// — or the admin's — browser.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyAz6LUNMFRHOo4_pvLoB9UMg_u-VRc_RHA",
   authDomain: "generalwebsite-580f9.firebaseapp.com",
