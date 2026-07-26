@@ -3676,9 +3676,13 @@ function coShowAlreadyOwnedError(ownedItems) {
   const modal = document.getElementById('co-owned-modal');
   if (!msgEl || !modal) return;
   msgEl.textContent = ownedItems.length === 1
-    ? `You already have "${ownedItems[0].name}". Check My Products before buying it again.`
-    : `You already have ${ownedItems.length} of the products in your cart. Check My Products, then remove them before continuing.`;
+    ? `You already have "${ownedItems[0].name}". It's been removed from your cart — check My Products to access it.`
+    : `You already have ${ownedItems.length} of the products in your cart. They've been removed — check My Products to access them.`;
   modal.classList.add('open');
+  // Drop the already-owned line items from the cart so the person isn't
+  // stuck re-hitting this same warning on their next checkout attempt.
+  ownedItems.forEach(item => Cart.remove(item.id));
+  renderCartItems();
 }
 
 function closeCoOwnedModal() {

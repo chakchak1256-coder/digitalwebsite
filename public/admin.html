@@ -666,7 +666,6 @@ select.form-input option{background:var(--bg2)}
             <div class="form-grid">
               <div class="form-group full"><label class="form-label">Product Name</label><input class="form-input" id="prod-name" placeholder="e.g. Netflix Premium 4K" required/></div>
               <div class="form-group"><label class="form-label">Category <span>(optional)</span></label><select class="form-input" id="prod-cat"><option value="">No category</option></select></div>
-              <div class="form-group"><label class="form-label">Language <span>(optional)</span></label><input class="form-input" id="prod-lang" placeholder="e.g. Arabic, English"/></div>
               <div class="form-group"><label class="form-label">Price (DA)</label><input class="form-input" id="prod-price" type="number" min="0" placeholder="1500" required/></div>
               <div class="form-group"><label class="form-label">Old Price (DA) <span>(optional)</span></label><input class="form-input" id="prod-old-price" type="number" min="0" placeholder="2500"/></div>
               <div class="form-group"><label class="form-label">Badge <span>(optional)</span></label><input class="form-input" id="prod-badge" type="text" placeholder="e.g. HOT, NEW, SALE, PROMO... (leave empty for none)"/></div>
@@ -1475,7 +1474,6 @@ function loadProductForm() {
     document.getElementById('edit-prod-id').value = p.id;
     document.getElementById('prod-name').value = p.name||'';
     document.getElementById('prod-cat').value = p.category||'';
-    document.getElementById('prod-lang').value = p.language||'';
     document.getElementById('prod-price').value = p.price||'';
     document.getElementById('prod-old-price').value = p.oldPrice||'';
     document.getElementById('prod-badge').value = p.badge||'';
@@ -1717,7 +1715,6 @@ async function saveProduct(e) {
   const data = {
     name: document.getElementById('prod-name').value.trim(),
     category: document.getElementById('prod-cat').value,
-    language: document.getElementById('prod-lang').value.trim(),
     price: parseFloat(document.getElementById('prod-price').value)||0,
     oldPrice: parseFloat(document.getElementById('prod-old-price').value)||null,
     badge: document.getElementById('prod-badge').value||null,
