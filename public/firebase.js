@@ -660,18 +660,42 @@ const Settings = {
   applyTheme() {
     const s = this.get();
     const r = document.documentElement.style;
-    r.setProperty('--accent', s.primary); r.setProperty('--primary', s.primary); r.setProperty('--secondary', s.primary);
-    const rgb = hexToRgb(s.primary);
-    if (rgb) {
-      const v = `${rgb.r},${rgb.g},${rgb.b}`;
-      r.setProperty('--accent-rgb', v); r.setProperty('--primary-rgb', v); r.setProperty('--secondary-rgb', v);
+
+    // Only touch the accent color if a real, valid hex color is configured.
+    // Previously an empty/invalid s.primary (or a stray value from a shared
+    // Firestore doc) would still get written to --accent, overriding the
+    // shipped default green. Now we validate first and simply skip applying
+    // anything when there's nothing legitimate to apply.
+    const validPrimary = typeof s.primary === 'string' && /^#([a-f\d]{3}|[a-f\d]{6})$/i.test(s.primary.trim())
+      ? s.primary.trim()
+      : null;
+    if (validPrimary) {
+      r.setProperty('--accent', validPrimary); r.setProperty('--primary', validPrimary); r.setProperty('--secondary', validPrimary);
+      const rgb = hexToRgb(validPrimary);
+      if (rgb) {
+        const v = `${rgb.r},${rgb.g},${rgb.b}`;
+        r.setProperty('--accent-rgb', v); r.setProperty('--primary-rgb', v); r.setProperty('--secondary-rgb', v);
+      }
+      r.setProperty('--accent-dark', adjustColor(validPrimary, -20));
     }
-    r.setProperty('--accent-dark', adjustColor(s.primary, -20));
-    document.querySelectorAll('.store-name').forEach(el => el.textContent = s.storeName);
+
+    if (typeof s.storeName === 'string' && s.storeName.trim()) {
+      document.querySelectorAll('.store-name').forEach(el => el.textContent = s.storeName.trim());
+      const t = document.getElementById('page-title'); if (t) t.textContent = s.storeName.trim();
+    }
+
+    // Only swap the navbar logo when an explicit, non-empty logo URL is
+    // configured. Before, a null/blank logo value (the default, and also
+    // what a bad or shared settings doc can contain) would blank out and
+    // HIDE the static /logo.png already sitting in the HTML. Now, with no
+    // valid logo configured, we simply leave the existing markup alone.
     const _theme = document.documentElement.getAttribute('data-theme') || 'light';
-    const _logo = (_theme === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
-    document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = _logo||''; el.style.display = _logo ? 'block' : 'none'; });
-    const t = document.getElementById('page-title'); if (t) t.textContent = s.storeName;
+    const _logoRaw = (_theme === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
+    const _logo = (typeof _logoRaw === 'string' && _logoRaw.trim()) ? _logoRaw.trim() : null;
+    if (_logo) {
+      document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = _logo; el.style.display = 'block'; });
+    }
+    // else: leave whatever logo is already in the HTML (the repo default) untouched.
   }
 };
 

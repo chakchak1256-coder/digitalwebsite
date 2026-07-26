@@ -549,6 +549,7 @@ select.form-input option{background:var(--bg2)}
         <div class="nav-item" onclick="showPanel('coupons')"><i class="fa-solid fa-tag"></i> Coupons</div>
         <div class="nav-item" onclick="showPanel('announcement')"><i class="fa-solid fa-bullhorn"></i> Announcement</div>
         <div class="nav-item" onclick="showPanel('social-links')"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
+        <div class="nav-item" onclick="showPanel('branding')"><i class="fa-solid fa-palette"></i> Branding</div>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -918,6 +919,49 @@ select.form-input option{background:var(--bg2)}
         </div>
       </div>
 
+      <!-- BRANDING -->
+      <div class="panel" id="panel-branding">
+        <div class="sec-header">
+          <span class="sec-title">Store Branding</span>
+          <button class="btn btn-primary" onclick="saveBranding()"><i class="fa-solid fa-save"></i> Save</button>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title"><i class="fa-solid fa-palette"></i> Logo, Name &amp; Color</div>
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem">
+            This is the branding actually being served to visitors right now (read live from Firestore). If your storefront doesn't match your repo's default look, this is why — edit the fields below and save, or hit "Reset to Repo Defaults" to wipe any stray branding data and restore the shipped green DIGITCH look.
+          </div>
+          <div id="branding-current" style="display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem;padding:.9rem 1rem;background:var(--bg3);border-radius:var(--radius-sm)">
+            <img id="branding-current-logo" src="" alt="" style="height:40px;width:auto;display:none;border-radius:6px"/>
+            <div style="font-size:.82rem;color:var(--text-muted)">
+              Currently live: <strong id="branding-current-name" style="color:var(--text)"></strong>
+              &nbsp;·&nbsp; primary color <span id="branding-current-swatch" style="display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle"></span> <code id="branding-current-color"></code>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Store Name</label>
+            <input class="form-input" id="brand-store-name" placeholder="DIGITCH"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Logo URL (light theme / default)</label>
+            <input class="form-input" id="brand-logo-light" placeholder="/logo.png or a full https:// URL"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Logo URL (dark theme — optional)</label>
+            <input class="form-input" id="brand-logo-dark" placeholder="Leave empty to reuse the light logo"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Color</label>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <input type="color" id="brand-primary-picker" value="#10B981" style="width:44px;height:38px;padding:2px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer"/>
+              <input class="form-input" id="brand-primary" placeholder="#10B981" style="max-width:160px"/>
+            </div>
+          </div>
+          <div style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border);display:flex;gap:.7rem">
+            <button class="btn btn-outline" onclick="resetBrandingToDefaults()"><i class="fa-solid fa-rotate-left"></i> Reset to Repo Defaults</button>
+          </div>
+        </div>
+      </div>
+
       <!-- SOCIAL LINKS -->
       <div class="panel" id="panel-social-links">
         <div class="sec-header">
@@ -1231,11 +1275,12 @@ function showPanel(name) {
   if (name === 'coupons') { renderCoupons(); }
   if (name === 'announcement') { loadAnnouncementForm(); }
   if (name === 'social-links') { loadSocialLinksForm(); }
+  if (name === 'branding') { loadBrandingForm(); }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews', 'social-links':'Social Media Links' };
+  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews', 'social-links':'Social Media Links', 'branding':'Store Branding' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -2782,6 +2827,78 @@ async function saveAnnouncement() {
   };
   await Settings.save(patch);
   showToast(enabled ? '✅ Announcement banner enabled' : 'Announcement saved (disabled)');
+}
+
+// ================================================================
+// ===== FEATURE: STORE BRANDING =====
+// The whole reason a storefront can end up showing a different logo/color
+// than what's in the repo: Settings.get() reads live from the Firestore
+// settings/store document, and applyTheme() overrides the default markup
+// with whatever is saved there. This panel shows exactly what's currently
+// live and lets you correct or reset it — the actual data lives in
+// Firestore, not in any file in this repo, so editing files alone can't
+// fix a bad value already saved there.
+// ================================================================
+const BRANDING_DEFAULTS = {
+  storeName: 'DIGITCH',
+  logoLight: '/logo.png',
+  logoDark: null,
+  logo: null,
+  primary: '#10B981',
+  secondary: '#10B981',
+  accent: '#10B981',
+};
+
+function loadBrandingForm() {
+  const s = Settings.get();
+  document.getElementById('brand-store-name').value = s.storeName || '';
+  document.getElementById('brand-logo-light').value = s.logoLight || s.logo || '';
+  document.getElementById('brand-logo-dark').value = s.logoDark || '';
+  const primary = s.primary || BRANDING_DEFAULTS.primary;
+  document.getElementById('brand-primary').value = primary;
+  document.getElementById('brand-primary-picker').value = /^#([a-f\d]{6})$/i.test(primary) ? primary : '#10B981';
+
+  // Show what's actually live right now, so it's obvious if this doesn't
+  // match what you expect the repo's default to look like.
+  const liveLogo = s.logoLight || s.logo || '';
+  const logoImg = document.getElementById('branding-current-logo');
+  logoImg.src = liveLogo; logoImg.style.display = liveLogo ? 'inline-block' : 'none';
+  document.getElementById('branding-current-name').textContent = s.storeName || '(none set)';
+  document.getElementById('branding-current-color').textContent = primary;
+  document.getElementById('branding-current-swatch').style.background = primary;
+
+  // Live-sync the color picker <-> text input
+  document.getElementById('brand-primary-picker').oninput = (e) => {
+    document.getElementById('brand-primary').value = e.target.value;
+  };
+}
+
+async function saveBranding() {
+  const storeName = document.getElementById('brand-store-name').value.trim() || BRANDING_DEFAULTS.storeName;
+  const logoLight = document.getElementById('brand-logo-light').value.trim() || null;
+  const logoDark = document.getElementById('brand-logo-dark').value.trim() || null;
+  let primary = document.getElementById('brand-primary').value.trim() || BRANDING_DEFAULTS.primary;
+  if (!/^#([a-f\d]{3}|[a-f\d]{6})$/i.test(primary)) {
+    showToast('⚠️ Primary color must be a valid hex code, e.g. #10B981');
+    return;
+  }
+  const patch = {
+    storeName, logoLight, logoDark,
+    logo: logoLight, // keep legacy 'logo' field in sync for older readers
+    primary, secondary: primary, accent: primary,
+  };
+  await Settings.save(patch);
+  Settings.applyTheme();
+  loadBrandingForm();
+  showToast('✅ Branding saved — live for all visitors now');
+}
+
+async function resetBrandingToDefaults() {
+  if (!confirm('Reset branding to the repo defaults (DIGITCH, green, /logo.png)? This overwrites whatever is currently saved in Firestore.')) return;
+  await Settings.save({ ...BRANDING_DEFAULTS });
+  Settings.applyTheme();
+  loadBrandingForm();
+  showToast('✅ Branding reset to repo defaults');
 }
 
 // ================================================================
