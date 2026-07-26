@@ -1120,6 +1120,20 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 #co-owned-modal h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.5rem}
 #co-owned-modal p{font-size:.86rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.3rem}
 #co-owned-modal .co-owned-actions{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+/* Generic checkout alert popup — replaces the inline red banner at the top
+   of the checkout form for every validation/error message (name required,
+   payment failed, etc.), so messages can never be missed or scrolled past. */
+#co-alert-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity var(--transition)}
+#co-alert-modal.open{opacity:1;pointer-events:all}
+#co-alert-modal .co-alert-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.8rem;width:100%;max-width:380px;text-align:center;
+  transform:scale(.97);transition:transform .18s ease}
+#co-alert-modal.open .co-alert-box{transform:scale(1)}
+#co-alert-modal .co-alert-icon{font-size:2.2rem;margin-bottom:.7rem}
+#co-alert-modal h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.5rem}
+#co-alert-modal p{font-size:.86rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.3rem}
 #mp-detail-content{overflow-y:auto;flex:1;min-height:0;padding-right:.5rem;margin-right:-.5rem}
 #mp-detail-content::-webkit-scrollbar{width:6px}
 #mp-detail-content::-webkit-scrollbar-track{background:transparent}
@@ -1241,18 +1255,6 @@ body.flash-on #mobile-nav{top:130px}
 .prod-heart.active{background:rgba(239,68,68,.35) !important;border-color:rgba(239,68,68,.6) !important}
 .prod-heart.active i{color:#EF4444 !important}
 .prod-heart i{color:#fff;transition:color var(--transition)}
-/* Per-product share/copy-link button — sits just left of the wishlist heart */
-.prod-share{
-  position:absolute;bottom:8px;right:48px;z-index:3;width:32px;height:32px;border-radius:50%;
-  background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
-  display:flex;align-items:center;justify-content:center;
-  font-size:.78rem;cursor:pointer;transition:all var(--transition);border:1px solid rgba(255,255,255,.12);
-  pointer-events:auto;
-}
-.prod-share:hover{background:rgba(var(--accent-rgb),.35);border-color:rgba(var(--accent-rgb),.5)}
-[data-theme="light"] .prod-share{background:rgba(0,0,0,.45);border-color:rgba(255,255,255,.2)}
-.prod-share i{color:#fff;transition:color var(--transition)}
-.prod-share:hover i{color:var(--accent)}
 /* Wishlist page */
 #wishlist-page{
   display:none;position:fixed;inset:0;z-index:820;
@@ -2461,7 +2463,6 @@ footer::before{
     <!-- STEP 1: Customer info form -->
     <div id="co-form-wrap" style="display:none">
       <h3 class="co-title"><i class="fa-solid fa-lock"></i> Complete Order</h3>
-      <div id="co-form-err" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.9rem"></div>
 
       <div class="form-group" id="co-name-group">
         <label>Full Name</label>
@@ -2561,7 +2562,6 @@ footer::before{
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem">JPG, PNG, WEBP — multiple screenshots allowed</div>
       </div>
       <div id="co-proof-previews" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.9rem"></div>
-      <div id="co-proof-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:#EF4444;margin-bottom:.8rem"></div>
       <div style="display:flex;gap:.6rem">
         <button type="button" class="btn btn-outline" style="flex:1" onclick="coBackToInfoStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
         <button type="button" class="btn btn-primary" style="flex:2" id="co-proof-submit-btn" onclick="placeOrderWithProof()"><i class="fa-solid fa-paper-plane"></i> Submit Order</button>
@@ -2701,6 +2701,18 @@ footer::before{
       </button>
       <button class="btn btn-outline" onclick="closeCoOwnedModal()">OK</button>
     </div>
+  </div>
+</div>
+
+<!-- Generic checkout alert popup — used for all form/payment validation
+     messages that used to show as an inline red banner at the top of the
+     checkout form. -->
+<div id="co-alert-modal">
+  <div class="co-alert-box">
+    <div class="co-alert-icon">⚠️</div>
+    <h3>Attention</h3>
+    <p id="co-alert-msg"></p>
+    <button class="btn btn-primary" onclick="closeCoAlertModal()" style="width:100%">OK</button>
   </div>
 </div>
 
@@ -2864,21 +2876,6 @@ function makeCatCard(cat, allProds) {
   return d;
 }
 
-// ===== SHAREABLE PER-PRODUCT LINKS =====
-// Every product gets its own bookmarkable/shareable URL: ?product=<id>
-// Opening a product's detail page updates the address bar to this URL
-// (via replaceState, so it doesn't spam browser history), and loading
-// the site with that URL directly re-opens the same product.
-function productShareUrl(id) {
-  return window.location.origin + window.location.pathname + '?product=' + encodeURIComponent(id);
-}
-function copyProductLink(id) {
-  const url = productShareUrl(id);
-  navigator.clipboard.writeText(url).then(() => {
-    showToast('🔗 Product link copied!');
-  }).catch(() => showToast('Copy failed — link: ' + url));
-}
-
 // ===== PRODUCTS (last added) =====
 function renderProducts() {
   const prods = DB.getAll('products'); // already sorted newest first (unshift on add)
@@ -2904,9 +2901,6 @@ function makeProductCard(prod) {
       ${prod.badge ? `<span class="prod-badge ${badgeCls}">${prod.badge}</span>` : ''}
       ${discountPct > 0 ? `<span class="prod-discount">-${discountPct}%</span>` : ''}
       <img src="${img}" alt="${prod.name}" loading="lazy"/>
-      <button class="prod-share" onclick="event.stopPropagation();copyProductLink('${prod.id}')" title="Copy link to this product">
-        <i class="fa-solid fa-link"></i>
-      </button>
       <button class="prod-heart ${wishlisted?'active':''}" onclick="event.stopPropagation();toggleWishlist('${prod.id}',this)" title="${wishlisted?'Remove from wishlist':'Add to wishlist'}">
         <i class="${wishlisted?'fa-solid':'fa-regular'} fa-heart"></i>
       </button>
@@ -3129,7 +3123,6 @@ function openProductDetail(id, fromAllPage = true) {
   if (prod.badge) badges.innerHTML += `<span class="pd-badge-pill"><i class="fa-solid fa-fire"></i> ${prod.badge}</span>`;
   
   badges.innerHTML += `<span class="pd-badge-pill"><i class="fa-solid fa-shield-halved"></i> Guaranteed</span>`;
-  if (prod.language) badges.innerHTML += `<span class="pd-badge-pill"><i class="fa-solid fa-language"></i> ${prod.language}</span>`;
 
   // Stars
   const starsEl = document.getElementById('pd-stars-row');
@@ -3149,7 +3142,7 @@ function openProductDetail(id, fromAllPage = true) {
   });
 
   const meta = document.getElementById('pd-meta'); meta.innerHTML = '';
-  [['Category',prod.category||'—'],['Language',prod.language||'International'],['Added',new Date(prod.createdAt).toLocaleDateString('en-DZ')]].forEach(([l,v]) => {
+  [['Category',prod.category||'—'],['Added',new Date(prod.createdAt).toLocaleDateString('en-DZ')]].forEach(([l,v]) => {
     meta.innerHTML += `<div class="meta-row"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`;
   });
 
@@ -3453,6 +3446,13 @@ function coShowPaymentInstructions(method) {
   const card = document.getElementById('co-method-' + method);
   if (card) card.classList.add('selected');
 
+  // Keep the actual radio input in sync with the visual selection — closing
+  // checkout unchecks all radios (_doCloseCheckout), but the card still
+  // *looked* selected on reopen, so the form thought no method was chosen
+  // and asked the user to pick one even though only CIB is ever shown.
+  const radio = document.querySelector(`input[name="co-payment"][value="${method}"]`);
+  if (radio) radio.checked = true;
+
   // Update Next button label
   const nextBtn = document.getElementById('co-submit-btn');
   if (nextBtn) {
@@ -3729,6 +3729,22 @@ function closeCoOwnedModal() {
   if (modal) modal.classList.remove('open');
 }
 
+// Generic popup for all other checkout messages (validation errors, payment
+// failures, network errors, etc.) — replaces the old inline red banner at
+// the top of the checkout form, which could be scrolled out of view.
+function coShowFormError(msg) {
+  const msgEl = document.getElementById('co-alert-msg');
+  const modal = document.getElementById('co-alert-modal');
+  if (!msgEl || !modal) return;
+  msgEl.textContent = msg;
+  modal.classList.add('open');
+}
+
+function closeCoAlertModal() {
+  const modal = document.getElementById('co-alert-modal');
+  if (modal) modal.classList.remove('open');
+}
+
 // STEP 1 → STEP 2: validate info, then show proof upload
 // Route the "Next" button based on selected payment method
 async function coHandleNextStep() {
@@ -3752,9 +3768,6 @@ async function coInitiateSlickPayCheckout() {
   const cartItems = Cart.get();
   if (!cartItems.length) { closeCheckout(); return; }
 
-  const errEl = document.getElementById('co-form-err');
-  errEl.style.display = 'none';
-
   const name         = (document.getElementById('co-name')?.value || '').trim();
   const email        = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
   // Digital products only — no shipping address needed from the customer.
@@ -3765,11 +3778,11 @@ async function coInitiateSlickPayCheckout() {
   const phoneDigits  = (document.getElementById('co-phone')?.value || '').trim();
   const phone        = phonePfx + phoneDigits;
 
-  if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
+  if (!name)  { coShowFormError('Please enter your full name.'); return; }
   if (!phoneDigits || phoneDigits.length !== 8 || !/^\d{8}$/.test(phoneDigits)) {
-    errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return;
+    coShowFormError('Enter exactly 8 digits after the prefix.'); return;
   }
-  if (!email) { errEl.textContent = '⚠️ Email is required for online payment.'; errEl.style.display = 'block'; return; }
+  if (!email) { coShowFormError('Email is required for online payment.'); return; }
 
   // Split name into first/last
   const nameParts = name.split(' ');
@@ -3780,8 +3793,8 @@ async function coInitiateSlickPayCheckout() {
   const currency = s.currency || 'DA';
   const total = Cart.total();
   if (total <= 100) {
-    errEl.textContent = '⚠️ Total must be greater than 100 DA for online payment.';
-    errEl.style.display = 'block'; return;
+    coShowFormError('Total must be greater than 100 DA for online payment.');
+    return;
   }
 
   // Build a single combined product name for the invoice
@@ -3820,8 +3833,7 @@ async function coInitiateSlickPayCheckout() {
     const data = await res.json();
 
     if (!res.ok || !data.payment_url) {
-      errEl.textContent = '⚠️ ' + (data.error || 'Payment initiation failed. Please try another method.');
-      errEl.style.display = 'block';
+      coShowFormError(data.error || 'Payment initiation failed. Please try another method.');
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next';
       return;
@@ -3834,8 +3846,7 @@ async function coInitiateSlickPayCheckout() {
     window.location.href = data.payment_url;
 
   } catch (err) {
-    errEl.textContent = '⚠️ Network error. Please check your connection and try again.';
-    errEl.style.display = 'block';
+    coShowFormError('Network error. Please check your connection and try again.');
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next';
   }
@@ -3847,19 +3858,16 @@ function coProceedToProofStep() {
   if (!Cart.get().length) { closeCheckout(); return; }
 
   // Clear previous error
-  const errEl = document.getElementById('co-form-err');
-  errEl.style.display = 'none';
-
   const name  = (document.getElementById('co-name')?.value || '').trim();
   const _phonePfx    = (document.getElementById('co-phone-prefix')?.value || '07');
   const _phoneDigits = (document.getElementById('co-phone')?.value || '').trim();
   const phone        = _phonePfx + _phoneDigits; // full 10-digit string, e.g. "0712345678"
   const method = document.querySelector('input[name="co-payment"]:checked')?.value || '';
 
-  if (!name)  { errEl.textContent = '⚠️ Please enter your full name.'; errEl.style.display = 'block'; return; }
-  if (!_phoneDigits) { errEl.textContent = '⚠️ Phone number is required.'; errEl.style.display = 'block'; return; }
-  if (_phoneDigits.length !== 8 || !/^\d{8}$/.test(_phoneDigits)) { errEl.textContent = '⚠️ Enter exactly 8 digits after the prefix.'; errEl.style.display = 'block'; return; }
-  if (!method) { errEl.textContent = '⚠️ Please select a payment method.'; errEl.style.display = 'block'; return; }
+  if (!name)  { coShowFormError('Please enter your full name.'); return; }
+  if (!_phoneDigits) { coShowFormError('Phone number is required.'); return; }
+  if (_phoneDigits.length !== 8 || !/^\d{8}$/.test(_phoneDigits)) { coShowFormError('Enter exactly 8 digits after the prefix.'); return; }
+  if (!method) { coShowFormError('Please select a payment method.'); return; }
 
   _showCoStep('proof');
 }
@@ -3873,8 +3881,8 @@ function _doCloseCheckout() {
   _coProofFiles = [];
   const prev = document.getElementById('co-proof-previews');
   if (prev) prev.innerHTML = '';
-  const errEl = document.getElementById('co-proof-error');
-  if (errEl) errEl.style.display = 'none';
+  closeCoOwnedModal();
+  closeCoAlertModal();
   document.querySelectorAll('input[name="co-payment"]').forEach(r => r.checked = false);
   document.querySelectorAll('.co-method-card').forEach(c => c.classList.remove('selected'));
   const instrEl = document.getElementById('co-payment-instructions');
@@ -3978,9 +3986,6 @@ async function placeOrderWithProof() {
   const cartItems = Cart.get();
   if (!cartItems.length) { closeCheckout(); return; }
 
-  const errEl = document.getElementById('co-proof-error');
-  errEl.style.display = 'none';
-
   const submitBtn = document.getElementById('co-proof-submit-btn');
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
@@ -4034,8 +4039,7 @@ async function placeOrderWithProof() {
   submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order';
 
   if (errors.length) {
-    errEl.textContent = '⚠️ ' + errors.join(', ');
-    errEl.style.display = 'block';
+    coShowFormError(errors.join(', '));
     return;
   }
 
@@ -4060,9 +4064,6 @@ async function coSimulateTestPayment() {
   if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
   const cartItems = Cart.get();
   if (!cartItems.length) { closeCheckout(); return; }
-
-  const errEl = document.getElementById('co-form-err');
-  errEl.style.display = 'none';
 
   const owned = await coGetAlreadyOwnedCartItems(currentUser.id);
   if (owned.length) { coShowAlreadyOwnedError(owned); return; }
@@ -4124,8 +4125,7 @@ async function coSimulateTestPayment() {
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-flask"></i> Simulate Test Payment (Dev Only)'; }
 
   if (errors.length) {
-    errEl.textContent = '⚠️ ' + errors.join(', ');
-    errEl.style.display = 'block';
+    coShowFormError(errors.join(', '));
     return;
   }
 
@@ -4137,8 +4137,7 @@ async function coSimulateTestPayment() {
   _showCoStep('success');
 }
 function showCheckoutError(msg) {
-  const errEl = document.getElementById('co-form-err');
-  if (errEl) { errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block'; }
+  coShowFormError(msg);
 }
 
 // Old proceedToProofStep kept for compatibility
