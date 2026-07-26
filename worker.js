@@ -403,6 +403,7 @@ async function priceCartItems(env, cartItems) {
       autoDeliver:   !!product.autoDeliver,
       deliveryLink:  product.deliveryLink  || '',
       deliveryType:  product.deliveryType  || 'link',
+      deliveryFiles: product.deliveryFiles || [],
     };
   }));
   return priced;
@@ -448,7 +449,7 @@ async function deliverOrder(env, order) {
   // carried their own delivery info, but no reason to make it sequential).
   const resolvedItems = await Promise.all(items.map(async (item) => {
     let { autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles } = item;
-    if (autoDeliver === undefined && item.productId) {
+    if ((autoDeliver === undefined || !Array.isArray(deliveryFiles)) && item.productId) {
       try {
         const product = await Firestore.getDoc(env, 'products', item.productId);
         if (product) {
