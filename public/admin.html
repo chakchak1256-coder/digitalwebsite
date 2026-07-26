@@ -697,13 +697,16 @@ select.form-input option{background:var(--bg2)}
               <label for="prod-auto-deliver" class="form-label" style="cursor:pointer;margin:0">Automatically deliver this product</label>
             </div>
             <div id="prod-delivery-fields" style="display:none">
-              <div style="display:flex;gap:.6rem;margin-bottom:.9rem">
+              <div style="display:flex;gap:.6rem;margin-bottom:.4rem">
                 <label class="co-method-card" style="flex:1;cursor:pointer;padding:.6rem .9rem;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:.5rem" id="pdtype-link">
-                  <input type="radio" name="prod-delivery-type" value="link" checked onchange="switchProdDeliveryType('link')"/> <i class="fa-solid fa-link"></i> Link / URL
+                  <input type="checkbox" id="prod-delivery-enable-link" checked onchange="toggleProdDeliveryMode()"/> <i class="fa-solid fa-link"></i> Link / URL
                 </label>
                 <label class="co-method-card" style="flex:1;cursor:pointer;padding:.6rem .9rem;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:.5rem" id="pdtype-pdf">
-                  <input type="radio" name="prod-delivery-type" value="pdf" onchange="switchProdDeliveryType('pdf')"/> <i class="fa-solid fa-file-pdf"></i> Upload File(s) (PDF, etc.)
+                  <input type="checkbox" id="prod-delivery-enable-files" onchange="toggleProdDeliveryMode()"/> <i class="fa-solid fa-file-pdf"></i> Upload File(s) (PDF, etc.)
                 </label>
+              </div>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.9rem">
+                Enable one or both — e.g. a video/Drive link <em>and</em> a bonus PDF, delivered together on the same purchase.
               </div>
               <div class="form-group full" id="prod-delivery-link-wrap">
                 <label class="form-label">Delivery Link</label>
@@ -1485,14 +1488,19 @@ function loadProductForm() {
     // Auto-delivery fields
     document.getElementById('prod-auto-deliver').checked = !!p.autoDeliver;
     document.getElementById('prod-delivery-link').value = p.deliveryLink || '';
-    const dtype = p.deliveryType === 'pdf' ? 'pdf' : 'link';
-    const dtypeRadio = document.querySelector(`input[name="prod-delivery-type"][value="${dtype}"]`);
-    if (dtypeRadio) dtypeRadio.checked = true;
-    switchProdDeliveryType(dtype);
+    const hasFiles = Array.isArray(p.deliveryFiles) && p.deliveryFiles.length > 0;
+    const dtype = p.deliveryType === 'pdf' ? 'pdf' : (p.deliveryType === 'both' ? 'both' : 'link');
+    // Link and files are now independent — figure out which one(s) were
+    // actually configured on this product instead of a single exclusive type.
+    const linkEnabled  = dtype === 'link' || dtype === 'both' || (!hasFiles && dtype !== 'pdf' && !!p.deliveryLink);
+    const filesEnabled = dtype === 'pdf'  || dtype === 'both' || hasFiles;
+    document.getElementById('prod-delivery-enable-link').checked = linkEnabled;
+    document.getElementById('prod-delivery-enable-files').checked = filesEnabled;
+    toggleProdDeliveryMode();
     toggleProdDeliveryFields();
     // Load existing delivery files (new array format), falling back to the
     // legacy single deliveryLink for products saved before multi-file support.
-    if (Array.isArray(p.deliveryFiles) && p.deliveryFiles.length) {
+    if (hasFiles) {
       productDeliveryFiles = p.deliveryFiles.map(f => ({ url: f.url, path: f.path || '', name: f.name || 'File', size: f.size || 0 }));
     } else if (dtype === 'pdf' && p.deliveryLink) {
       productDeliveryFiles = [{ url: p.deliveryLink, path: '', name: 'Previously uploaded file', size: 0 }];
@@ -1527,7 +1535,9 @@ function resetProductForm() {
   if (btnText) btnText.textContent = 'Save Product';
   document.getElementById('prod-auto-deliver').checked = false;
   clearProdDeliveryFile();
-  switchProdDeliveryType('link');
+  document.getElementById('prod-delivery-enable-link').checked = true;
+  document.getElementById('prod-delivery-enable-files').checked = false;
+  toggleProdDeliveryMode();
   toggleProdDeliveryFields();
 }
 // ── Product Automatic Delivery — toggle + type switch + file upload ──
@@ -1536,11 +1546,15 @@ function toggleProdDeliveryFields() {
   document.getElementById('prod-delivery-fields').style.display = on ? '' : 'none';
 }
 
-function switchProdDeliveryType(type) {
-  document.getElementById('pdtype-link').classList.toggle('selected', type === 'link');
-  document.getElementById('pdtype-pdf').classList.toggle('selected', type === 'pdf');
-  document.getElementById('prod-delivery-link-wrap').style.display = type === 'link' ? '' : 'none';
-  document.getElementById('prod-delivery-file-wrap').style.display = type === 'pdf' ? '' : 'none';
+// Link and files are independent toggles now, so both can be shown (and
+// saved) at once — a product can deliver a URL and uploaded file(s) together.
+function toggleProdDeliveryMode() {
+  const linkOn  = document.getElementById('prod-delivery-enable-link').checked;
+  const filesOn = document.getElementById('prod-delivery-enable-files').checked;
+  document.getElementById('pdtype-link').classList.toggle('selected', linkOn);
+  document.getElementById('pdtype-pdf').classList.toggle('selected', filesOn);
+  document.getElementById('prod-delivery-link-wrap').style.display = linkOn ? '' : 'none';
+  document.getElementById('prod-delivery-file-wrap').style.display = filesOn ? '' : 'none';
 }
 
 const MAX_PROD_DELIVERY_FILES = 4;
@@ -1710,14 +1724,17 @@ async function saveProduct(e) {
     }))
     .filter(grp => grp.title && grp.items.length > 0);
 
-  const autoDeliver = document.getElementById('prod-auto-deliver').checked;
-  const deliveryType = document.querySelector('input[name="prod-delivery-type"]:checked')?.value || 'link';
-  // For 'pdf' type, deliveryLink is kept as the first uploaded file's URL for
-  // backward compatibility with older code paths that only read a single link.
-  const deliveryFiles = deliveryType === 'pdf' ? productDeliveryFiles.slice(0, MAX_PROD_DELIVERY_FILES) : [];
-  const deliveryLink = deliveryType === 'pdf'
-    ? (deliveryFiles[0] ? deliveryFiles[0].url : '')
-    : (document.getElementById('prod-delivery-link').value || '').trim();
+  const autoDeliver  = document.getElementById('prod-auto-deliver').checked;
+  const linkEnabled  = document.getElementById('prod-delivery-enable-link').checked;
+  const filesEnabled = document.getElementById('prod-delivery-enable-files').checked;
+  const rawLink = (document.getElementById('prod-delivery-link').value || '').trim();
+  const deliveryFiles = filesEnabled ? productDeliveryFiles.slice(0, MAX_PROD_DELIVERY_FILES) : [];
+  // deliveryLink is kept as a single "primary" link for any older code path
+  // that only reads that one field — use the real URL when Link/URL is
+  // enabled, otherwise fall back to the first uploaded file's URL so a
+  // files-only product still has something in that field.
+  const deliveryLink = linkEnabled && rawLink ? rawLink : (deliveryFiles[0] ? deliveryFiles[0].url : rawLink);
+  const deliveryType = linkEnabled && filesEnabled ? 'both' : (filesEnabled ? 'pdf' : 'link');
 
   const data = {
     name: document.getElementById('prod-name').value.trim(),
@@ -1729,13 +1746,13 @@ async function saveProduct(e) {
     description: document.getElementById('prod-desc').value.trim(),
     images: productImages,
     variables: variables,
-    autoDeliver: autoDeliver && !!deliveryLink,
+    autoDeliver: autoDeliver && !!(deliveryLink || deliveryFiles.length),
     deliveryType: deliveryType,
     deliveryLink: deliveryLink,
     deliveryFiles: deliveryFiles.map(f => ({ url: f.url, path: f.path || '', name: f.name, size: f.size || 0 })),
   };
   if (!data.name || data.price === '' || isNaN(data.price) || data.price < 0) { showToast('Please fill required fields (name and price)'); return; }
-  if (autoDeliver && !deliveryLink) { showToast('Add a delivery link/file, or turn off automatic delivery.'); return; }
+  if (autoDeliver && !deliveryLink && !deliveryFiles.length) { showToast('Add a delivery link, upload a file, or turn off automatic delivery.'); return; }
   const btn = document.getElementById('save-prod-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span id="save-prod-btn-text">Saving…</span>'; }
   try {

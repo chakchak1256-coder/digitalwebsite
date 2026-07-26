@@ -2939,14 +2939,15 @@ async function claimFreeProduct(prod) {
     );
 
     if (fullProd.autoDeliver && fullProd.deliveryLink) {
-      const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : 'link';
+      const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : (fullProd.deliveryType === 'both' ? 'both' : 'link');
       const accessData = {
         '_DeliveryType': dtype,
         'Download Link': fullProd.deliveryLink,
       };
       // Multi-file delivery: attach the full file list (if any) so My Products
-      // can offer every uploaded file, not just the first one.
-      if (dtype === 'pdf' && Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
+      // can offer every uploaded file, not just the first one. Independent of
+      // dtype so a merged link+files product delivers both together.
+      if (Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
         accessData['_Files'] = fullProd.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
       }
       await Purchases.update(purchase.id, {
@@ -4066,9 +4067,9 @@ async function coSimulateTestPayment() {
       if (fullProd.autoDeliver && fullProd.deliveryLink) {
         // Product has auto-delivery configured — deliver it immediately,
         // exactly like a real completed payment would.
-        const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : 'link';
+        const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : (fullProd.deliveryType === 'both' ? 'both' : 'link');
         const accessData = { '_DeliveryType': dtype, 'Download Link': fullProd.deliveryLink };
-        if (dtype === 'pdf' && Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
+        if (Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
           accessData['_Files'] = fullProd.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
         }
         await Purchases.update(purchase.id, { accessData, accessLink: fullProd.deliveryLink, deliveryType: dtype });
@@ -4542,7 +4543,7 @@ function mpOpenDetailModal(purchase) {
   if (hasAccessData || hasAccessLink) {
     const data = purchase.accessData || {};
 
-    if (dtype === 'pdf' || (dtype === 'credentials' && (data['Download Link'] || data['File']))) {
+    if (dtype === 'pdf' || dtype === 'both' || (dtype === 'credentials' && (data['Download Link'] || data['File']))) {
       // Multi-file delivery: use the full file list if present, otherwise fall
       // back to the single legacy Download Link for older purchases.
       const files = Array.isArray(data['_Files']) && data['_Files'].length
@@ -4570,6 +4571,17 @@ function mpOpenDetailModal(purchase) {
         </div>
         ${fileRows}
       </div>`;
+
+      // 'both' means a separate link was configured alongside the uploaded
+      // file(s) — show it as its own block rather than only ever surfacing
+      // whichever one the UI happened to check first.
+      if (dtype === 'both' && data['Download Link']) {
+        accessHtml += `<div style="margin-top:.8rem;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.2);border-radius:var(--radius-sm);padding:1rem">
+          <div style="font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem"><i class="fa-solid fa-link"></i> Access Link</div>
+          <div style="font-size:.84rem;word-break:break-all;background:rgba(0,0,0,.15);padding:.55rem .8rem;border-radius:8px;border:1px solid var(--border);font-family:monospace;color:var(--accent)">${data['Download Link']}</div>
+          ${openCopyBtns(data['Download Link'], 'Open Link')}
+        </div>`;
+      }
     } else if (dtype === 'canva') {
       const url = data['Canva Template'] || data['Template Link'] || hasAccessLink;
       const tname = data['Template Name'] || '';
