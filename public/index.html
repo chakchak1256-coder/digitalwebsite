@@ -4876,6 +4876,17 @@ function waOrderCart() {
   const phone = wa.replace(/[^0-9]/g, '');
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
+
+  // The order is now being handled manually over WhatsApp, so clear the
+  // cart the same way a completed checkout does — otherwise the same
+  // items would still be sitting there for a later (duplicate) checkout.
+  const cartDrawer  = document.getElementById('cart-drawer');
+  const cartOverlay = document.getElementById('cart-overlay');
+  if (cartDrawer)  cartDrawer.classList.remove('open');
+  if (cartOverlay) cartOverlay.classList.remove('open');
+  document.body.classList.remove('no-scroll');
+  Cart.clear();
+  showToast('✅ Order sent via WhatsApp — cart cleared');
 }
 
 // ================================================================
