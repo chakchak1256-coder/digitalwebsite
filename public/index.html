@@ -183,6 +183,7 @@ body{background:var(--bg2)}
 }
 #hero .hero-inner{position:relative;z-index:1;}
 [data-theme="dark"] #hero{background:var(--bg)}
+[data-theme="dark"] #hero::before{background-image:url('/logob.png')}
 @media(max-width:980px){
   #hero{padding:120px 5vw 60px;}
   .hero-inner{grid-template-columns:1fr;gap:0;text-align:center;padding-bottom:0}
@@ -1901,6 +1902,7 @@ footer::before{
 <nav id="nav">
   <div class="nav-logo" onclick="showMain()">
     <img class="nav-logo-img" src="/logo.png" alt="logo"/>
+    <script>document.currentScript.previousElementSibling.src = (document.documentElement.getAttribute('data-theme') === 'dark') ? '/logob.png' : '/logo.png';</script>
     <span class="nav-logo-text store-name">DIGITCH</span>
   </div>
   <div class="nav-links">
@@ -2912,7 +2914,7 @@ function makeProductCard(prod) {
       <div class="prod-price-row">
         <div class="prod-prices">
           <span class="prod-price">${formatPrice(prod.price, s.currency)}</span>
-          ${prod.oldPrice ? `<span class="prod-old">${prod.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}
+          ${(prod.oldPrice && prod.oldPrice > prod.price) ? `<span class="prod-old">${prod.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}
         </div>
         <button class="prod-add" title="Add to cart"><i class="fa-solid fa-plus"></i></button>
       </div>
@@ -3032,7 +3034,7 @@ function renderBestSellers() {
           <span>${p.category || ''}</span>
         </div>
       </div>
-      <div class="bs-price">${p.oldPrice ? `<span class="bs-old">${p.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}${formatPrice(p.price, s.currency)}</div>`;
+      <div class="bs-price">${(p.oldPrice && p.oldPrice > p.price) ? `<span class="bs-old">${p.oldPrice.toLocaleString()} ${s.currency}</span>` : ''}${formatPrice(p.price, s.currency)}</div>`;
     row.onclick = () => { trackRecentlyViewed(p); openProductDetail(p.id, false); };
     list.appendChild(row);
   });
@@ -3114,7 +3116,7 @@ function openProductDetail(id, fromAllPage = true) {
   document.getElementById('pd-desc').textContent = prod.description||'';
 
   const oldEl = document.getElementById('pd-old'), discEl = document.getElementById('pd-disc');
-  if (prod.oldPrice) {
+  if (prod.oldPrice && prod.oldPrice > prod.price) {
     oldEl.textContent = prod.oldPrice.toLocaleString() + ' ' + s.currency; oldEl.style.display = '';
     discEl.textContent = `-${Math.round((1-prod.price/prod.oldPrice)*100)}%`; discEl.style.display = '';
   } else { oldEl.style.display = 'none'; discEl.style.display = 'none'; }
@@ -4364,16 +4366,29 @@ function doUserLogout() {
 
 
 // ===== THEME TOGGLE =====
+// Swaps the default repo logo (logo.png / logob.png) for the current theme —
+// but only when the admin hasn't configured a custom logo of their own via
+// Settings (Settings.applyTheme() already handles that case using
+// s.logoDark/s.logoLight/s.logo, and always wins over this default swap).
+function updateDefaultLogoForTheme(theme) {
+  const s = (typeof Settings !== 'undefined') ? Settings.get() : {};
+  const hasCustomLogo = !!((theme === 'dark' && s.logoDark) || s.logoLight || s.logo);
+  if (hasCustomLogo) return; // Settings.applyTheme() already set the right custom logo
+  const src = theme === 'dark' ? '/logob.png' : '/logo.png';
+  document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = src; });
+}
 function initTheme() {
   const theme = document.documentElement.getAttribute('data-theme') || 'dark';
   const icon = document.getElementById('theme-icon');
   if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  updateDefaultLogoForTheme(theme);
 }
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('dz_theme', theme);
   const icon = document.getElementById('theme-icon');
   if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  updateDefaultLogoForTheme(theme);
 }
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';

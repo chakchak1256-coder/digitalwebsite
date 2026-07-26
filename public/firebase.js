@@ -694,8 +694,12 @@ const Settings = {
     const _logo = (typeof _logoRaw === 'string' && _logoRaw.trim()) ? _logoRaw.trim() : null;
     if (_logo) {
       document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = _logo; el.style.display = 'block'; });
+    } else {
+      // No custom logo configured — fall back to the theme-appropriate
+      // default repo asset (logob.png is the dark-theme-optimized version).
+      const _defaultLogo = _theme === 'dark' ? '/logob.png' : '/logo.png';
+      document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = _defaultLogo; el.style.display = 'block'; });
     }
-    // else: leave whatever logo is already in the HTML (the repo default) untouched.
   }
 };
 
