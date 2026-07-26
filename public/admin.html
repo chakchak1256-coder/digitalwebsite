@@ -1784,8 +1784,14 @@ function resetCategoryForm() {
   document.getElementById('category-form').reset();
   document.getElementById('edit-cat-id').value = '';
   document.getElementById('cat-img-preview').innerHTML = '';
-  document.getElementById('add-cat-title').textContent = 'Add New Category';
-  document.getElementById('save-cat-btn-text').textContent = 'Save Category';
+  const title = document.getElementById('add-cat-title');
+  if (title) title.textContent = 'Add New Category';
+  // save-cat-btn-text can momentarily not exist: while saveCategory() is
+  // in flight it swaps the button's innerHTML for a spinner, which removes
+  // this span from the DOM until the save finishes. Guard against that so
+  // a successful save doesn't crash here and get reported as a failure.
+  const btnText = document.getElementById('save-cat-btn-text');
+  if (btnText) btnText.textContent = 'Save Category';
 }
 async function handleCatImage(input) {
   const f = input.files[0]; if (!f) return;
@@ -3145,8 +3151,12 @@ async function reviewSetStatus(id, status) {
 }
 
 function confirmDeleteReview(id) {
-  openConfirm('Delete Review', 'Are you sure you want to permanently delete this review?', async () => {
-    await Reviews.delete(id);
+  confirmAction('Delete Review', 'Are you sure you want to permanently delete this review?', async () => {
+    const ok = await Reviews.delete(id);
+    if (!ok) {
+      showToast('Failed to delete review — check console (likely a Firestore permissions issue).');
+      return;
+    }
     _allReviews = _allReviews.filter(r => r.id !== id);
     renderReviewsAdmin();
     showToast('Review deleted.');

@@ -411,7 +411,17 @@ const Reviews = {
       await _db.collection('reviews').doc(id).delete();
       if (productId) await Reviews._recalcProductRating(productId);
       return true;
-    } catch(e) { return false; }
+    } catch(e) {
+      // Log a helpful hint for the most common cause (Firestore security
+      // rules) — same pattern as DB.add() above, so this failure is no
+      // longer silently swallowed.
+      if (e.code === 'permission-denied' || (e.message && e.message.includes('Missing or insufficient permissions'))) {
+        console.error('[DIGITCH] Review delete BLOCKED by Firestore security rules. The admin panel does not sign in with Firebase Auth, so make sure your rules allow "delete" on /reviews/{id} without requiring request.auth.');
+      } else {
+        console.error('Reviews.delete:', e);
+      }
+      return false;
+    }
   },
 
   // Recalculate average rating for a product based on approved reviews
@@ -706,7 +716,12 @@ const Settings = {
     // HIDE the static /logo.png already sitting in the HTML. Now, with no
     // valid logo configured, we simply leave the existing markup alone.
     const _theme = document.documentElement.getAttribute('data-theme') || 'light';
-    const _logoRaw = (_theme === 'dark' && s.logoDark) ? s.logoDark : (s.logoLight || s.logo || null);
+    // In dark theme, only ever use s.logoDark. Previously this fell back to
+    // s.logoLight/s.logo when logoDark wasn't set, which meant a store that
+    // only configured one generic logo would keep showing the light logo
+    // (with its light-colored background box) on the dark navbar instead of
+    // falling through to the dark-optimized default asset below.
+    const _logoRaw = _theme === 'dark' ? (s.logoDark || null) : (s.logoLight || s.logo || null);
     const _logo = (typeof _logoRaw === 'string' && _logoRaw.trim()) ? _logoRaw.trim() : null;
     if (_logo) {
       document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = _logo; el.style.display = 'block'; });

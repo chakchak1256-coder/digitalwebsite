@@ -2761,8 +2761,23 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (p === 'my-products') { openMyProducts(); }
   })();
   window.addEventListener('cart:update', () => { updateCartBadge(); _coRefreshOrderSummary(); });
-  // db:update fires when Firestore data arrives — renders happen here
-  window.addEventListener('db:update', () => {
+  // db:update fires when Firestore data arrives — renders happen here.
+  window.addEventListener('db:update', handleDbUpdate);
+  // firebase.js runs as a blocking <script> earlier in this page and, as
+  // soon as it loads, synchronously reads the localStorage product cache
+  // and dispatches an initial 'db:update' with it (see initFirestoreData()
+  // in firebase.js). That happens *before* DOMContentLoaded fires — i.e.
+  // before the listener above even existed — so that first, instant,
+  // cache-based dispatch was always missed. The page only ever painted
+  // products after the real Firestore network round-trip resolved and
+  // fired 'db:update' a second time, which is exactly the ~2s delay.
+  // Calling the handler once here renders whatever's already sitting in
+  // DB._cache (the same cache firebase.js just populated) immediately,
+  // and the listener above still catches the later, fresher dispatch.
+  handleDbUpdate();
+});
+
+function handleDbUpdate() {
     // Clean up stale references to products that were deleted by the
     // seller: drop them from anyone's cart and wishlist so people can no
     // longer buy a removed product, and the wishlist badge count stays
@@ -2801,8 +2816,7 @@ document.addEventListener('DOMContentLoaded', () => {
       _pendingProductOpen = ''; // only try once — catalog is fully loaded by the first db:update
       _hideDeepLinkLoader();
     }
-  });
-});
+}
 
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', scrollY > 50);
@@ -4253,7 +4267,7 @@ function doUserLogout() {
 // s.logoDark/s.logoLight/s.logo, and always wins over this default swap).
 function updateDefaultLogoForTheme(theme) {
   const s = (typeof Settings !== 'undefined') ? Settings.get() : {};
-  const hasCustomLogo = !!((theme === 'dark' && s.logoDark) || s.logoLight || s.logo);
+  const hasCustomLogo = theme === 'dark' ? !!s.logoDark : !!(s.logoLight || s.logo);
   if (hasCustomLogo) return; // Settings.applyTheme() already set the right custom logo
   const src = theme === 'dark' ? '/logob.png' : '/logo.png';
   document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = src; });
