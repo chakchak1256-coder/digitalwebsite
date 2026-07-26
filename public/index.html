@@ -4182,7 +4182,11 @@ async function doGoogleSignIn() {
   const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
   closeLoginModal(); initUserAuth();
   showToast('Welcome back, ' + r.user.name + '! 👋');
-  if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
+  // Re-run the full checkout flow (cart validation, free-cart check, form
+  // prefill, payment instructions, step selection) instead of just toggling
+  // the modal's visibility class — toggling alone left every internal step
+  // at display:none, showing an empty white box.
+  if (wasCheckout) setTimeout(() => openCheckout(), 300);
 }
 
 // ── Google post-signup state ───────────────────────────────────────
@@ -4235,7 +4239,9 @@ async function doCompleteGoogleSignup() {
   const wasCheckout = document.getElementById('am-checkout-note').style.display !== 'none';
   closeLoginModal(); initUserAuth();
   showToast('Welcome, ' + r.user.name + '! 🎉');
-  if (wasCheckout) setTimeout(() => document.getElementById('checkout-modal').classList.add('open'), 300);
+  // Same fix as doGoogleSignIn() above — reopen via openCheckout() so the
+  // modal's internal steps actually get populated, not just made visible.
+  if (wasCheckout) setTimeout(() => openCheckout(), 300);
 }
 
 // ── Validation helpers ────────────────────────────────────────────
