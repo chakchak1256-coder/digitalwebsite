@@ -470,14 +470,14 @@ async function deliverOrder(env, order) {
     const { autoDeliver, deliveryLink, deliveryType, images, category, name, deliveryFiles } = item;
     const isAuto = !!(autoDeliver && deliveryLink);
 
-    // Build accessData: for PDF deliveries with multiple files, attach the
-    // full file list under `_Files` so My Products can show each one with
-    // its own download button. Falls back to the single Download Link
-    // for products with only one file (or non-PDF delivery types).
+    // Build accessData: Download Link and the uploaded file list are now
+    // independent — a product can have either, or both merged together
+    // (e.g. a video link plus a bonus PDF). Attach whichever is actually
+    // populated rather than gating _Files behind deliveryType === 'pdf'.
     let accessData = {};
     if (isAuto) {
       accessData = { '_DeliveryType': deliveryType || 'link', 'Download Link': deliveryLink };
-      if (deliveryType === 'pdf' && Array.isArray(deliveryFiles) && deliveryFiles.length) {
+      if (Array.isArray(deliveryFiles) && deliveryFiles.length) {
         accessData['_Files'] = deliveryFiles.map(f => ({ url: f.url, name: f.name }));
       }
     }
