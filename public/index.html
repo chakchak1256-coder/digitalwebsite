@@ -114,6 +114,15 @@ body{background:var(--bg2)}
   transition:background var(--transition),border-color var(--transition),box-shadow var(--transition);
 }
 [data-theme="dark"] #nav{background:var(--nav-bg);backdrop-filter:blur(16px);border-color:var(--border)}
+/* The fixed navbar sits above scrolling content, so its backdrop-filter blur
+   gets recomputed on every scroll frame. That's one of the heaviest CSS
+   effects a phone GPU can be asked to do continuously, and it's the main
+   cause of scroll jank on older/low-end phones. Below ~900px we swap it for
+   a solid near-opaque background instead — visually almost identical, but
+   free to render. */
+@media(max-width:900px){
+  [data-theme="dark"] #nav{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg2)}
+}
 #nav.scrolled{box-shadow:0 10px 32px -8px rgba(20,20,30,.14)}
 [data-theme="dark"] #nav.scrolled{box-shadow:0 4px 24px rgba(0,0,0,.4)}
 .nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
@@ -822,20 +831,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .detail-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:3.5rem;align-items:start}
 .gallery-main{aspect-ratio:4/3;border-radius:var(--radius);overflow:hidden;
   background:var(--bg3);border:1px solid var(--border);margin-bottom:.6rem;
-  position:relative;cursor:zoom-in}
+  position:relative}
 .gallery-main img{width:100%;height:100%;object-fit:contain}
-.gallery-main .zoom-lens{
-  position:absolute;inset:0;background-repeat:no-repeat;background-size:220%;
-  opacity:0;transition:opacity .15s ease;pointer-events:none;
-}
-.gallery-main.zoom-hover .zoom-lens{opacity:1}
-.gallery-main.zoom-hover img{opacity:0}
-.zoom-badge{
-  position:absolute;right:12px;bottom:12px;width:34px;height:34px;border-radius:50%;
-  background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;
-  font-size:.8rem;pointer-events:none;transition:opacity .2s ease;backdrop-filter:blur(4px);
-}
-.gallery-main:hover .zoom-badge{opacity:0}
 .gallery-thumbs{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.2rem}
 .thumb{
   width:60px;height:60px;flex-shrink:0;border-radius:7px;overflow:hidden;
@@ -1050,41 +1047,6 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 #co-alert-modal h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.5rem}
 #co-alert-modal p{font-size:.86rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.3rem}
 
-/* ===== PRODUCT IMAGE ZOOM LIGHTBOX ===== */
-#pd-zoom-modal{
-  position:fixed;inset:0;z-index:3000;background:rgba(6,6,8,.96);
-  display:none;align-items:center;justify-content:center;touch-action:none;
-}
-#pd-zoom-modal.active{display:flex}
-.pd-zoom-stage{
-  position:relative;width:100%;height:100%;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;cursor:grab;
-}
-.pd-zoom-stage.dragging{cursor:grabbing}
-.pd-zoom-stage img{
-  max-width:88vw;max-height:82vh;user-select:none;-webkit-user-drag:none;pointer-events:none;
-  transform-origin:center center;will-change:transform;
-}
-.pd-zoom-stage img.pd-zoom-anim{transition:transform .18s ease}
-.pd-zoom-close,.pd-zoom-nav{
-  position:absolute;width:42px;height:42px;border-radius:50%;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#fff;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;
-  font-size:1rem;transition:background .2s ease;
-}
-.pd-zoom-close:hover,.pd-zoom-nav:hover{background:rgba(255,255,255,.2)}
-.pd-zoom-close{top:18px;right:18px}
-.pd-zoom-nav{top:50%;transform:translateY(-50%)}
-.pd-zoom-prev{left:18px}
-.pd-zoom-next{right:18px}
-.pd-zoom-hint{
-  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-  color:rgba(255,255,255,.5);font-size:.72rem;letter-spacing:.02em;text-align:center;white-space:nowrap;
-}
-@media(max-width:640px){
-  .pd-zoom-nav{width:38px;height:38px;font-size:.9rem}
-  .pd-zoom-hint{font-size:.65rem}
-}
 #mp-detail-content{overflow-y:auto;flex:1;min-height:0;padding-right:.5rem;margin-right:-.5rem}
 #mp-detail-content::-webkit-scrollbar{width:6px}
 #mp-detail-content::-webkit-scrollbar-track{background:transparent}
@@ -1699,7 +1661,7 @@ section{ position:relative; }
 }
 .about-card:hover::after{ opacity:1; }
 
-/* product / purchase card depth + image zoom (image zoom already present; reinforce w/ shadow lift) */
+/* product / purchase card depth + hover lift */
 .product-card,.purchase-card{ will-change:transform; }
 .product-card:hover,.purchase-card:hover{
   box-shadow:0 26px 50px -18px rgba(0,0,0,.32),0 0 0 1px rgba(var(--accent-rgb),.14),0 0 30px -10px rgba(var(--accent-rgb),.25);
@@ -2303,9 +2265,6 @@ footer::before{
       <span class="cart-total-val" id="cart-total-val">0 DA</span>
     </div>
     <button class="btn-checkout" onclick="openCheckout()"><i class="fa-solid fa-lock"></i> Checkout</button>
-    <button class="btn-checkout" id="wa-order-btn" onclick="waOrderCart()" style="background:transparent;border:1px solid #25D366;color:#25D366;margin-top:.45rem">
-      <i class="fa-brands fa-whatsapp"></i> Order via WhatsApp
-    </button>
   </div>
 </div>
 
@@ -2520,8 +2479,6 @@ footer::before{
       <div>
         <div class="gallery-main" id="gallery-main">
           <img id="gal-main" src="" alt=""/>
-          <div class="zoom-lens" id="zoom-lens"></div>
-          <div class="zoom-badge"><i class="fa-solid fa-magnifying-glass-plus"></i></div>
         </div>
         <div class="gallery-thumbs" id="gal-thumbs"></div>
       </div>
@@ -2564,16 +2521,6 @@ footer::before{
   </div>
 </div>
 
-<!-- Product image zoom lightbox -->
-<div id="pd-zoom-modal">
-  <button class="pd-zoom-close" id="pd-zoom-close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-  <button class="pd-zoom-nav pd-zoom-prev" id="pd-zoom-prev" aria-label="Previous image"><i class="fa-solid fa-chevron-left"></i></button>
-  <button class="pd-zoom-nav pd-zoom-next" id="pd-zoom-next" aria-label="Next image"><i class="fa-solid fa-chevron-right"></i></button>
-  <div class="pd-zoom-stage" id="pd-zoom-stage">
-    <img id="pd-zoom-img" src="" alt=""/>
-  </div>
-  <div class="pd-zoom-hint">Scroll or pinch to zoom · Drag to pan · Double-click to reset</div>
-</div>
 
 <!-- TOAST -->
 <div id="toast"><i class="fa-solid fa-check-circle"></i> <span id="toast-msg"></span></div>
@@ -2645,7 +2592,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartBadge();
   updateWishlistBadge();
   initScrollSpy();
-  initGalleryZoom();
   Presence.start();
   CartLive.start();
   // Apply store branding (logo, store name, brand colors) from Settings —
@@ -2752,7 +2698,7 @@ function renderProducts() {
     g.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:3rem">No products yet.</p>';
     return;
   }
-  prods.slice(0, 8).forEach(p => g.appendChild(makeProductCard(p)));
+  prods.slice(0, 4).forEach(p => g.appendChild(makeProductCard(p)));
 }
 
 function makeProductCard(prod) {
@@ -3005,16 +2951,14 @@ function openProductDetail(id, fromAllPage = true) {
   if (starsEl) { starsEl.innerHTML = prod.rating ? buildStarsHtml(prod.rating, 'pd-stars') : ''; }
 
   const mainImg = document.getElementById('gal-main'); mainImg.src = imgs[0];
-  _pdZoomImgs = imgs; _pdZoomIndex = 0;
   const thumbs = document.getElementById('gal-thumbs'); thumbs.innerHTML = '';
   imgs.forEach((img, i) => {
     const t = document.createElement('div');
     t.className = 'thumb' + (i===0?' active':'');
-    t.innerHTML = `<img src="${img}" alt=""/>`;
+    t.innerHTML = `<img src="${img}" alt="" loading="lazy" decoding="async"/>`;
     t.onclick = () => {
       mainImg.style.opacity='0'; setTimeout(()=>{ mainImg.src=img; mainImg.style.opacity='1'; },200);
       document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('active')); t.classList.add('active');
-      _pdZoomIndex = i;
     };
     thumbs.appendChild(t);
   });
@@ -3143,171 +3087,6 @@ function closeProductDetail() {
   document.title = 'DIGITCH — Digital Products Store in Algeria';
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', 'DIGITCH — buy digital products online in Algeria: subscriptions, software, templates and more, with secure CIB/EDAHABIA payment and instant delivery.');
-}
-
-// ===== PRODUCT IMAGE ZOOM (hover magnifier + fullscreen pinch/pan lightbox) =====
-let _pdZoomImgs = [];
-let _pdZoomIndex = 0;
-
-function initGalleryZoom() {
-  const wrap = document.getElementById('gallery-main');
-  const mainImg = document.getElementById('gal-main');
-  const lens = document.getElementById('zoom-lens');
-  if (!wrap || !mainImg || !lens) return;
-
-  // Desktop hover magnifier — only for real hover/pointer-fine devices,
-  // since touch devices get the tap-to-open lightbox instead.
-  const supportsHover = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
-  if (supportsHover) {
-    wrap.addEventListener('mousemove', (e) => {
-      const rect = wrap.getBoundingClientRect();
-      const xPct = ((e.clientX - rect.left) / rect.width) * 100;
-      const yPct = ((e.clientY - rect.top) / rect.height) * 100;
-      lens.style.backgroundImage = `url('${mainImg.src}')`;
-      lens.style.backgroundPosition = `${xPct}% ${yPct}%`;
-      wrap.classList.add('zoom-hover');
-    });
-    wrap.addEventListener('mouseleave', () => wrap.classList.remove('zoom-hover'));
-  }
-
-  wrap.addEventListener('click', () => openZoomModal(_pdZoomIndex));
-
-  // ── Lightbox controls ──────────────────────────────────────────
-  const modal = document.getElementById('pd-zoom-modal');
-  const stage = document.getElementById('pd-zoom-stage');
-  const zImg  = document.getElementById('pd-zoom-img');
-  const btnClose = document.getElementById('pd-zoom-close');
-  const btnPrev  = document.getElementById('pd-zoom-prev');
-  const btnNext  = document.getElementById('pd-zoom-next');
-
-  let scale = 1, panX = 0, panY = 0;
-  let dragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0;
-  let pinchStartDist = 0, pinchStartScale = 1;
-
-  function applyTransform(animate) {
-    zImg.classList.toggle('pd-zoom-anim', !!animate);
-    zImg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-  }
-  function resetTransform(animate) {
-    scale = 1; panX = 0; panY = 0;
-    applyTransform(animate);
-  }
-  function clampPan() {
-    // Keep the image roughly on-screen; simple clamp based on scale.
-    const maxPan = (scale - 1) * 260;
-    panX = Math.max(-maxPan, Math.min(maxPan, panX));
-    panY = Math.max(-maxPan, Math.min(maxPan, panY));
-  }
-
-  window._pdOpenZoom = function(index) {
-    _pdZoomIndex = index;
-    zImg.src = _pdZoomImgs[_pdZoomIndex];
-    resetTransform(false);
-    modal.classList.add('active');
-    document.body.classList.add('no-scroll');
-    btnPrev.style.display = _pdZoomImgs.length > 1 ? '' : 'none';
-    btnNext.style.display = _pdZoomImgs.length > 1 ? '' : 'none';
-  };
-  window._pdCloseZoom = function() {
-    modal.classList.remove('active');
-    document.body.classList.remove('no-scroll');
-  };
-  function navZoom(dir) {
-    if (_pdZoomImgs.length < 2) return;
-    _pdZoomIndex = (_pdZoomIndex + dir + _pdZoomImgs.length) % _pdZoomImgs.length;
-    zImg.src = _pdZoomImgs[_pdZoomIndex];
-    resetTransform(false);
-  }
-
-  btnClose.onclick = () => window._pdCloseZoom();
-  btnPrev.onclick = () => navZoom(-1);
-  btnNext.onclick = () => navZoom(1);
-  modal.addEventListener('click', (e) => { if (e.target === modal) window._pdCloseZoom(); });
-
-  document.addEventListener('keydown', (e) => {
-    if (!modal.classList.contains('active')) return;
-    if (e.key === 'Escape') window._pdCloseZoom();
-    else if (e.key === 'ArrowLeft') navZoom(-1);
-    else if (e.key === 'ArrowRight') navZoom(1);
-  });
-
-  // Scroll / trackpad zoom
-  stage.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
-    scale = Math.max(1, Math.min(4, scale + delta));
-    if (scale === 1) { panX = 0; panY = 0; }
-    clampPan();
-    applyTransform(true);
-  }, { passive: false });
-
-  // Double-click to toggle zoom
-  stage.addEventListener('dblclick', () => {
-    if (scale > 1) { resetTransform(true); }
-    else { scale = 2.2; applyTransform(true); }
-  });
-
-  // Mouse drag to pan (only when zoomed in)
-  stage.addEventListener('mousedown', (e) => {
-    if (scale <= 1) return;
-    dragging = true; stage.classList.add('dragging');
-    startX = e.clientX; startY = e.clientY; startPanX = panX; startPanY = panY;
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    panX = startPanX + (e.clientX - startX);
-    panY = startPanY + (e.clientY - startY);
-    clampPan();
-    applyTransform(false);
-  });
-  window.addEventListener('mouseup', () => { dragging = false; stage.classList.remove('dragging'); });
-
-  // Touch: pinch to zoom, drag to pan, swipe to change image
-  let touchStartX = 0, isSwipe = false;
-  stage.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
-      pinchStartDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      pinchStartScale = scale;
-      isSwipe = false;
-    } else if (e.touches.length === 1) {
-      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-      startPanX = panX; startPanY = panY;
-      touchStartX = e.touches[0].clientX;
-      isSwipe = scale <= 1;
-    }
-  }, { passive: true });
-  stage.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      scale = Math.max(1, Math.min(4, pinchStartScale * (dist / pinchStartDist)));
-      clampPan();
-      applyTransform(false);
-    } else if (e.touches.length === 1 && scale > 1) {
-      e.preventDefault();
-      panX = startPanX + (e.touches[0].clientX - startX);
-      panY = startPanY + (e.touches[0].clientY - startY);
-      clampPan();
-      applyTransform(false);
-    }
-  }, { passive: false });
-  stage.addEventListener('touchend', (e) => {
-    if (isSwipe && e.changedTouches.length === 1) {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(dx) > 60) navZoom(dx > 0 ? -1 : 1);
-    }
-    if (scale < 1.02) resetTransform(true);
-  });
-}
-
-function openZoomModal(index) {
-  if (typeof window._pdOpenZoom === 'function') window._pdOpenZoom(index);
 }
 
 // ===== SHOW MAIN =====
@@ -4941,41 +4720,6 @@ function applyCoupon() {
 }
 
 // ================================================================
-// ===== FEATURE: WHATSAPP ORDER (pre-filled cart) =====
-// ================================================================
-function waOrderCart() {
-  const s = Settings.get();
-  const wa = s.social && s.social.whatsapp;
-  if (!wa) { showToast('WhatsApp not configured.'); return; }
-  const items = Cart.get();
-  if (!items.length) return;
-  const cur = s.currency || 'DA';
-  let msg = `🛒 *New Order Request*\n\n`;
-  items.forEach((it, i) => {
-    msg += `${i+1}. *${it.name}*${it.variantLabel ? ' — ' + it.variantLabel : ''}\n`;
-    msg += `   Qty: ${it.qty} × ${it.price.toLocaleString()} ${cur} = ${(it.price*it.qty).toLocaleString()} ${cur}\n`;
-  });
-  msg += `\n*Total: ${Cart.total().toLocaleString()} ${cur}*`;
-  if (_appliedCoupon) msg += `\n🏷 Promo: ${_appliedCoupon.code}`;
-  const user = UserAuth.current();
-  if (user) msg += `\n\n👤 ${user.name}\n📧 ${user.email}`;
-  const phone = wa.replace(/[^0-9]/g, '');
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-
-  // The order is now being handled manually over WhatsApp, so clear the
-  // cart the same way a completed checkout does — otherwise the same
-  // items would still be sitting there for a later (duplicate) checkout.
-  const cartDrawer  = document.getElementById('cart-drawer');
-  const cartOverlay = document.getElementById('cart-overlay');
-  if (cartDrawer)  cartDrawer.classList.remove('open');
-  if (cartOverlay) cartOverlay.classList.remove('open');
-  document.body.classList.remove('no-scroll');
-  Cart.clear();
-  showToast('✅ Order sent via WhatsApp — cart cleared');
-}
-
-// ================================================================
 // ===== FEATURE: ORDER TRACKING =====
 // ================================================================
 function openTracking() {
@@ -5368,7 +5112,7 @@ function updateWaFloat() {
   const btn = document.getElementById('wa-float');
   const link = document.getElementById('wa-float-link');
   if (wa && btn && link) {
-    // Set base href; actual cart-prefill happens via waOrderCart
+    // Base WhatsApp chat link for the floating button
     link.href = wa.startsWith('http') ? wa : 'https://wa.me/' + wa.replace(/[^0-9]/g,'');
     btn.style.display = 'block';
   } else if (btn) {
