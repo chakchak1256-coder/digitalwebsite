@@ -284,85 +284,51 @@ body{background:var(--bg2)}
 [data-theme="dark"] .hero-stat-label{color:var(--text-muted)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
-/* ===== HERO VISUAL (laptop + phone mockup, screenshot-matched) ===== */
+/* ===== HERO VISUAL (abstract geometric composition — no devices/objects) ===== */
 .hero-visual{
   position:relative;height:460px;display:flex;align-items:center;justify-content:center;
   animation:fadeUp .8s .2s both;
 }
-@media(max-width:980px){.hero-visual{display:none}}
+@media(max-width:980px){.hero-visual{height:340px}}
+@media(max-width:640px){.hero-visual{height:260px}}
 .hero-visual-glow{display:none}
 
-.hero-devices{position:relative;width:100%;max-width:560px;height:100%;display:flex;align-items:flex-end;justify-content:center}
-.hero-plinth{
-  position:absolute;bottom:6%;left:6%;width:74%;height:34%;border-radius:18px;
-  background:linear-gradient(135deg,#EDEEF0,#E1E3E6);
-  box-shadow:0 30px 60px -20px rgba(20,20,30,.18);
-  transform:perspective(600px) rotateX(48deg);
+.hero-art{position:relative;width:100%;max-width:520px;aspect-ratio:1/1;margin:0 auto}
+.hero-art-svg{width:100%;height:100%;display:block;overflow:visible}
+
+/* thin concentric rings — quiet structure, asymmetric placement */
+.hero-ring{fill:none;stroke:var(--accent);stroke-width:1;vector-effect:non-scaling-stroke}
+.hero-ring-1{stroke-opacity:.16}
+.hero-ring-2{stroke-opacity:.10}
+.hero-ring-3{stroke-opacity:.07}
+[data-theme="dark"] .hero-ring-1{stroke-opacity:.28}
+[data-theme="dark"] .hero-ring-2{stroke-opacity:.18}
+[data-theme="dark"] .hero-ring-3{stroke-opacity:.12}
+
+/* soft filled orb — the single focal shape, gradient-filled */
+.hero-orb{transform-box:fill-box;transform-origin:center}
+
+/* elegant thin lines */
+.hero-line{stroke:var(--accent);stroke-width:1;stroke-linecap:round;stroke-opacity:.3;vector-effect:non-scaling-stroke}
+[data-theme="dark"] .hero-line{stroke-opacity:.4}
+
+/* sweeping arc — a quiet nod to the brand curve, fully abstract */
+.hero-arc{fill:none;stroke-width:1.4;stroke-linecap:round;vector-effect:non-scaling-stroke;
+  transform-box:fill-box;transform-origin:center}
+
+/* small dot accents */
+.hero-dots circle{fill:var(--accent);opacity:.35}
+[data-theme="dark"] .hero-dots circle{opacity:.5}
+
+@keyframes heroOrbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes heroArcPulse{0%,100%{opacity:.35}50%{opacity:.85}}
+@keyframes heroRingSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.hero-orb{animation:heroOrbFloat 8s ease-in-out infinite}
+.hero-arc{animation:heroArcPulse 6s ease-in-out infinite}
+.hero-rings{transform-box:fill-box;transform-origin:center;animation:heroRingSpin 90s linear infinite}
+@media (prefers-reduced-motion:reduce){
+  .hero-orb,.hero-arc,.hero-rings{animation:none}
 }
-[data-theme="dark"] .hero-plinth{background:linear-gradient(135deg,#2A2A2C,#1E1E20)}
-.hero-plant{position:absolute;left:0;bottom:18%;width:90px;z-index:3;animation:fadeUp .8s .3s both}
-@media(max-width:700px){.hero-plant{display:none}}
-.hero-pot{width:46px;height:38px;margin:0 auto;border-radius:6px 6px 14px 14px;
-  background:linear-gradient(135deg,#fafafa,#e4e4e7);box-shadow:0 8px 16px -6px rgba(0,0,0,.2)}
-.hero-leaves{position:relative;height:64px;margin-bottom:-6px}
-.hero-leaf{position:absolute;bottom:0;left:50%;width:5px;height:54px;background:#34A65F;border-radius:6px;
-  transform-origin:bottom center;}
-.hero-leaf::before,.hero-leaf::after{content:'';position:absolute;width:4px;height:4px;border-radius:50%}
-.hero-laptop{position:relative;z-index:2;width:64%;max-width:380px}
-.hero-laptop-screen{
-  background:#15161A;border-radius:14px 14px 4px 4px;padding:9px 9px 0;
-  box-shadow:0 30px 60px -16px rgba(20,20,30,.35);
-}
-.hero-laptop-inner{
-  background:#fff;border-radius:7px;overflow:hidden;aspect-ratio:16/10.4;
-  display:flex;flex-direction:column;
-}
-.hero-laptop-base{
-  height:13px;background:linear-gradient(180deg,#C9CBCF,#B7B9BD);
-  border-radius:0 0 10px 10px;margin-top:-1px;
-  box-shadow:0 6px 14px -4px rgba(0,0,0,.25);
-  position:relative;
-}
-.hero-laptop-base::after{content:'';position:absolute;left:50%;top:0;transform:translateX(-50%);
-  width:60px;height:5px;background:#9b9da2;border-radius:0 0 6px 6px}
-.hl-topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
-  border-bottom:1px solid #EFEFF1;font-size:5.5px}
-.hl-logo{display:flex;align-items:center;gap:4px;font-family:'Syne',sans-serif;font-weight:800;font-size:7px;color:#0A0A0A}
-.hl-logo span{color:var(--accent)}
-.hl-nav{display:flex;gap:8px;font-size:5.5px;color:#A1A1AA}
-.hl-icons{display:flex;gap:5px;color:#A1A1AA;font-size:6px}
-.hl-body{flex:1;padding:10px 12px;display:grid;grid-template-columns:1fr 1.3fr;gap:8px}
-.hl-headline{font-family:'Syne',sans-serif;font-weight:800;font-size:9px;line-height:1.3;color:#0A0A0A}
-.hl-headline span{color:var(--accent);display:block}
-.hl-pill{margin-top:8px;background:var(--accent);color:#fff;font-size:5.5px;font-weight:700;
-  display:inline-block;padding:4px 9px;border-radius:5px}
-.hl-card{background:#F4F5F7;border-radius:7px;padding:7px;display:flex;flex-direction:column;gap:5px}
-.hl-chart{flex:1;display:flex;align-items:flex-end;gap:2.5px;padding-top:4px}
-.hl-chart i{flex:1;background:linear-gradient(180deg,#6EE7B7,var(--accent));border-radius:2px 2px 0 0}
-.hl-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
-.hl-stat{background:#F4F5F7;border-radius:5px;padding:4px 3px;text-align:center}
-.hl-stat b{display:block;font-size:6px;color:#0A0A0A;font-family:'Syne',sans-serif}
-.hl-stat span{font-size:4.2px;color:#A1A1AA}
-.hero-phone{
-  position:absolute;right:-4%;bottom:8%;z-index:3;width:25%;max-width:140px;
-  background:#15161A;border-radius:22px;padding:7px;
-  box-shadow:0 24px 48px -14px rgba(20,20,30,.4);
-  animation:fadeUp .8s .12s both;
-}
-@media(max-width:560px){.hero-phone{width:30%;right:0}}
-.hero-phone-screen{background:#fff;border-radius:16px;aspect-ratio:9/18.5;overflow:hidden;
-  display:flex;flex-direction:column;padding:14px 10px 10px}
-.hp-status{font-size:5px;color:#A1A1AA;display:flex;justify-content:space-between;margin-bottom:10px}
-.hp-headline{font-family:'Syne',sans-serif;font-weight:800;font-size:9px;line-height:1.25;color:#0A0A0A}
-.hp-headline span{color:var(--accent);display:block}
-.hp-pill{margin-top:9px;background:var(--accent);color:#fff;font-size:5px;font-weight:700;
-  text-align:center;padding:5px;border-radius:5px}
-.hp-badges{display:flex;gap:5px;margin-top:auto}
-.hp-badge{flex:1;background:#F4F5F7;border-radius:5px;padding:5px 4px;text-align:center}
-.hp-badge i{width:14px;height:14px;border-radius:50%;background:rgba(16,185,129,.15);color:var(--accent);
-  display:flex;align-items:center;justify-content:center;margin:0 auto 3px;font-size:6px}
-.hp-badge b{display:block;font-size:6px;color:#0A0A0A;font-family:'Syne',sans-serif}
-.hp-badge span{font-size:4px;color:#A1A1AA}
 
 /* ===== DECORATIVE SCENE (reference-image background system — emerald palette) ===== */
 .dig-scene{display:none}
@@ -1712,19 +1678,9 @@ a,button,.btn,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
 .hero-stat{ transition:transform .4s cubic-bezier(.22,.85,.32,1), box-shadow .4s ease, border-color .4s ease; }
 .hero-stat:hover{ transform:translateY(-3px); box-shadow:0 10px 24px -12px rgba(var(--accent-rgb),.4); border-color:rgba(var(--accent-rgb),.35); }
 
-/* floating device mockups */
-.hero-laptop{ animation:dzFloat 7s ease-in-out infinite; }
-.hero-phone{ animation:dzFloat 7s ease-in-out infinite; animation-delay:-2.4s; }
-.hero-plant{ animation:dzFloat 6s ease-in-out infinite .15s, fadeUp .8s .3s both; }
-@keyframes dzFloat{
-  0%,100%{ transform:translateY(0); }
-  50%{ transform:translateY(-9px); }
-}
-.hero-laptop-screen{ transition:box-shadow .5s ease; }
-.hero-visual:hover .hero-laptop-screen{ box-shadow:0 36px 70px -16px rgba(var(--accent-rgb),.28); }
-@media (prefers-reduced-motion:reduce){
-  .hero-laptop,.hero-phone,.hero-plant{ animation:none; }
-}
+/* ambient hero art hover — a slight lift on the focal orb */
+.hero-orb{ transition:filter .5s ease; }
+.hero-visual:hover .hero-orb{ filter:brightness(1.06); }
 
 /* ---- section separators (soft gradient dividers) ---- */
 section{ position:relative; }
@@ -1991,62 +1947,55 @@ footer::before{
       </div>
     </div>
     <div class="hero-visual">
-      <div class="hero-devices">
-        <div class="hero-plinth"></div>
-        <div class="hero-plant">
-          <div class="hero-leaves">
-            <div class="hero-leaf" style="left:50%;transform:rotate(-4deg) scaleY(1)"></div>
-            <div class="hero-leaf" style="left:42%;transform:rotate(-22deg) scaleY(.92)"></div>
-            <div class="hero-leaf" style="left:58%;transform:rotate(20deg) scaleY(.9)"></div>
-            <div class="hero-leaf" style="left:35%;transform:rotate(-38deg) scaleY(.7)"></div>
-            <div class="hero-leaf" style="left:65%;transform:rotate(36deg) scaleY(.7)"></div>
-          </div>
-          <div class="hero-pot"></div>
-        </div>
-        <div class="hero-laptop">
-          <div class="hero-laptop-screen">
-            <div class="hero-laptop-inner">
-              <div class="hl-topbar">
-                <div class="hl-logo">DIGI<span>TCH</span></div>
-                <div class="hl-nav"><span>Dashboard</span><span>Overview</span><span>Analytics</span><span>Projects</span></div>
-                <div class="hl-icons"><i class="fa-solid fa-magnifying-glass"></i><i class="fa-solid fa-bell"></i><i class="fa-solid fa-circle-user"></i></div>
-              </div>
-              <div class="hl-body">
-                <div>
-                  <div class="hl-headline">Digital Solutions<span>That Drive Results</span></div>
-                  <span class="hl-pill">Get Started</span>
-                </div>
-                <div class="hl-card">
-                  <div class="hl-chart">
-                    <i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i>
-                    <i style="height:60%"></i><i style="height:52%"></i><i style="height:78%"></i>
-                    <i style="height:90%"></i>
-                  </div>
-                </div>
-              </div>
-              <div style="padding:0 12px 10px">
-                <div class="hl-stats-row">
-                  <div class="hl-stat"><b>81</b><span>Clients</span></div>
-                  <div class="hl-stat"><b>29</b><span>Projects</span></div>
-                  <div class="hl-stat"><b>35</b><span>Reviews</span></div>
-                  <div class="hl-stat"><b>98</b><span>Rating</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="hero-laptop-base"></div>
-        </div>
-        <div class="hero-phone">
-          <div class="hero-phone-screen">
-            <div class="hp-status"><span>9:41</span><span>●●●</span></div>
-            <div class="hp-headline">Digital<span>Excellence Made Simple</span></div>
-            <span class="hp-pill">Get Started</span>
-            <div class="hp-badges">
-              <div class="hp-badge"><i class="fa-solid fa-shield"></i><b>250+</b><span>Projects</span></div>
-              <div class="hp-badge"><i class="fa-solid fa-star"></i><b>99%</b><span>Rating</span></div>
-            </div>
-          </div>
-        </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg class="hero-art-svg" viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="heroGlow" cx="50%" cy="46%" r="55%">
+              <stop offset="0%" stop-color="#10B981" stop-opacity=".28"/>
+              <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="heroOrbGrad" x1="10%" y1="0%" x2="90%" y2="100%">
+              <stop offset="0%" stop-color="#A7F3D0"/>
+              <stop offset="55%" stop-color="#10B981"/>
+              <stop offset="100%" stop-color="#047857"/>
+            </linearGradient>
+            <linearGradient id="heroArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#10B981" stop-opacity="0"/>
+              <stop offset="50%" stop-color="#10B981" stop-opacity=".9"/>
+              <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- ambient glow -->
+          <circle cx="300" cy="270" r="220" fill="url(#heroGlow)"/>
+
+          <!-- quiet concentric ring structure -->
+          <g class="hero-rings">
+            <circle class="hero-ring hero-ring-1" cx="300" cy="266" r="188"/>
+            <circle class="hero-ring hero-ring-2" cx="226" cy="212" r="118"/>
+            <circle class="hero-ring hero-ring-3" cx="300" cy="266" r="240"/>
+          </g>
+
+          <!-- sweeping elegant arc -->
+          <path class="hero-arc" d="M108 372 A 214 214 0 0 1 458 196" stroke="url(#heroArcGrad)"/>
+
+          <!-- thin accent lines -->
+          <line class="hero-line" x1="70" y1="130" x2="168" y2="102"/>
+          <line class="hero-line" x1="436" y1="424" x2="498" y2="462"/>
+          <line class="hero-line" x1="80" y1="452" x2="130" y2="440"/>
+
+          <!-- focal gradient orb -->
+          <circle class="hero-orb" cx="356" cy="332" r="52" fill="url(#heroOrbGrad)"/>
+
+          <!-- fine dot accents -->
+          <g class="hero-dots">
+            <circle cx="466" cy="140" r="3"/>
+            <circle cx="494" cy="112" r="2"/>
+            <circle cx="94" cy="204" r="2"/>
+            <circle cx="150" cy="452" r="2.5"/>
+            <circle cx="118" cy="470" r="1.6"/>
+          </g>
+        </svg>
       </div>
     </div>
   </div>
@@ -4266,14 +4215,17 @@ function doUserLogout() {
 
 
 // ===== THEME TOGGLE =====
-// Swaps the default repo logo (logo.png / logob.png) for the current theme —
-// but only when the admin hasn't configured a custom logo of their own via
-// Settings (Settings.applyTheme() already handles that case using
-// s.logoDark/s.logoLight/s.logo, and always wins over this default swap).
+// Swaps the navbar logo for the current theme. This always defers to
+// Settings.applyTheme() (firebase.js), which is the single source of truth
+// for logo selection: it uses the admin's custom logoLight/logoDark/logo
+// when configured, and falls back to the repo default (/logo.png or
+// /logob.png) otherwise. Previously this logic was duplicated here and
+// would bail out early whenever *any* logo field was set (which happens
+// any time branding is saved, since the admin form always fills in
+// logoLight as '/logo.png' by default) — leaving the logo stuck on
+// whichever theme's image was last set, instead of updating it.
 function updateDefaultLogoForTheme(theme) {
-  const s = (typeof Settings !== 'undefined') ? Settings.get() : {};
-  const hasCustomLogo = theme === 'dark' ? !!s.logoDark : !!(s.logoLight || s.logo);
-  if (hasCustomLogo) return; // Settings.applyTheme() already set the right custom logo
+  if (typeof Settings !== 'undefined') { Settings.applyTheme(); return; }
   const src = theme === 'dark' ? '/logob.png' : '/logo.png';
   document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = src; });
 }
