@@ -144,7 +144,7 @@ body{background:var(--bg2)}
 [data-theme="dark"] #nav.scrolled{box-shadow:0 4px 24px rgba(0,0,0,.4)}
 /* ===== TOP BAR (logo / search / socials) ===== */
 #topbar{
-  position:fixed;top:0;left:0;right:0;z-index:895;height:52px;
+  position:fixed;top:0;left:0;right:0;z-index:905;height:52px;
   padding:0 5vw;display:flex;align-items:center;justify-content:space-between;gap:1rem;
   background:#0C0C0C;transition:top var(--transition);
 }
@@ -172,8 +172,38 @@ body.flash-on #topbar{top:56px}
   display:flex;align-items:center;justify-content:center;color:#F2F2F2;
   font-size:.8rem;transition:all var(--transition)}
 .topbar-soc-btn:hover{background:rgba(255,255,255,.18);transform:translateY(-1px)}
+
+/* Mobile search bar — a dedicated row shown between the top bar and the nav
+   pill on narrow screens, since there's no room for an inline search box
+   next to the logo and socials at that width. */
+#mobile-search-bar{display:none}
+#mobile-search-input-wrap{display:flex;align-items:center;gap:.55rem;flex:1;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  border-radius:99px;padding:.5rem 1rem;transition:border-color var(--transition)}
+#mobile-search-input-wrap:focus-within{border-color:rgba(var(--accent-rgb),.5)}
+#mobile-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0}
+#mobile-search-q{background:none;border:none;outline:none;color:#F2F2F2;
+  font-size:.85rem;flex:1;font-family:inherit}
+#mobile-search-q::placeholder{color:rgba(255,255,255,.4)}
+#mobile-search-results{position:absolute;top:calc(100% + 6px);left:5vw;right:5vw;
+  background:var(--bg2);border:1px solid var(--border-strong);border-radius:var(--radius);
+  box-shadow:var(--shadow-md);z-index:894;max-height:320px;overflow-y:auto;display:none}
+#mobile-search-results.show{display:block}
+
 @media(max-width:700px){
   #topbar-search-wrap{display:none}
+  #mobile-search-bar{
+    display:flex;align-items:center;position:fixed;top:52px;left:0;right:0;z-index:905;
+    height:52px;padding:0 5vw;background:#0C0C0C;transition:top var(--transition);
+  }
+  body.flash-on #mobile-search-bar{top:108px}
+  #nav{top:122px}
+  body.flash-on #nav{top:160px}
+  #mobile-nav{top:196px}
+  body.flash-on #mobile-nav{top:234px}
+  #user-menu{top:196px !important}
+  #hero{padding-top:224px}
+  .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner,.tracking-inner{padding-top:192px}
 }
 @media(max-width:480px){
   .topbar-logo-text{display:none}
@@ -185,7 +215,7 @@ body.flash-on #topbar{top:56px}
   color:#0A0A0A;letter-spacing:-.02em}
 [data-theme="dark"] .nav-logo-text{color:var(--text)}
 .nav-logo-text span{color:var(--accent)}
-.nav-links{display:flex;gap:1.6rem;align-items:center}
+.nav-links{display:flex;flex:1;gap:1.6rem;align-items:center;justify-content:center}
 .nav-links a{font-size:.85rem;font-weight:500;color:#52525B;
   transition:color var(--transition);padding:4px 0;position:relative}
 [data-theme="dark"] .nav-links a{color:var(--text-muted)}
@@ -1927,18 +1957,26 @@ footer::before{
   <div id="topbar-search-wrap">
     <div id="topbar-search-input-wrap">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="topbar-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value)" autocomplete="off"/>
+      <input type="text" id="topbar-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value,'desktop')" autocomplete="off"/>
     </div>
     <div id="topbar-search-results"></div>
   </div>
   <div id="topbar-socials"></div>
 </div>
 
+<!-- Mobile-only search row (shown between the top bar and the nav pill on narrow screens) -->
+<div id="mobile-search-bar">
+  <div id="mobile-search-input-wrap">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" id="mobile-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value,'mobile')" autocomplete="off"/>
+  </div>
+  <div id="mobile-search-results"></div>
+</div>
+
 <!-- ===== NAV ===== -->
 <nav id="nav">
   <div class="nav-links">
     <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
-    <a href="#products" data-section="new-arrivals" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Our Products</a>
     <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
     <a href="#best-sellers" data-section="best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
     <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
@@ -1994,7 +2032,6 @@ footer::before{
 
 <div id="mobile-nav">
   <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
-  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Our Products</a>
   <a href="#" onclick="closeMobileNav();closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
   <a href="#best-sellers" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Best Sellers</a>
   <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
@@ -4941,10 +4978,11 @@ window.addEventListener('wishlist:update', () => {
 // ===== FEATURE: NAV LIVE SEARCH =====
 // ================================================================
 let _nsDebounce = null;
-function navSearchQuery(q) {
+function navSearchQuery(q, target) {
   clearTimeout(_nsDebounce);
   _nsDebounce = setTimeout(() => {
-    const res = document.getElementById('topbar-search-results');
+    const res = document.getElementById(target === 'mobile' ? 'mobile-search-results' : 'topbar-search-results');
+    if (!res) return;
     if (!q.trim()) { res.classList.remove('show'); res.innerHTML = ''; return; }
     const prods = DB.getAll('products').filter(p =>
       p.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -4955,7 +4993,7 @@ function navSearchQuery(q) {
     const s = Settings.get();
     res.innerHTML = prods.map(p => {
       const img = (p.images||[])[0] || '';
-      return `<div class="ns-item" onclick="navSearchSelect('${p.id}')">
+      return `<div class="ns-item" onclick="navSearchSelect('${p.id}','${target}')">
         ${img ? `<img class="ns-img" src="${img}" alt=""/>` : `<div class="ns-img" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:var(--bg3)">📦</div>`}
         <div class="ns-info">
           <div class="ns-name">${p.name}</div>
@@ -4967,17 +5005,22 @@ function navSearchQuery(q) {
     res.classList.add('show');
   }, 200);
 }
-function navSearchSelect(id) {
-  const res = document.getElementById('topbar-search-results');
-  res.classList.remove('show'); res.innerHTML = '';
-  document.getElementById('topbar-search-q').value = '';
+function navSearchSelect(id, target) {
+  const res = document.getElementById(target === 'mobile' ? 'mobile-search-results' : 'topbar-search-results');
+  const qEl = document.getElementById(target === 'mobile' ? 'mobile-search-q' : 'topbar-search-q');
+  if (res) { res.classList.remove('show'); res.innerHTML = ''; }
+  if (qEl) qEl.value = '';
   const prod = DB.getById('products', id);
   if (prod) { trackRecentlyViewed(prod); openProductDetail(id, false); }
 }
 document.addEventListener('click', e => {
-  const wrap = document.getElementById('topbar-search-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    document.getElementById('topbar-search-results').classList.remove('show');
+  const dWrap = document.getElementById('topbar-search-wrap');
+  if (dWrap && !dWrap.contains(e.target)) {
+    const r = document.getElementById('topbar-search-results'); if (r) r.classList.remove('show');
+  }
+  const mWrap = document.getElementById('mobile-search-bar');
+  if (mWrap && !mWrap.contains(e.target)) {
+    const r = document.getElementById('mobile-search-results'); if (r) r.classList.remove('show');
   }
 });
 
