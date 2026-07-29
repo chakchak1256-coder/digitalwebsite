@@ -120,44 +120,44 @@ section{position:relative;z-index:1}
 
 /* ===== TOPBAR ===== */
 #topbar{
-  position:fixed;top:0;left:0;right:0;z-index:901;height:42px;
+  position:fixed;top:0;left:0;right:0;z-index:901;height:54px;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 5vw;background:#0C0C0C;border-bottom:1px solid rgba(255,255,255,.08);
   transition:transform .35s ease,opacity .3s ease;
 }
 [data-theme="light"] #topbar{background:#12161C}
 #topbar.topbar-hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
-#topbar-logo{display:flex;align-items:center;gap:8px}
-#topbar-logo img{height:22px;width:auto}
-#topbar-logo span{font-family:'Syne',sans-serif;font-weight:800;font-size:.82rem;color:#fff;letter-spacing:-.01em}
-#topbar-socials{display:flex;align-items:center;gap:10px}
+#topbar-logo{display:flex;align-items:center;gap:10px}
+#topbar-logo img{height:28px;width:auto}
+#topbar-logo span{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;color:#fff;letter-spacing:-.01em}
+#topbar-socials{display:flex;align-items:center;gap:12px}
 #topbar-socials a{
-  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.08);color:#fff;font-size:.75rem;transition:transform .2s ease,background .2s ease;
+  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);color:#fff;font-size:.88rem;transition:transform .2s ease,background .2s ease;
 }
 #topbar-socials a:hover{transform:translateY(-2px);background:rgba(255,255,255,.16)}
-#topbar-empty{font-size:.76rem;color:rgba(255,255,255,.5)}
+#topbar-empty{font-size:.8rem;color:rgba(255,255,255,.5)}
 @media(max-width:600px){
-  #topbar{height:38px;padding:0 4vw}
-  #topbar-logo img{height:18px}
+  #topbar{height:46px;padding:0 4vw}
+  #topbar-logo img{height:22px}
   #topbar-logo span{display:none}
-  #topbar-socials a{width:23px;height:23px;font-size:.68rem}
+  #topbar-socials a{width:27px;height:27px;font-size:.78rem}
 }
 
 /* ===== NAV ===== */
 body{background:var(--bg2)}
 [data-theme="dark"] body{background:var(--bg)}
 #nav{
-  position:fixed;top:60px;left:5vw;right:5vw;z-index:900;
-  height:74px;padding:0 1.6rem;border-radius:18px;max-width:1320px;margin:0 auto;
-  display:flex;align-items:center;justify-content:space-between;
+  position:fixed;top:72px;left:5vw;right:5vw;z-index:900;
+  height:86px;padding:0 1.9rem;border-radius:20px;max-width:1320px;margin:0 auto;
+  display:flex;align-items:center;justify-content:flex-end;
   background:#FFFFFF;
   border:1px solid rgba(0,0,0,.06);
   box-shadow:0 8px 28px -8px rgba(20,20,30,.08);
   transition:background var(--transition),border-color var(--transition),box-shadow var(--transition),top .35s ease;
 }
 #nav.nav-raised{top:18px}
-body.flash-on #nav{top:98px}
+body.flash-on #nav{top:110px}
 body.flash-on #nav.nav-raised{top:56px}
 [data-theme="dark"] #nav{background:var(--nav-bg);backdrop-filter:blur(16px);border-color:var(--border)}
 /* The fixed navbar sits above scrolling content, so its backdrop-filter blur
@@ -177,8 +177,8 @@ body.flash-on #nav.nav-raised{top:56px}
   color:#0A0A0A;letter-spacing:-.02em}
 [data-theme="dark"] .nav-logo-text{color:var(--text)}
 .nav-logo-text span{color:var(--accent)}
-.nav-links{display:flex;gap:1.6rem;align-items:center}
-.nav-links a{font-size:.85rem;font-weight:500;color:#52525B;
+.nav-links{display:flex;gap:1.8rem;align-items:center;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.nav-links a{font-size:.92rem;font-weight:500;color:#52525B;
   transition:color var(--transition);padding:4px 0;position:relative}
 [data-theme="dark"] .nav-links a{color:var(--text-muted)}
 .nav-links a:hover,.nav-links a.active{color:var(--accent)}
@@ -188,9 +188,9 @@ body.flash-on #nav.nav-raised{top:56px}
   background:var(--accent);border-radius:2px}
 .nav-actions{display:flex;gap:8px;align-items:center;overflow:visible}
 #cart-btn{
-  position:relative;width:38px;height:38px;border-radius:50%;
+  position:relative;width:42px;height:42px;border-radius:50%;
   background:#fff;border:1px solid rgba(0,0,0,.08);
-  display:flex;align-items:center;justify-content:center;font-size:.9rem;
+  display:flex;align-items:center;justify-content:center;font-size:.98rem;
   transition:all var(--transition);color:#3F3F46;
 }
 [data-theme="dark"] #cart-btn{background:var(--card);border-color:var(--border);color:var(--text-muted)}
@@ -205,9 +205,9 @@ body.flash-on #nav.nav-raised{top:56px}
 [data-theme="dark"] #cart-badge{border-color:var(--bg2)}
 #user-btn-wrap{position:relative}
 .theme-btn{
-  width:38px;height:38px;border-radius:50%;
+  width:42px;height:42px;border-radius:50%;
   background:#fff;border:1px solid rgba(0,0,0,.08);
-  display:flex;align-items:center;justify-content:center;font-size:.85rem;
+  display:flex;align-items:center;justify-content:center;font-size:.92rem;
   transition:all var(--transition);color:#3F3F46;
 }
 [data-theme="dark"] .theme-btn{background:var(--card);border-color:var(--border);color:var(--text-muted)}
@@ -218,12 +218,12 @@ body.flash-on #nav.nav-raised{top:56px}
 .hamburger span{display:block;width:18px;height:1.5px;background:var(--text-muted);
   border-radius:2px;transition:var(--transition)}
 #mobile-nav{
-  position:fixed;top:134px;left:0;right:0;bottom:0;z-index:850;
+  position:fixed;top:158px;left:0;right:0;bottom:0;z-index:850;
   background:var(--bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.8rem;
   transform:translateX(100%);transition:transform .25s ease,top .35s ease;
 }
-#mobile-nav.raised{top:92px}
+#mobile-nav.raised{top:104px}
 #mobile-nav.open{transform:translateX(0)}
 #mobile-nav a{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;
   color:var(--text-muted);transition:color var(--transition)}
@@ -1034,9 +1034,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 @media(max-width:900px){
   .nav-links{display:none}
   .hamburger{display:flex}
-  #nav{padding:0 1.1rem}
-  .nav-logo-img{height:36px}
-  .nav-logo-text{display:none}
+  #nav{padding:0 1.1rem;justify-content:flex-end}
   .nav-actions{gap:5px}
   #nav-search-wrap{display:none}
   #history-btn{display:none}
@@ -1239,14 +1237,14 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .flash-seg{background:rgba(0,0,0,.25);border-radius:4px;padding:2px 6px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800;letter-spacing:.02em}
 #flash-banner-close{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:0 0 0 .5rem;font-size:.9rem;line-height:1}
 /* push nav down when banner visible */
-body.flash-on #mobile-nav{top:172px}
-body.flash-on #mobile-nav.raised{top:130px}
+body.flash-on #mobile-nav{top:196px}
+body.flash-on #mobile-nav.raised{top:142px}
 
 /* ===== NAV SEARCH ===== */
 #nav-search-wrap{position:relative;display:flex;align-items:center}
-#nav-search-btn{width:38px;height:38px;border-radius:8px;background:var(--card);
+#nav-search-btn{width:42px;height:42px;border-radius:8px;background:var(--card);
   border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-size:.85rem;transition:all var(--transition);color:var(--text-muted)}
+  font-size:.92rem;transition:all var(--transition);color:var(--text-muted)}
 #nav-search-btn:hover{background:var(--bg3);color:var(--text)}
 #nav-search-panel{
   position:absolute;top:calc(100% + 10px);right:0;width:320px;
@@ -1295,9 +1293,9 @@ body.flash-on #mobile-nav.raised{top:130px}
 #wishlist-page.active{display:block}
 .wishlist-inner{max-width:1160px;margin:0 auto;padding:88px 5vw 60px}
 /* Wishlist nav btn */
-#wishlist-nav-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
+#wishlist-nav-btn{position:relative;overflow:visible;width:42px;height:42px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:.85rem;
+  display:flex;align-items:center;justify-content:center;font-size:.92rem;
   transition:all var(--transition);color:var(--text-muted)}
 #wishlist-nav-btn:hover{background:var(--bg3);color:var(--text)}
 #wishlist-badge{
@@ -1311,9 +1309,9 @@ body.flash-on #mobile-nav.raised{top:130px}
 [data-theme="dark"] #wishlist-badge{border-color:var(--bg2)}
 
 /* ===== HISTORY (recently viewed) NAV BUTTON + PANEL ===== */
-#history-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
+#history-btn{position:relative;overflow:visible;width:42px;height:42px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:.85rem;
+  display:flex;align-items:center;justify-content:center;font-size:.92rem;
   transition:all var(--transition);color:var(--text-muted)}
 #history-btn:hover{background:var(--bg3);color:var(--text)}
 #history-btn.active{color:var(--accent);border-color:rgba(var(--accent-rgb),.4)}
@@ -1424,7 +1422,7 @@ body.flash-on #mobile-nav.raised{top:130px}
 
 /* ===== DIGITAL TOOLS CAROUSEL ===== */
 #game-carousel-section {
-  padding: 9.5rem 0 1.8rem;
+  padding: 10.8rem 0 1.8rem;
   background: var(--bg2);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -1432,7 +1430,7 @@ body.flash-on #mobile-nav.raised{top:130px}
   position: relative;
 }
 @media(max-width:600px){
-  #game-carousel-section{ padding-top: 9rem; }
+  #game-carousel-section{ padding-top: 10.5rem; }
 }
 [data-theme="dark"] #game-carousel-section { background: var(--bg3); }
 #game-carousel-section::before,
@@ -1925,14 +1923,8 @@ footer::before{
 
 <!-- ===== NAV ===== -->
 <nav id="nav">
-  <div class="nav-logo" onclick="showMain()">
-    <img class="nav-logo-img" src="/logo.png" alt="logo"/>
-    <script>document.currentScript.previousElementSibling.src = (document.documentElement.getAttribute('data-theme') === 'dark') ? '/logob.png' : '/logo.png';</script>
-    <span class="nav-logo-text store-name">DIGITCH</span>
-  </div>
   <div class="nav-links">
-    <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
-    <a href="#products" data-section="new-arrivals" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">New Arrivals</a>
+    <a href="#" data-section="hero" onclick="showMain();return false;">Home</a>
     <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
     <a href="#best-sellers" data-section="best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
     <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
@@ -1959,7 +1951,7 @@ footer::before{
     <button id="user-btn" onclick="toggleUserMenu()" style="position:relative;width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);align-items:center;justify-content:center;font-size:1rem;transition:all var(--transition)">
       <i class="fa-solid fa-user" id="user-icon"></i>
     </button>
-    <div id="user-menu" style="display:none;position:absolute;top:92px;right:5vw;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;min-width:200px;z-index:1000;box-shadow:0 12px 35px rgba(0,0,0,.5)">
+    <div id="user-menu" style="display:none;position:absolute;top:104px;right:5vw;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;min-width:200px;z-index:1000;box-shadow:0 12px 35px rgba(0,0,0,.5)">
       <div id="user-menu-info" style="padding:.6rem .9rem;margin-bottom:.3rem;border-bottom:1px solid var(--border)"></div>
       <button onclick="openMyProducts();document.getElementById('user-menu').style.display='none';" style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;width:100%;transition:background var(--transition)" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''"><i class="fa-solid fa-box-archive" style="color:var(--primary)"></i> My Products</button>
       <button onclick="doUserLogout()" style="width:100%;display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;color:var(--text-muted);transition:all var(--transition);text-align:left" onmouseover="this.style.color='#ff4d6d'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -1998,8 +1990,7 @@ footer::before{
 </nav>
 
 <div id="mobile-nav">
-  <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
-  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">New Arrivals</a>
+  <a href="#" onclick="closeMobileNav();showMain();return false;">Home</a>
   <a href="#" onclick="closeMobileNav();closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
   <a href="#best-sellers" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Best Sellers</a>
   <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
@@ -2193,7 +2184,7 @@ footer::before{
   <div class="container">
     <div class="footer-logo store-name">DIGITCH</div>
     <div class="footer-links">
-      <a href="#hero" onclick="showMain()">Home</a>
+      <a href="#" onclick="showMain();return false;">Home</a>
       <a href="#products" onclick="closeMyProducts();closeAllProducts();">New Arrivals</a>
       <a href="#" onclick="closeMyProducts();closeAllProducts();openAllProducts();return false;">Products</a>
       <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();">Best Sellers</a>
@@ -3388,6 +3379,7 @@ function showMain() {
   closeMyProducts();
   closeWishlist();
   closeTracking();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ===== CART =====
