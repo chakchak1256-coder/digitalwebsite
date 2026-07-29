@@ -218,7 +218,7 @@ body.flash-on #topbar{top:56px}
   body.flash-on #mobile-nav{top:234px}
   #user-menu{top:196px !important}
   #hero{padding-top:224px}
-  .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner,.tracking-inner{padding-top:192px}
+  .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner{padding-top:192px}
 }
 @media(max-width:480px){
   .topbar-logo-text{display:none}
@@ -652,31 +652,8 @@ body.flash-on #topbar{top:56px}
 .warranty-card-icon{font-size:1.3rem;margin-bottom:.7rem}
 .warranty-card-title{font-family:'Syne',sans-serif;font-size:.875rem;font-weight:700;margin-bottom:.35rem;color:var(--text)}
 .warranty-card-text{font-size:.8rem;color:var(--text-muted);line-height:1.65}
-.warranty-banner{
-  padding:1.8rem 2rem;border-radius:var(--radius);
-  background:var(--bg2);border:1px solid var(--border);
-  display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;text-align:left;
-}
-.warranty-banner-icon{font-size:1.6rem;flex-shrink:0}
-.warranty-banner-text h4{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;margin-bottom:.25rem;color:var(--text)}
-.warranty-banner-text p{font-size:.82rem;color:var(--text-muted)}
 
-/* ===== CONTACT ===== */
-#contact{padding:96px 0;background:var(--bg2)}
-.contact-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:4rem;align-items:start}
-.contact-socials{display:flex;flex-direction:column;gap:.6rem;margin-top:1.3rem}
-.soc-link{
-  display:flex;align-items:center;gap:.8rem;padding:.8rem 1rem;
-  border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border);
-  transition:border-color var(--transition),transform var(--transition);
-}
-.soc-link:hover{transform:translateX(4px);border-color:rgba(var(--accent-rgb),.3)}
-.soc-icon{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
-.soc-link span{font-size:.85rem;font-weight:500;color:var(--text)}
-.contact-form-box{
-  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;
-}
-.form-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;color:var(--text)}
+/* ===== FORM (shared by checkout / review modals) ===== */
 .form-group{margin-bottom:1rem}
 .form-group label{display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:.3rem}
 .form-input{
@@ -689,14 +666,6 @@ body.flash-on #topbar{top:56px}
 .form-input::placeholder{color:var(--text-muted)}
 textarea.form-input{resize:vertical;min-height:100px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.form-submit{
-  width:100%;padding:11px;border-radius:var(--radius-sm);margin-top:.3rem;
-  background:var(--accent);color:#fff;font-weight:700;font-size:.875rem;
-  transition:all var(--transition);
-}
-.form-submit:hover{background:var(--accent-dark);transform:translateY(-1px)}
-.form-ok{display:none;text-align:center;padding:2rem;color:var(--accent)}
-.form-ok i{font-size:1.8rem;margin-bottom:.5rem;display:block}
 
 /* ===== FOOTER ===== */
 footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0 2rem;text-align:center}
@@ -1092,7 +1061,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   .nav-actions{gap:5px}
   #nav-search-wrap{display:none}
   #history-wrap{display:none}
-  .about-grid,.contact-grid,.detail-grid{grid-template-columns:1fr}
+  .about-grid,.detail-grid{grid-template-columns:1fr}
   .about-right{grid-template-columns:repeat(4,1fr)}
   .about-card.span2{grid-column:span 4}
 }
@@ -1275,7 +1244,6 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 [data-theme="light"] #cart-drawer,[data-theme="light"] #checkout-modal .checkout-box,[data-theme="light"] #all-products-page,[data-theme="light"] #product-page{background:var(--bg)}
 [data-theme="light"] .product-card,[data-theme="light"] .about-feat,[data-theme="light"] .about-card{background:var(--bg2)}
 [data-theme="light"] #nav{border-bottom-color:var(--border)}
-[data-theme="light"] .contact-form-box,[data-theme="light"] .soc-link{background:var(--bg)}
 
 /* ===== FLASH SALE BANNER ===== */
 #flash-banner{
@@ -1437,29 +1405,6 @@ body.flash-on #mobile-nav{top:182px}
 #co-coupon-feedback{font-size:.78rem;margin-top:.3rem;display:none}
 #co-coupon-feedback.ok{color:#10B981;display:block}
 #co-coupon-feedback.err{color:#EF4444;display:block}
-
-/* ===== ORDER TRACKING ===== */
-#tracking-page{
-  display:none;position:fixed;inset:0;z-index:800;
-  background:var(--bg);overflow-y:auto;
-}
-#tracking-page.active{display:block}
-.tracking-inner{max-width:640px;margin:0 auto;padding:140px 5vw 60px}
-.tracking-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:2rem}
-.tracking-steps{display:flex;flex-direction:column;gap:0;margin-top:1.5rem}
-.t-step{display:flex;gap:1rem;position:relative;padding-bottom:1.2rem}
-.t-step:last-child{padding-bottom:0}
-.t-step-line{position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--border)}
-.t-step:last-child .t-step-line{display:none}
-.t-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);background:var(--bg3);
-  display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;
-  transition:all var(--transition);position:relative;z-index:1}
-.t-dot.done{background:rgba(var(--accent-rgb),.15);border-color:var(--accent);color:var(--accent)}
-.t-dot.current{background:var(--accent);border-color:var(--accent);color:#fff;
-  box-shadow:0 0 0 4px rgba(var(--accent-rgb),.2)}
-.t-step-info{padding-top:4px}
-.t-step-name{font-size:.88rem;font-weight:700;color:var(--text)}
-.t-step-desc{font-size:.78rem;color:var(--text-muted);margin-top:.1rem}
 
 /* ===== AUTH STATE — CSS-driven, no flash ===== */
 /* Default (logged out): show sign-in, hide user btn + my products */
@@ -1689,7 +1634,7 @@ body.flash-on #mobile-nav{top:182px}
 /* ---- global motion defaults ---- */
 *{ scroll-behavior:smooth; }
 a,button,.btn,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
-.soc-link,.warranty-card,.purchase-card,.feature-strip-item,.trust-item,
+.warranty-card,.purchase-card,.feature-strip-item,.trust-item,
 .prod-add,.qty-btn,.cart-close,.theme-btn,#cart-btn,.cart-del,.pc-access-btn,.pc-copy-btn{
   transition:transform .4s cubic-bezier(.22,.85,.32,1),
              box-shadow .4s cubic-bezier(.22,.85,.32,1),
@@ -1809,7 +1754,7 @@ a,button,.btn,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
 /* ---- section separators (soft gradient dividers) ---- */
 section{ position:relative; }
 #about::before,#products::before,#best-sellers::before,
-#warranty::before,#contact::before,#testimonials::before{
+#warranty::before,#testimonials::before{
   content:'';position:absolute;top:0;left:8%;right:8%;height:1px;z-index:1;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(var(--accent-rgb),.35),transparent);
 }
@@ -1871,19 +1816,9 @@ section{ position:relative; }
 .trust-icon,.feature-strip-icon,.mp-stat-icon{ transition:transform .4s cubic-bezier(.22,.85,.32,1); }
 .trust-item:hover .trust-icon,.feature-strip-item:hover .feature-strip-icon{ transform:scale(1.1) rotate(-4deg); }
 
-/* contact form: refined focus + submit feel */
+/* form inputs: refined focus feel */
 .form-input{ transition:border-color .3s ease, box-shadow .3s ease, background .3s ease; }
 .form-input:focus{ box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16); }
-.form-submit{ position:relative; overflow:hidden; }
-.form-submit::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 48%,transparent 66%);
-  transform:translateX(-130%); transition:transform .65s ease;
-}
-.form-submit:hover::before{ transform:translateX(130%); }
-.contact-form-box{ transition:box-shadow .4s ease, border-color .4s ease; }
-.contact-form-box:hover{ box-shadow:0 18px 40px -20px rgba(0,0,0,.3); }
-.soc-link:hover{ box-shadow:0 8px 20px -12px rgba(var(--accent-rgb),.35); }
 
 /* cart drawer + checkout modal: smoother easing */
 #cart-drawer{ transition:transform .45s cubic-bezier(.22,.85,.32,1); }
@@ -2245,16 +2180,6 @@ footer::before{
           <div class="warranty-card-text">We listen, we support, and we stand behind every product we sell — always.</div>
         </div>
       </div>
-      <div class="warranty-banner">
-        <div class="warranty-banner-icon">💬</div>
-        <div class="warranty-banner-text">
-          <h4>Something went wrong with your order?</h4>
-          <p>Contact us directly on WhatsApp or Telegram and we'll make it right — guaranteed.</p>
-        </div>
-        <button class="btn btn-primary" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">
-          <i class="fa-solid fa-headset"></i> Contact Support
-        </button>
-      </div>
     </div>
   </div>
 </section>
@@ -2305,26 +2230,6 @@ footer::before{
       <h2 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800">Wishlist</h2>
     </div>
     <div class="products-grid" id="wishlist-grid"></div>
-  </div>
-</div>
-
-<!-- ===== ORDER TRACKING PAGE ===== -->
-<div id="tracking-page">
-  <div class="tracking-inner">
-    <button class="back-btn" onclick="closeTracking()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-    <div style="margin-bottom:2rem">
-      <div class="section-tag">Support</div>
-      <h2 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800">Track Your Order</h2>
-      <p style="color:var(--text-muted);font-size:.9rem;margin-top:.4rem">Enter your order ID to check status.</p>
-    </div>
-    <div class="tracking-card">
-      <div style="display:flex;gap:.6rem;margin-bottom:1rem">
-        <input class="form-input" id="tracking-input" type="text" placeholder="e.g. ORD-1234567890-ABCDE" style="flex:1;text-transform:uppercase;letter-spacing:.04em;font-family:monospace"/>
-        <button class="btn btn-primary" onclick="trackOrder()"><i class="fa-solid fa-magnifying-glass"></i> Track</button>
-      </div>
-      <div id="tracking-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.7rem 1rem;font-size:.83rem;color:#EF4444;margin-bottom:1rem"></div>
-      <div id="tracking-result" style="display:none"></div>
-    </div>
   </div>
 </div>
 
@@ -3471,7 +3376,6 @@ function showMain() {
   closeProductDetail();
   closeMyProducts();
   closeWishlist();
-  closeTracking();
 }
 
 // ===== CART =====
@@ -5104,77 +5008,6 @@ function applyCoupon() {
 }
 
 // ================================================================
-// ===== FEATURE: ORDER TRACKING =====
-// ================================================================
-function openTracking() {
-  document.getElementById('tracking-page').classList.add('active');
-  document.body.classList.add('no-scroll');
-  document.getElementById('tracking-result').style.display = 'none';
-  document.getElementById('tracking-error').style.display = 'none';
-  document.getElementById('tracking-input').value = '';
-}
-function closeTracking() {
-  document.getElementById('tracking-page').classList.remove('active');
-  document.body.classList.remove('no-scroll');
-}
-
-async function trackOrder() {
-  const raw = (document.getElementById('tracking-input').value || '').trim().toUpperCase();
-  const errEl = document.getElementById('tracking-error');
-  const resEl = document.getElementById('tracking-result');
-  errEl.style.display = 'none';
-  resEl.style.display = 'none';
-  if (!raw) { errEl.textContent = 'Please enter your order ID.'; errEl.style.display = 'block'; return; }
-  // Search purchases by orderId
-  try {
-    const snap = await _db.collection('purchases').where('orderId', '==', raw).limit(5).get();
-    if (snap.empty) {
-      errEl.textContent = 'No order found with this ID. Please check the ID and try again.';
-      errEl.style.display = 'block';
-      return;
-    }
-    const docs = snap.docs.map(d => d.data());
-    const first = docs[0];
-    const status = first.status || 'pending';
-    const statusSteps = ['pending','processing','delivered'];
-    const statusLabels = {
-      pending:    { name: 'Order Received',   desc: 'Your order has been received and is awaiting review.', icon: 'fa-clock' },
-      processing: { name: 'Verifying Payment', desc: 'We are confirming your payment and preparing your product.', icon: 'fa-spinner' },
-      delivered:  { name: 'Delivered',         desc: 'Your product has been delivered. Check My Products!', icon: 'fa-circle-check' }
-    };
-    const curIdx = statusSteps.indexOf(status);
-    const stepsHtml = statusSteps.map((s2, i) => {
-      const st = statusLabels[s2] || { name: s2, desc: '', icon: 'fa-circle' };
-      const cls = i < curIdx ? 'done' : i === curIdx ? 'current' : '';
-      const icon = i <= curIdx ? 'fa-check' : st.icon;
-      return `<div class="t-step">
-        <div class="t-step-line"></div>
-        <div class="t-dot ${cls}"><i class="fa-solid ${icon}"></i></div>
-        <div class="t-step-info">
-          <div class="t-step-name">${st.name}</div>
-          <div class="t-step-desc">${st.desc}</div>
-        </div>
-      </div>`;
-    }).join('');
-    const date = first.createdAt ? new Date(first.createdAt).toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'}) : '—';
-    const s3 = Settings.get();
-    resEl.style.display = 'block';
-    resEl.innerHTML = `
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.2rem">
-        <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Order Details</div>
-        <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Order ID</span><span style="font-size:.78rem;font-family:monospace">${raw}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Date</span><span style="font-size:.83rem;font-weight:600">${date}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.83rem;color:var(--text-muted)">Items</span><span style="font-size:.83rem;font-weight:600">${docs.length}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:.3rem 0"><span style="font-size:.83rem;color:var(--text-muted)">Payment</span><span style="font-size:.83rem;font-weight:600">${mpPaymentLabel(first.paymentMethod)||'—'}</span></div>
-      </div>
-      <div class="tracking-steps">${stepsHtml}</div>`;
-  } catch(e) {
-    errEl.textContent = 'Could not fetch order status. Please try again.';
-    errEl.style.display = 'block';
-  }
-}
-
-// ================================================================
 // ===== FEATURE: REVIEWS =====
 // ================================================================
 let _rvSelectedStar = 0;
@@ -5694,7 +5527,7 @@ function updateWaFloat() {
     var selectors = [
       '#about .about-title','#about .about-desc','#about .about-feat',
       '#about .about-card','.product-card','.purchase-card',
-      '#warranty .warranty-title','#warranty .warranty-lead','.warranty-card','.warranty-banner',
+      '#warranty .warranty-title','#warranty .warranty-lead','.warranty-card',
       '.feature-strip-item','.trust-item','.bs-row','.testi-card',
       '.section-header'
     ];
