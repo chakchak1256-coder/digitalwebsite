@@ -2286,13 +2286,11 @@ footer::before{
     <div class="footer-logo store-name">DIGITCH</div>
     <div class="footer-links">
       <a href="#hero" onclick="showMain()">Home</a>
-      <a href="#products" onclick="closeMyProducts();closeAllProducts();">Our Products</a>
-      <a href="#" onclick="closeMyProducts();closeAllProducts();openAllProducts();return false;">Products</a>
-      <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();">Best Sellers</a>
-      <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
-      <a href="#warranty" onclick="closeMyProducts();closeAllProducts();">Warranty</a>
-      <a href="#" onclick="openTracking();return false;">Track Order</a>
-      <a href="admin.html">Admin</a>
+      <a href="#" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
+      <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
+      <a href="#about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
+      <a href="#warranty" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Warranty</a>
+      <a href="#" onclick="closeWishlist();openMyProducts();return false;">My Products</a>
     </div>
     <p class="footer-copy" id="footer-copy">© 2025 DIGITCH · All rights reserved</p>
   </div>
