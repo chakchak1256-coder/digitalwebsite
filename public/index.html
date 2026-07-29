@@ -142,26 +142,34 @@ body{background:var(--bg2)}
 }
 #nav.scrolled{box-shadow:0 10px 32px -8px rgba(20,20,30,.14)}
 [data-theme="dark"] #nav.scrolled{box-shadow:0 4px 24px rgba(0,0,0,.4)}
-/* ===== TOP BAR (logo / search / socials) ===== */
+/* ===== TOP BAR (logo / search / socials) =====
+   Intentionally the inverse of the nav pill's coloring: black on the light
+   theme, white on the dark theme. */
 #topbar{
   position:fixed;top:0;left:0;right:0;z-index:905;height:52px;
   padding:0 5vw;display:flex;align-items:center;justify-content:space-between;gap:1rem;
-  background:#0C0C0C;transition:top var(--transition);
+  background:#0C0C0C;transition:top var(--transition),background var(--transition),border-color var(--transition);
 }
+[data-theme="dark"] #topbar{background:#FFFFFF;border-bottom:1px solid rgba(0,0,0,.06)}
 body.flash-on #topbar{top:56px}
 .topbar-logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
 .topbar-logo-img{height:28px;width:auto;display:block}
-.topbar-logo-text{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#F2F2F2;letter-spacing:-.02em}
+.topbar-logo-text{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#F2F2F2;letter-spacing:-.02em;transition:color var(--transition)}
+[data-theme="dark"] .topbar-logo-text{color:#0A0A0A}
 .topbar-logo-text span{color:var(--accent)}
 #topbar-search-wrap{position:relative;flex:1;max-width:420px;margin:0 auto}
 #topbar-search-input-wrap{display:flex;align-items:center;gap:.55rem;
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
-  border-radius:99px;padding:.45rem 1rem;transition:border-color var(--transition)}
+  border-radius:99px;padding:.45rem 1rem;transition:all var(--transition)}
+[data-theme="dark"] #topbar-search-input-wrap{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12)}
 #topbar-search-input-wrap:focus-within{border-color:rgba(var(--accent-rgb),.5)}
-#topbar-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0}
+#topbar-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0;transition:color var(--transition)}
+[data-theme="dark"] #topbar-search-input-wrap i{color:rgba(0,0,0,.4)}
 #topbar-search-q{background:none;border:none;outline:none;color:#F2F2F2;
-  font-size:.83rem;flex:1;font-family:inherit}
+  font-size:.83rem;flex:1;font-family:inherit;transition:color var(--transition)}
+[data-theme="dark"] #topbar-search-q{color:#0A0A0A}
 #topbar-search-q::placeholder{color:rgba(255,255,255,.4)}
+[data-theme="dark"] #topbar-search-q::placeholder{color:rgba(0,0,0,.35)}
 #topbar-search-results{position:absolute;top:calc(100% + 10px);left:0;right:0;
   background:var(--bg2);border:1px solid var(--border-strong);border-radius:var(--radius);
   box-shadow:var(--shadow-md);z-index:999;max-height:320px;overflow-y:auto;display:none}
@@ -171,7 +179,9 @@ body.flash-on #topbar{top:56px}
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
   display:flex;align-items:center;justify-content:center;color:#F2F2F2;
   font-size:.8rem;transition:all var(--transition)}
+[data-theme="dark"] .topbar-soc-btn{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#0A0A0A}
 .topbar-soc-btn:hover{background:rgba(255,255,255,.18);transform:translateY(-1px)}
+[data-theme="dark"] .topbar-soc-btn:hover{background:rgba(0,0,0,.1)}
 
 /* Mobile search bar — a dedicated row shown between the top bar and the nav
    pill on narrow screens, since there's no room for an inline search box
@@ -179,12 +189,16 @@ body.flash-on #topbar{top:56px}
 #mobile-search-bar{display:none}
 #mobile-search-input-wrap{display:flex;align-items:center;gap:.55rem;flex:1;
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
-  border-radius:99px;padding:.5rem 1rem;transition:border-color var(--transition)}
+  border-radius:99px;padding:.5rem 1rem;transition:all var(--transition)}
+[data-theme="dark"] #mobile-search-input-wrap{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12)}
 #mobile-search-input-wrap:focus-within{border-color:rgba(var(--accent-rgb),.5)}
-#mobile-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0}
+#mobile-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0;transition:color var(--transition)}
+[data-theme="dark"] #mobile-search-input-wrap i{color:rgba(0,0,0,.4)}
 #mobile-search-q{background:none;border:none;outline:none;color:#F2F2F2;
-  font-size:.85rem;flex:1;font-family:inherit}
+  font-size:.85rem;flex:1;font-family:inherit;transition:color var(--transition)}
+[data-theme="dark"] #mobile-search-q{color:#0A0A0A}
 #mobile-search-q::placeholder{color:rgba(255,255,255,.4)}
+[data-theme="dark"] #mobile-search-q::placeholder{color:rgba(0,0,0,.35)}
 #mobile-search-results{position:absolute;top:calc(100% + 6px);left:5vw;right:5vw;
   background:var(--bg2);border:1px solid var(--border-strong);border-radius:var(--radius);
   box-shadow:var(--shadow-md);z-index:894;max-height:320px;overflow-y:auto;display:none}
@@ -194,8 +208,9 @@ body.flash-on #topbar{top:56px}
   #topbar-search-wrap{display:none}
   #mobile-search-bar{
     display:flex;align-items:center;position:fixed;top:52px;left:0;right:0;z-index:905;
-    height:52px;padding:0 5vw;background:#0C0C0C;transition:top var(--transition);
+    height:52px;padding:0 5vw;background:#0C0C0C;transition:top var(--transition),background var(--transition),border-color var(--transition);
   }
+  [data-theme="dark"] #mobile-search-bar{background:#FFFFFF;border-bottom:1px solid rgba(0,0,0,.06)}
   body.flash-on #mobile-search-bar{top:108px}
   #nav{top:122px}
   body.flash-on #nav{top:160px}
@@ -1071,7 +1086,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 @media(max-width:900px){
   .nav-links{display:none}
   .hamburger{display:flex}
-  #nav{padding:0 1.1rem}
+  #nav{padding:0 1.1rem;justify-content:center}
   .nav-logo-img{height:36px}
   .nav-logo-text{display:none}
   .nav-actions{gap:5px}
@@ -1951,7 +1966,7 @@ footer::before{
 <!-- ===== TOP BAR ===== -->
 <div id="topbar">
   <div class="topbar-logo" onclick="showMain()">
-    <img class="nav-logo-img topbar-logo-img" src="/logob.png" alt="logo"/>
+    <img class="topbar-logo-img" src="/logob.png" alt="logo"/>
     <span class="topbar-logo-text store-name">DIGITCH</span>
   </div>
   <div id="topbar-search-wrap">
@@ -4490,11 +4505,20 @@ function updateDefaultLogoForTheme(theme) {
   const src = theme === 'dark' ? '/logob.png' : '/logo.png';
   document.querySelectorAll('.nav-logo-img').forEach(el => { el.src = src; });
 }
+// Top bar logo — deliberately the opposite pairing of the nav logo above,
+// since the top bar's background itself is the inverse of the nav pill's
+// (black on the light theme, white on the dark theme). Kept on its own
+// class/function so branding updates to the main nav logo don't affect it.
+function updateTopbarLogoForTheme(theme) {
+  const img = document.querySelector('.topbar-logo-img');
+  if (img) img.src = theme === 'dark' ? '/logo.png' : '/logob.png';
+}
 function initTheme() {
   const theme = document.documentElement.getAttribute('data-theme') || 'dark';
   const icon = document.getElementById('theme-icon');
   if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
   updateDefaultLogoForTheme(theme);
+  updateTopbarLogoForTheme(theme);
 }
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -4502,6 +4526,7 @@ function applyTheme(theme) {
   const icon = document.getElementById('theme-icon');
   if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
   updateDefaultLogoForTheme(theme);
+  updateTopbarLogoForTheme(theme);
 }
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
