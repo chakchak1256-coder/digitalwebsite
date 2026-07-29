@@ -51,8 +51,25 @@
 }
 </script>
 
+<!-- Connection warm-up: these origins are needed within the first second
+     of load (fonts, icon CSS, Firebase SDK, Firestore data). Opening the
+     TCP/TLS handshake now, before the browser even discovers the tags/
+     scripts below, saves a full round-trip per origin — this matters a
+     lot more on mobile networks with higher latency. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com"/>
+<link rel="preconnect" href="https://www.gstatic.com"/>
+<link rel="preconnect" href="https://firestore.googleapis.com"/>
+
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<!-- Font Awesome is only decorative icons, not needed for first paint, so
+     load it without blocking rendering: the media="print" trick makes the
+     browser fetch it at normal priority but not block on it, then it
+     "becomes" the real stylesheet once loaded. noscript fallback covers
+     browsers with JS disabled. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/></noscript>
 <style>
 /* ============================================================
    DESIGN SYSTEM — DIGITCH  (Clean / Premium Redesign)
@@ -2648,11 +2665,19 @@ footer::before{
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<script src="firebase.js"></script>
+<!-- defer: these 4 scripts total ~250KB+ and used to block HTML parsing
+     until fully downloaded + executed, on top of being requested this late
+     in the document. `defer` lets the browser keep parsing/painting the
+     rest of the page while these download in the background, then runs
+     them in this exact order right before DOMContentLoaded — same
+     execution order as before, just no longer blocking. Verified nothing
+     earlier in this document reads `firebase`/`_db`/`_auth` before this
+     point, so this is safe. -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js" defer></script>
+<script src="firebase.js" defer></script>
 <script>
 // ===== STATE =====
 let fromAll = false;
