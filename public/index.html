@@ -118,47 +118,18 @@ section{position:relative;z-index:1}
 ::-webkit-scrollbar-track{background:var(--bg2)}
 ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:99px}
 
-/* ===== TOPBAR ===== */
-#topbar{
-  position:fixed;top:0;left:0;right:0;z-index:901;height:54px;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 5vw;background:#0C0C0C;border-bottom:1px solid rgba(255,255,255,.08);
-  transition:transform .35s ease,opacity .3s ease;
-}
-[data-theme="light"] #topbar{background:#12161C}
-#topbar.topbar-hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
-#topbar-logo{display:flex;align-items:center;gap:10px}
-#topbar-logo img{height:28px;width:auto}
-#topbar-logo span{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;color:#fff;letter-spacing:-.01em}
-#topbar-socials{display:flex;align-items:center;gap:12px}
-#topbar-socials a{
-  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.08);color:#fff;font-size:.88rem;transition:transform .2s ease,background .2s ease;
-}
-#topbar-socials a:hover{transform:translateY(-2px);background:rgba(255,255,255,.16)}
-#topbar-empty{font-size:.8rem;color:rgba(255,255,255,.5)}
-@media(max-width:600px){
-  #topbar{height:46px;padding:0 4vw}
-  #topbar-logo img{height:22px}
-  #topbar-logo span{display:none}
-  #topbar-socials a{width:27px;height:27px;font-size:.78rem}
-}
-
 /* ===== NAV ===== */
 body{background:var(--bg2)}
 [data-theme="dark"] body{background:var(--bg)}
 #nav{
-  position:fixed;top:72px;left:5vw;right:5vw;z-index:900;
-  height:86px;padding:0 1.9rem;border-radius:20px;max-width:1320px;margin:0 auto;
-  display:flex;align-items:center;justify-content:flex-end;
+  position:fixed;top:70px;left:5vw;right:5vw;z-index:900;
+  height:74px;padding:0 1.6rem;border-radius:18px;max-width:1320px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
   background:#FFFFFF;
   border:1px solid rgba(0,0,0,.06);
   box-shadow:0 8px 28px -8px rgba(20,20,30,.08);
-  transition:background var(--transition),border-color var(--transition),box-shadow var(--transition),top .35s ease;
+  transition:background var(--transition),border-color var(--transition),box-shadow var(--transition);
 }
-#nav.nav-raised{top:18px}
-body.flash-on #nav{top:110px}
-body.flash-on #nav.nav-raised{top:56px}
 [data-theme="dark"] #nav{background:var(--nav-bg);backdrop-filter:blur(16px);border-color:var(--border)}
 /* The fixed navbar sits above scrolling content, so its backdrop-filter blur
    gets recomputed on every scroll frame. That's one of the heaviest CSS
@@ -171,14 +142,51 @@ body.flash-on #nav.nav-raised{top:56px}
 }
 #nav.scrolled{box-shadow:0 10px 32px -8px rgba(20,20,30,.14)}
 [data-theme="dark"] #nav.scrolled{box-shadow:0 4px 24px rgba(0,0,0,.4)}
+/* ===== TOP BAR (logo / search / socials) ===== */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:895;height:52px;
+  padding:0 5vw;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  background:#0C0C0C;transition:top var(--transition);
+}
+body.flash-on #topbar{top:56px}
+.topbar-logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
+.topbar-logo-img{height:28px;width:auto;display:block}
+.topbar-logo-text{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#F2F2F2;letter-spacing:-.02em}
+.topbar-logo-text span{color:var(--accent)}
+#topbar-search-wrap{position:relative;flex:1;max-width:420px;margin:0 auto}
+#topbar-search-input-wrap{display:flex;align-items:center;gap:.55rem;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  border-radius:99px;padding:.45rem 1rem;transition:border-color var(--transition)}
+#topbar-search-input-wrap:focus-within{border-color:rgba(var(--accent-rgb),.5)}
+#topbar-search-input-wrap i{color:rgba(255,255,255,.45);font-size:.78rem;flex-shrink:0}
+#topbar-search-q{background:none;border:none;outline:none;color:#F2F2F2;
+  font-size:.83rem;flex:1;font-family:inherit}
+#topbar-search-q::placeholder{color:rgba(255,255,255,.4)}
+#topbar-search-results{position:absolute;top:calc(100% + 10px);left:0;right:0;
+  background:var(--bg2);border:1px solid var(--border-strong);border-radius:var(--radius);
+  box-shadow:var(--shadow-md);z-index:999;max-height:320px;overflow-y:auto;display:none}
+#topbar-search-results.show{display:block}
+#topbar-socials{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.topbar-soc-btn{width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center;color:#F2F2F2;
+  font-size:.8rem;transition:all var(--transition)}
+.topbar-soc-btn:hover{background:rgba(255,255,255,.18);transform:translateY(-1px)}
+@media(max-width:700px){
+  #topbar-search-wrap{display:none}
+}
+@media(max-width:480px){
+  .topbar-logo-text{display:none}
+}
+
 .nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
 .nav-logo-img{height:48px;width:auto;display:block;background:none;border-radius:0}
 .nav-logo-text{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;
   color:#0A0A0A;letter-spacing:-.02em}
 [data-theme="dark"] .nav-logo-text{color:var(--text)}
 .nav-logo-text span{color:var(--accent)}
-.nav-links{display:flex;gap:1.8rem;align-items:center;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.nav-links a{font-size:.92rem;font-weight:500;color:#52525B;
+.nav-links{display:flex;gap:1.6rem;align-items:center}
+.nav-links a{font-size:.85rem;font-weight:500;color:#52525B;
   transition:color var(--transition);padding:4px 0;position:relative}
 [data-theme="dark"] .nav-links a{color:var(--text-muted)}
 .nav-links a:hover,.nav-links a.active{color:var(--accent)}
@@ -188,9 +196,9 @@ body.flash-on #nav.nav-raised{top:56px}
   background:var(--accent);border-radius:2px}
 .nav-actions{display:flex;gap:8px;align-items:center;overflow:visible}
 #cart-btn{
-  position:relative;width:42px;height:42px;border-radius:50%;
+  position:relative;width:38px;height:38px;border-radius:50%;
   background:#fff;border:1px solid rgba(0,0,0,.08);
-  display:flex;align-items:center;justify-content:center;font-size:.98rem;
+  display:flex;align-items:center;justify-content:center;font-size:.9rem;
   transition:all var(--transition);color:#3F3F46;
 }
 [data-theme="dark"] #cart-btn{background:var(--card);border-color:var(--border);color:var(--text-muted)}
@@ -205,9 +213,9 @@ body.flash-on #nav.nav-raised{top:56px}
 [data-theme="dark"] #cart-badge{border-color:var(--bg2)}
 #user-btn-wrap{position:relative}
 .theme-btn{
-  width:42px;height:42px;border-radius:50%;
+  width:38px;height:38px;border-radius:50%;
   background:#fff;border:1px solid rgba(0,0,0,.08);
-  display:flex;align-items:center;justify-content:center;font-size:.92rem;
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;
   transition:all var(--transition);color:#3F3F46;
 }
 [data-theme="dark"] .theme-btn{background:var(--card);border-color:var(--border);color:var(--text-muted)}
@@ -218,12 +226,11 @@ body.flash-on #nav.nav-raised{top:56px}
 .hamburger span{display:block;width:18px;height:1.5px;background:var(--text-muted);
   border-radius:2px;transition:var(--transition)}
 #mobile-nav{
-  position:fixed;top:158px;left:0;right:0;bottom:0;z-index:850;
+  position:fixed;top:144px;left:0;right:0;bottom:0;z-index:850;
   background:var(--bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.8rem;
-  transform:translateX(100%);transition:transform .25s ease,top .35s ease;
+  transform:translateX(100%);transition:transform .25s ease;
 }
-#mobile-nav.raised{top:104px}
 #mobile-nav.open{transform:translateX(0)}
 #mobile-nav a{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;
   color:var(--text-muted);transition:color var(--transition)}
@@ -267,7 +274,7 @@ body.flash-on #nav.nav-raised{top:56px}
 /* ===== HERO ===== */
 #hero{
   min-height:auto;display:flex;align-items:center;
-  padding:160px 5vw 0;overflow:hidden;background:var(--bg2);
+  padding:212px 5vw 0;overflow:hidden;background:var(--bg2);
   position:relative;
 }
 #hero::before{
@@ -279,7 +286,7 @@ body.flash-on #nav.nav-raised{top:56px}
 [data-theme="dark"] #hero{background:var(--bg)}
 [data-theme="dark"] #hero::before{background-image:url('/logob.png')}
 @media(max-width:980px){
-  #hero{padding:120px 5vw 60px;}
+  #hero{padding:172px 5vw 60px;}
 }
 .hero-bg{display:none}
 .hero-inner{
@@ -835,7 +842,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #all-products-page.active{display:block}
-.all-products-inner{max-width:1160px;margin:0 auto;padding:88px 5vw 60px}
+.all-products-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
 .all-hdr{display:flex;align-items:center;gap:1rem;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap}
 .search-bar{
   display:flex;align-items:center;gap:.5rem;padding:.5rem .9rem;
@@ -869,7 +876,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #product-page.active{display:block}
-.product-page-inner{max-width:1060px;margin:0 auto;padding:88px 5vw 60px}
+.product-page-inner{max-width:1060px;margin:0 auto;padding:140px 5vw 60px}
 .back-btn{
   display:inline-flex;align-items:center;gap:.4rem;color:var(--text-muted);
   font-size:.85rem;margin-bottom:2rem;cursor:pointer;transition:color var(--transition);
@@ -1025,7 +1032,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 @media(max-width:1100px){
   /* Navbar gets tight — hide logo text, history, search; tighten gaps; shrink Sign In */
   .nav-logo-text{display:none}
-  #history-btn{display:none}
+  #history-wrap{display:none}
   #nav-search-wrap{display:none}
   .nav-actions{gap:5px}
   #login-nav-btn{padding:6px 10px !important;font-size:.78rem !important}
@@ -1034,11 +1041,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 @media(max-width:900px){
   .nav-links{display:none}
   .hamburger{display:flex}
-  #nav{padding:0 1.1rem;justify-content:flex-end}
+  #nav{padding:0 1.1rem}
+  .nav-logo-img{height:36px}
+  .nav-logo-text{display:none}
   .nav-actions{gap:5px}
   #nav-search-wrap{display:none}
-  #history-btn{display:none}
-  .about-grid,.detail-grid{grid-template-columns:1fr}
+  #history-wrap{display:none}
+  .about-grid,.contact-grid,.detail-grid{grid-template-columns:1fr}
   .about-right{grid-template-columns:repeat(4,1fr)}
   .about-card.span2{grid-column:span 4}
 }
@@ -1071,7 +1080,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #my-products-page.active{display:block}
-.mp-inner{max-width:1160px;margin:0 auto;padding:88px 5vw 60px}
+.mp-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
 .mp-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
 .mp-hdr-left h2{font-size:1.6rem;font-weight:800;margin-bottom:.2rem}
 .mp-hdr-left p{color:var(--text-muted);font-size:.875rem}
@@ -1237,14 +1246,14 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 .flash-seg{background:rgba(0,0,0,.25);border-radius:4px;padding:2px 6px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800;letter-spacing:.02em}
 #flash-banner-close{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:0 0 0 .5rem;font-size:.9rem;line-height:1}
 /* push nav down when banner visible */
-body.flash-on #mobile-nav{top:196px}
-body.flash-on #mobile-nav.raised{top:142px}
+body.flash-on #nav{top:108px}
+body.flash-on #mobile-nav{top:182px}
 
 /* ===== NAV SEARCH ===== */
 #nav-search-wrap{position:relative;display:flex;align-items:center}
-#nav-search-btn{width:42px;height:42px;border-radius:8px;background:var(--card);
+#nav-search-btn{width:38px;height:38px;border-radius:8px;background:var(--card);
   border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-size:.92rem;transition:all var(--transition);color:var(--text-muted)}
+  font-size:.85rem;transition:all var(--transition);color:var(--text-muted)}
 #nav-search-btn:hover{background:var(--bg3);color:var(--text)}
 #nav-search-panel{
   position:absolute;top:calc(100% + 10px);right:0;width:320px;
@@ -1291,11 +1300,11 @@ body.flash-on #mobile-nav.raised{top:142px}
   background:var(--bg);overflow-y:auto;
 }
 #wishlist-page.active{display:block}
-.wishlist-inner{max-width:1160px;margin:0 auto;padding:88px 5vw 60px}
+.wishlist-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
 /* Wishlist nav btn */
-#wishlist-nav-btn{position:relative;overflow:visible;width:42px;height:42px;border-radius:8px;
+#wishlist-nav-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:.92rem;
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;
   transition:all var(--transition);color:var(--text-muted)}
 #wishlist-nav-btn:hover{background:var(--bg3);color:var(--text)}
 #wishlist-badge{
@@ -1309,9 +1318,9 @@ body.flash-on #mobile-nav.raised{top:142px}
 [data-theme="dark"] #wishlist-badge{border-color:var(--bg2)}
 
 /* ===== HISTORY (recently viewed) NAV BUTTON + PANEL ===== */
-#history-btn{position:relative;overflow:visible;width:42px;height:42px;border-radius:8px;
+#history-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:.92rem;
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;
   transition:all var(--transition);color:var(--text-muted)}
 #history-btn:hover{background:var(--bg3);color:var(--text)}
 #history-btn.active{color:var(--accent);border-color:rgba(var(--accent-rgb),.4)}
@@ -1390,7 +1399,7 @@ body.flash-on #mobile-nav.raised{top:142px}
   background:var(--bg);overflow-y:auto;
 }
 #tracking-page.active{display:block}
-.tracking-inner{max-width:640px;margin:0 auto;padding:88px 5vw 60px}
+.tracking-inner{max-width:640px;margin:0 auto;padding:140px 5vw 60px}
 .tracking-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:2rem}
 .tracking-steps{display:flex;flex-direction:column;gap:0;margin-top:1.5rem}
 .t-step{display:flex;gap:1rem;position:relative;padding-bottom:1.2rem}
@@ -1422,15 +1431,12 @@ body.flash-on #mobile-nav.raised{top:142px}
 
 /* ===== DIGITAL TOOLS CAROUSEL ===== */
 #game-carousel-section {
-  padding: 10.8rem 0 1.8rem;
+  padding: 1.8rem 0;
   background: var(--bg2);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   overflow: hidden;
   position: relative;
-}
-@media(max-width:600px){
-  #game-carousel-section{ padding-top: 10.5rem; }
 }
 [data-theme="dark"] #game-carousel-section { background: var(--bg3); }
 #game-carousel-section::before,
@@ -1700,7 +1706,7 @@ a,button,.btn,.product-card,.about-card,.testi-card,.bs-row,.about-feat,
   box-shadow:0 10px 32px -10px rgba(0,0,0,.55),0 0 0 1px rgba(var(--accent-rgb),.1);
 }
 .nav-logo-img{ transition:transform .45s cubic-bezier(.22,.85,.32,1); }
-.nav-logo:hover .nav-logo-img{ transform:rotate(-4deg) scale(1.06); }
+.nav-logo:hover .nav-logo-img,.topbar-logo:hover .nav-logo-img{ transform:rotate(-4deg) scale(1.06); }
 .nav-links a{ position:relative; }
 .nav-links a::before{
   content:'';position:absolute;left:50%;bottom:-9px;width:0;height:2px;border-radius:2px;
@@ -1912,11 +1918,18 @@ footer::before{
   <button id="flash-banner-close" onclick="document.getElementById('flash-banner').classList.remove('visible');document.body.classList.remove('flash-on')"><i class="fa-solid fa-xmark"></i></button>
 </div>
 
-<!-- ===== TOPBAR ===== -->
+<!-- ===== TOP BAR ===== -->
 <div id="topbar">
-  <div id="topbar-logo" onclick="showMain()" style="cursor:pointer">
-    <img src="/logob.png" alt="logo"/>
-    <span class="store-name">DIGITCH</span>
+  <div class="topbar-logo" onclick="showMain()">
+    <img class="nav-logo-img topbar-logo-img" src="/logob.png" alt="logo"/>
+    <span class="topbar-logo-text store-name">DIGITCH</span>
+  </div>
+  <div id="topbar-search-wrap">
+    <div id="topbar-search-input-wrap">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="topbar-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value)" autocomplete="off"/>
+    </div>
+    <div id="topbar-search-results"></div>
   </div>
   <div id="topbar-socials"></div>
 </div>
@@ -1924,7 +1937,8 @@ footer::before{
 <!-- ===== NAV ===== -->
 <nav id="nav">
   <div class="nav-links">
-    <a href="#" data-section="hero" onclick="showMain();return false;">Home</a>
+    <a href="#hero" data-section="hero" onclick="showMain()">Home</a>
+    <a href="#products" data-section="new-arrivals" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Our Products</a>
     <a href="#" data-section="products" onclick="closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
     <a href="#best-sellers" data-section="best-sellers" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">Best Sellers</a>
     <a href="#about" data-section="about" onclick="closeMyProducts();closeAllProducts();closeProductDetail();closeWishlist();">About</a>
@@ -1932,17 +1946,6 @@ footer::before{
     <a href="#" id="my-products-link" onclick="closeWishlist();openMyProducts();return false;">My Products</a>
   </div>
   <div class="nav-actions">
-    <!-- Nav Search -->
-    <div id="nav-search-wrap">
-      <button id="nav-search-btn" onclick="toggleNavSearch()" title="Search products"><i class="fa-solid fa-magnifying-glass"></i></button>
-      <div id="nav-search-panel">
-        <div id="nav-search-input-wrap">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="nav-search-q" placeholder="Search products..." oninput="navSearchQuery(this.value)" autocomplete="off"/>
-        </div>
-        <div id="nav-search-results"><div class="ns-empty">Start typing to search…</div></div>
-      </div>
-    </div>
     <!-- Wishlist -->
     <button id="wishlist-nav-btn" onclick="toggleWishlistPanel()" title="Wishlist">
       <i class="fa-regular fa-heart"></i>
@@ -1951,7 +1954,7 @@ footer::before{
     <button id="user-btn" onclick="toggleUserMenu()" style="position:relative;width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);align-items:center;justify-content:center;font-size:1rem;transition:all var(--transition)">
       <i class="fa-solid fa-user" id="user-icon"></i>
     </button>
-    <div id="user-menu" style="display:none;position:absolute;top:104px;right:5vw;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;min-width:200px;z-index:1000;box-shadow:0 12px 35px rgba(0,0,0,.5)">
+    <div id="user-menu" style="display:none;position:absolute;top:144px;right:5vw;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;min-width:200px;z-index:1000;box-shadow:0 12px 35px rgba(0,0,0,.5)">
       <div id="user-menu-info" style="padding:.6rem .9rem;margin-bottom:.3rem;border-bottom:1px solid var(--border)"></div>
       <button onclick="openMyProducts();document.getElementById('user-menu').style.display='none';" style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;width:100%;transition:background var(--transition)" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''"><i class="fa-solid fa-box-archive" style="color:var(--primary)"></i> My Products</button>
       <button onclick="doUserLogout()" style="width:100%;display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:8px;font-size:.86rem;font-weight:500;color:var(--text-muted);transition:all var(--transition);text-align:left" onmouseover="this.style.color='#ff4d6d'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -1990,14 +1993,60 @@ footer::before{
 </nav>
 
 <div id="mobile-nav">
-  <a href="#" onclick="closeMobileNav();showMain();return false;">Home</a>
+  <a href="#hero" onclick="closeMobileNav();showMain()">Home</a>
+  <a href="#products" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Our Products</a>
   <a href="#" onclick="closeMobileNav();closeWishlist();closeMyProducts();openAllProducts();return false;">Products</a>
   <a href="#best-sellers" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Best Sellers</a>
   <a href="#about" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">About</a>
   <a href="#warranty" onclick="closeMobileNav();closeMyProducts();closeAllProducts();closeWishlist();">Warranty</a>
   <a href="#" id="my-products-link-mobile" onclick="closeMobileNav();closeWishlist();openMyProducts();return false;">My Products</a>
-  <a href="#" onclick="closeMobileNav();toggleHistoryPanel();return false;"><i class="fa-solid fa-clock-rotate-left" style="margin-right:.5rem;font-size:.9em"></i>Recently Viewed</a>
 </div>
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span class="hero-dot"></span>
+        Premium Digital Solutions
+      </div>
+      <h1 class="hero-title">
+        Elevate Your Digital<span class="accent">Experience</span>
+      </h1>
+      <p class="hero-sub">Discover premium digital products and services designed to help your business grow and succeed.</p>
+      <div class="hero-btns">
+        <button class="btn btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
+          Explore Products <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
+          Our Services <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURE STRIP ===== -->
+<section id="feature-strip">
+  <div class="feature-strip-card">
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-star"></i></div>
+      <div><div class="feature-strip-title">Premium Quality</div><div class="feature-strip-desc">Top-notch digital products crafted with excellence</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-bolt"></i></div>
+      <div><div class="feature-strip-title">Instant Access</div><div class="feature-strip-desc">Get your digital products delivered instantly</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><div class="feature-strip-title">Secure &amp; Safe</div><div class="feature-strip-desc">Your security is our priority with secure transactions</div></div>
+    </div>
+    <div class="feature-strip-item">
+      <div class="feature-strip-icon"><i class="fa-solid fa-headset"></i></div>
+      <div><div class="feature-strip-title">Expert Support</div><div class="feature-strip-desc">24/7 customer support whenever you need it</div></div>
+    </div>
+  </div>
+</section>
 
 <!-- ===== DIGITAL TOOLS CAROUSEL ===== -->
 <section id="game-carousel-section">
@@ -2184,8 +2233,8 @@ footer::before{
   <div class="container">
     <div class="footer-logo store-name">DIGITCH</div>
     <div class="footer-links">
-      <a href="#" onclick="showMain();return false;">Home</a>
-      <a href="#products" onclick="closeMyProducts();closeAllProducts();">New Arrivals</a>
+      <a href="#hero" onclick="showMain()">Home</a>
+      <a href="#products" onclick="closeMyProducts();closeAllProducts();">Our Products</a>
       <a href="#" onclick="closeMyProducts();closeAllProducts();openAllProducts();return false;">Products</a>
       <a href="#best-sellers" onclick="closeMyProducts();closeAllProducts();">Best Sellers</a>
       <a href="#about" onclick="closeMyProducts();closeAllProducts();">About</a>
@@ -2714,7 +2763,7 @@ function handleDbUpdate() {
     }
     renderProducts();
     renderBestSellers();
-    renderContactSocials();
+    renderTopbarSocials();
     updateFooter();
     updateWaFloat();
     renderRecentlyViewed();
@@ -2740,20 +2789,14 @@ function handleDbUpdate() {
 }
 
 window.addEventListener('scroll', () => {
-  const scrolled = scrollY > 30;
   document.getElementById('nav').classList.toggle('scrolled', scrollY > 50);
-  document.getElementById('nav').classList.toggle('nav-raised', scrolled);
-  const topbarEl = document.getElementById('topbar');
-  if (topbarEl) topbarEl.classList.toggle('topbar-hidden', scrolled);
-  const mobileNavEl = document.getElementById('mobile-nav');
-  if (mobileNavEl) mobileNavEl.classList.toggle('raised', scrolled);
 });
 
 // ===== SCROLLSPY — active nav link ====
 function initScrollSpy() {
   const sections = ['hero','products','best-sellers','about','warranty'];
   const navLinks = document.querySelectorAll('.nav-links a[data-section]');
-  // Map section ids to nav link data-section (the "products" section shows New Arrivals content)
+  // Map section ids to nav link data-section (the "products" section shows Our Products content)
   const map = { hero:'hero', products:'new-arrivals', 'best-sellers':'best-sellers', about:'about', warranty:'warranty' };
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
@@ -3379,7 +3422,6 @@ function showMain() {
   closeMyProducts();
   closeWishlist();
   closeTracking();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ===== CART =====
@@ -4238,25 +4280,21 @@ function proceedToProofStep(e) {
   coProceedToProofStep();
 }
 
-// ===== TOPBAR SOCIALS ===== (settings editable in admin panel → Social Links)
-function renderContactSocials() {
+// ===== TOPBAR SOCIALS ===== (source: Settings > social, editable in admin's Social Links panel)
+function renderTopbarSocials() {
   const s = Settings.get(); const socials = s.social||{};
   const map = { facebook:{icon:'fa-brands fa-facebook',label:'Facebook'}, instagram:{icon:'fa-brands fa-instagram',label:'Instagram'}, whatsapp:{icon:'fa-brands fa-whatsapp',label:'WhatsApp'}, telegram:{icon:'fa-brands fa-telegram',label:'Telegram'}, tiktok:{icon:'fa-brands fa-tiktok',label:'TikTok'}, youtube:{icon:'fa-brands fa-youtube',label:'YouTube'} };
-  const el = document.getElementById('topbar-socials'); if (!el) return;
-  el.innerHTML = '';
-  let any = false;
+  const el = document.getElementById('topbar-socials'); if (!el) return; el.innerHTML = '';
   Object.entries(map).forEach(([k,v]) => {
-    if (!socials[k]) return; any = true;
-    const a = document.createElement('a'); a.href=socials[k]; a.target='_blank'; a.rel='noopener'; a.title=v.label;
+    if (!socials[k]) return;
+    const a = document.createElement('a'); a.className='topbar-soc-btn'; a.href=socials[k]; a.target='_blank'; a.rel='noopener'; a.title=v.label;
     a.innerHTML = `<i class="${v.icon}"></i>`;
     el.appendChild(a);
   });
-  if (!any) el.innerHTML = '<span id="topbar-empty">Set your social links in admin settings</span>';
 }
 
 // ===== UTILS =====
 function updateFooter() { const el=document.getElementById('footer-copy'); if(el) el.textContent=`© ${new Date().getFullYear()} DIGITCH · All rights reserved`; }
-function handleContact(e) { e.preventDefault(); document.getElementById('contact-form').style.display='none'; document.getElementById('form-ok').style.display='block'; }
 function showToast(msg) { document.getElementById('toast-msg').textContent=msg; const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
 function toggleMobileNav() { document.getElementById('mobile-nav').classList.toggle('open'); }
 function closeMobileNav() { document.getElementById('mobile-nav').classList.remove('open'); }
@@ -4903,23 +4941,17 @@ window.addEventListener('wishlist:update', () => {
 // ===== FEATURE: NAV LIVE SEARCH =====
 // ================================================================
 let _nsDebounce = null;
-function toggleNavSearch() {
-  const panel = document.getElementById('nav-search-panel');
-  const isOpen = panel.classList.contains('open');
-  panel.classList.toggle('open', !isOpen);
-  if (!isOpen) { setTimeout(() => document.getElementById('nav-search-q').focus(), 60); }
-}
 function navSearchQuery(q) {
   clearTimeout(_nsDebounce);
   _nsDebounce = setTimeout(() => {
-    const res = document.getElementById('nav-search-results');
-    if (!q.trim()) { res.innerHTML = '<div class="ns-empty">Start typing to search…</div>'; return; }
+    const res = document.getElementById('topbar-search-results');
+    if (!q.trim()) { res.classList.remove('show'); res.innerHTML = ''; return; }
     const prods = DB.getAll('products').filter(p =>
       p.name.toLowerCase().includes(q.toLowerCase()) ||
       (p.description||'').toLowerCase().includes(q.toLowerCase()) ||
       (p.category||'').toLowerCase().includes(q.toLowerCase())
     ).slice(0, 8);
-    if (!prods.length) { res.innerHTML = '<div class="ns-empty">No products found.</div>'; return; }
+    if (!prods.length) { res.innerHTML = '<div class="ns-empty">No products found.</div>'; res.classList.add('show'); return; }
     const s = Settings.get();
     res.innerHTML = prods.map(p => {
       const img = (p.images||[])[0] || '';
@@ -4932,19 +4964,20 @@ function navSearchQuery(q) {
         <div class="ns-price">${formatPrice(p.price, s.currency)}</div>
       </div>`;
     }).join('');
+    res.classList.add('show');
   }, 200);
 }
 function navSearchSelect(id) {
-  document.getElementById('nav-search-panel').classList.remove('open');
-  document.getElementById('nav-search-q').value = '';
-  document.getElementById('nav-search-results').innerHTML = '<div class="ns-empty">Start typing to search…</div>';
+  const res = document.getElementById('topbar-search-results');
+  res.classList.remove('show'); res.innerHTML = '';
+  document.getElementById('topbar-search-q').value = '';
   const prod = DB.getById('products', id);
   if (prod) { trackRecentlyViewed(prod); openProductDetail(id, false); }
 }
 document.addEventListener('click', e => {
-  const wrap = document.getElementById('nav-search-wrap');
+  const wrap = document.getElementById('topbar-search-wrap');
   if (wrap && !wrap.contains(e.target)) {
-    document.getElementById('nav-search-panel').classList.remove('open');
+    document.getElementById('topbar-search-results').classList.remove('show');
   }
 });
 
@@ -5597,7 +5630,6 @@ function updateWaFloat() {
       '#about .about-card','.product-card','.purchase-card',
       '#warranty .warranty-title','#warranty .warranty-lead','.warranty-card','.warranty-banner',
       '.feature-strip-item','.trust-item','.bs-row','.testi-card',
-      '#contact .contact-form-box','#contact .soc-link','#contact .section-header',
       '.section-header'
     ];
     selectors.forEach(function(sel){
