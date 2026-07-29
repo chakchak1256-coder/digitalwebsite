@@ -590,6 +590,12 @@ const DB = {
   },
 
   // Sync read from cache (returns [] if not loaded yet)
+  // Whether a collection has actually been loaded at least once (from cache
+  // or Firestore). Lets the UI tell "still loading" apart from "loaded, and
+  // there's genuinely nothing here" — getAll() alone can't, since it returns
+  // [] in both cases.
+  isLoaded(col) { return col in this._cache; },
+
   getAll(col) { return this._cache[col] || []; },
 
   getById(col, id) { return (this._cache[col] || []).find(x => x.id === id) || null; },

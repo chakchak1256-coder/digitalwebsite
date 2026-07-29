@@ -217,7 +217,7 @@ body.flash-on #topbar{top:56px}
   #mobile-nav{top:196px}
   body.flash-on #mobile-nav{top:234px}
   #user-menu{top:196px !important}
-  #hero{padding-top:248px}
+  #hero{padding-top:288px}
   .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner{padding-top:192px}
 }
 @media(max-width:480px){
@@ -1912,7 +1912,12 @@ footer::before{
         View All <i class="fa-solid fa-arrow-right"></i>
       </button>
     </div>
-    <div class="products-grid" id="products-grid"></div>
+    <div class="products-grid" id="products-grid">
+      <div class="mp-skeleton"><div class="sk-img"></div><div class="sk-body"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line" style="width:80%;height:28px;border-radius:6px;margin-top:.5rem"></div></div></div>
+      <div class="mp-skeleton"><div class="sk-img"></div><div class="sk-body"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line" style="width:80%;height:28px;border-radius:6px;margin-top:.5rem"></div></div></div>
+      <div class="mp-skeleton"><div class="sk-img"></div><div class="sk-body"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line" style="width:80%;height:28px;border-radius:6px;margin-top:.5rem"></div></div></div>
+      <div class="mp-skeleton"><div class="sk-img"></div><div class="sk-body"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line" style="width:80%;height:28px;border-radius:6px;margin-top:.5rem"></div></div></div>
+    </div>
   </div>
 </section>
 
@@ -1928,7 +1933,11 @@ footer::before{
         View All <i class="fa-solid fa-arrow-right"></i>
       </button>
     </div>
-    <div class="bs-list" id="best-sellers-list"></div>
+    <div class="bs-list" id="best-sellers-list">
+      <div class="bs-row" style="pointer-events:none"><div class="mp-skeleton" style="width:30px;height:30px;border-radius:50%;flex-shrink:0"></div><div class="mp-skeleton" style="width:56px;height:56px;border-radius:9px;flex-shrink:0"></div><div style="flex:1"><div class="mp-skeleton sk-line" style="width:50%"></div><div class="mp-skeleton sk-line short"></div></div></div>
+      <div class="bs-row" style="pointer-events:none"><div class="mp-skeleton" style="width:30px;height:30px;border-radius:50%;flex-shrink:0"></div><div class="mp-skeleton" style="width:56px;height:56px;border-radius:9px;flex-shrink:0"></div><div style="flex:1"><div class="mp-skeleton sk-line" style="width:50%"></div><div class="mp-skeleton sk-line short"></div></div></div>
+      <div class="bs-row" style="pointer-events:none"><div class="mp-skeleton" style="width:30px;height:30px;border-radius:50%;flex-shrink:0"></div><div class="mp-skeleton" style="width:56px;height:56px;border-radius:9px;flex-shrink:0"></div><div style="flex:1"><div class="mp-skeleton sk-line" style="width:50%"></div><div class="mp-skeleton sk-line short"></div></div></div>
+    </div>
   </div>
 </section>
 
@@ -2619,10 +2628,19 @@ function initScrollSpy() {
 
 // ===== PRODUCTS (New Arrivals — featured only, last 4) =====
 function renderProducts() {
+  const g = document.getElementById('products-grid');
+  // Data hasn't arrived yet (first visit, no cache) — leave the skeleton
+  // markup already sitting in the HTML alone instead of replacing it with
+  // an empty-state message; this call will run again once db:update fires
+  // for real. Without this check the page briefly shows "No featured
+  // products yet" and then pops the real grid in right after, which reads
+  // as broken/slow rather than "still loading" — especially on mobile
+  // where that whole DOMContentLoaded → Firestore round trip takes longer.
+  if (!DB.isLoaded('products')) return;
   const all = DB.getAll('products'); // already sorted newest first (unshift on add)
   const prods = all.filter(p => !!p.featured);
   const s = Settings.get();
-  const g = document.getElementById('products-grid'); g.innerHTML = '';
+  g.innerHTML = '';
   if (!prods.length) {
     g.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:3rem">No featured products yet.</p>';
     return;
@@ -2751,9 +2769,16 @@ async function claimFreeProduct(prod) {
 function renderBestSellers() {
   const list = document.getElementById('best-sellers-list');
   if (!list) return;
+  // Same reasoning as renderProducts(): don't hide the section (or leave it
+  // hidden) just because the fetch hasn't resolved yet — wait for a real
+  // "loaded" signal so this doesn't flash a hidden/empty section on every
+  // page load and only pop in once the network round trip finishes.
+  if (!DB.isLoaded('products')) return;
   const s = Settings.get();
   let prods = DB.getAll('products').slice();
-  if (!prods.length) { const sec = document.getElementById('best-sellers'); if (sec) sec.style.display = 'none'; return; }
+  const sec = document.getElementById('best-sellers');
+  if (!prods.length) { if (sec) sec.style.display = 'none'; return; }
+  if (sec) sec.style.display = '';
   prods.sort((a, b) => {
     const bb = (b.badge === 'BEST SELLER' ? 1 : 0) - (a.badge === 'BEST SELLER' ? 1 : 0);
     if (bb !== 0) return bb;
