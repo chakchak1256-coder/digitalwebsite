@@ -2689,13 +2689,14 @@ function initScrollSpy() {
   sections.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
 }
 
-// ===== PRODUCTS (last added) =====
+// ===== PRODUCTS (New Arrivals — featured only, last 4) =====
 function renderProducts() {
-  const prods = DB.getAll('products'); // already sorted newest first (unshift on add)
+  const all = DB.getAll('products'); // already sorted newest first (unshift on add)
+  const prods = all.filter(p => !!p.featured);
   const s = Settings.get();
   const g = document.getElementById('products-grid'); g.innerHTML = '';
   if (!prods.length) {
-    g.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:3rem">No products yet.</p>';
+    g.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:3rem">No featured products yet.</p>';
     return;
   }
   prods.slice(0, 4).forEach(p => g.appendChild(makeProductCard(p)));
