@@ -841,6 +841,78 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 }
 .thumb.active,.thumb:hover{border-color:var(--accent)}
 .thumb img{width:100%;height:100%;object-fit:cover}
+
+/* ===== GALLERY ZOOM TRIGGER ===== */
+.gallery-main{cursor:zoom-in}
+.gal-zoom-btn{
+  position:absolute;bottom:12px;right:12px;width:38px;height:38px;border-radius:50%;
+  background:rgba(12,12,12,.65);backdrop-filter:blur(6px);border:1px solid var(--border);
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:.85rem;transition:background .15s,transform .15s;z-index:2;
+}
+.gal-zoom-btn:hover{background:var(--accent);transform:scale(1.06)}
+
+/* ===== IMAGE ZOOM LIGHTBOX ===== */
+.img-lightbox{
+  display:none;position:fixed;inset:0;z-index:950;background:rgba(6,6,6,.96);
+  flex-direction:column;
+}
+.img-lightbox.active{display:flex}
+.lb-toolbar{
+  display:flex;align-items:center;justify-content:flex-end;gap:.5rem;
+  padding:.9rem 1.1rem;flex-shrink:0;
+}
+.lb-toolbar-group{
+  display:flex;align-items:center;gap:.3rem;background:var(--bg2);
+  border:1px solid var(--border);border-radius:10px;padding:.3rem;margin-right:auto;
+}
+.lb-btn{
+  width:38px;height:38px;border-radius:8px;background:transparent;border:none;
+  color:var(--text);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:.9rem;transition:background .15s,color .15s;
+}
+.lb-btn:hover{background:var(--bg3);color:var(--accent)}
+.lb-btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+.lb-zoom-level{
+  min-width:52px;text-align:center;font-size:.8rem;font-weight:700;color:var(--text-muted);
+  font-family:'DM Sans',sans-serif;user-select:none;
+}
+.lb-close-btn{
+  width:42px;height:42px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1rem;transition:background .15s,color .15s;
+}
+.lb-close-btn:hover{background:#EF4444;border-color:#EF4444;color:#fff}
+.lb-stage{
+  flex:1;position:relative;overflow:hidden;display:flex;align-items:center;
+  justify-content:center;touch-action:none;cursor:grab;min-height:0;
+}
+.lb-stage.dragging{cursor:grabbing}
+.lb-stage.zoomed{cursor:grab}
+#lb-img{
+  max-width:88%;max-height:88%;user-select:none;pointer-events:none;
+  will-change:transform;transform:translate(0px,0px) scale(1);
+}
+#lb-img.lb-anim{transition:transform .18s ease-out}
+.lb-nav-btn{
+  position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;
+  border-radius:50%;background:rgba(20,20,20,.55);border:1px solid var(--border);
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  z-index:3;transition:background .15s;
+}
+.lb-nav-btn:hover{background:var(--accent)}
+.lb-prev{left:16px}
+.lb-next{right:16px}
+.lb-hint{
+  text-align:center;color:var(--text-muted);font-size:.75rem;padding:.7rem 0 1rem;
+  flex-shrink:0;letter-spacing:.02em;
+}
+.lb-counter{font-size:.78rem;color:var(--text-muted);font-weight:600;padding:0 .4rem}
+@media(max-width:640px){
+  .lb-toolbar{flex-wrap:wrap}
+  .lb-nav-btn{width:38px;height:38px}
+  #lb-img{max-width:94%;max-height:82%}
+}
 .pd-cat{font-size:.68rem;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem}
 .pd-name{font-size:clamp(1.3rem,3vw,1.7rem);font-weight:800;margin-bottom:1rem;color:var(--text)}
 .pd-prices{display:flex;align-items:baseline;gap:.6rem;margin-bottom:1.1rem}
@@ -2479,6 +2551,9 @@ footer::before{
       <div>
         <div class="gallery-main" id="gallery-main">
           <img id="gal-main" src="" alt=""/>
+          <button class="gal-zoom-btn" id="gal-zoom-btn" title="Zoom image" aria-label="Zoom image">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
         </div>
         <div class="gallery-thumbs" id="gal-thumbs"></div>
       </div>
@@ -2519,6 +2594,26 @@ footer::before{
       </div>
     </div>
   </div>
+</div>
+
+<!-- ===== IMAGE ZOOM LIGHTBOX ===== -->
+<div class="img-lightbox" id="img-lightbox">
+  <div class="lb-toolbar">
+    <div class="lb-toolbar-group">
+      <button class="lb-btn" id="lb-zoom-out" title="Zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+      <span class="lb-zoom-level" id="lb-zoom-level">100%</span>
+      <button class="lb-btn" id="lb-zoom-in" title="Zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+      <button class="lb-btn" id="lb-zoom-reset" title="Reset zoom"><i class="fa-solid fa-arrows-rotate"></i></button>
+      <span class="lb-counter" id="lb-counter"></span>
+    </div>
+    <button class="lb-close-btn" id="lb-close" title="Close (Esc)" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="lb-stage" id="lb-stage">
+    <button class="lb-nav-btn lb-prev" id="lb-prev" title="Previous image"><i class="fa-solid fa-chevron-left"></i></button>
+    <img id="lb-img" src="" alt="" draggable="false"/>
+    <button class="lb-nav-btn lb-next" id="lb-next" title="Next image"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+  <div class="lb-hint">Scroll or pinch to zoom · Drag to pan · Double-click to toggle zoom</div>
 </div>
 
 
@@ -2952,6 +3047,7 @@ function openProductDetail(id, fromAllPage = true) {
   if (starsEl) { starsEl.innerHTML = prod.rating ? buildStarsHtml(prod.rating, 'pd-stars') : ''; }
 
   const mainImg = document.getElementById('gal-main'); mainImg.src = imgs[0];
+  currentGalleryImages = imgs; currentGalleryIndex = 0;
   const thumbs = document.getElementById('gal-thumbs'); thumbs.innerHTML = '';
   imgs.forEach((img, i) => {
     const t = document.createElement('div');
@@ -2960,9 +3056,13 @@ function openProductDetail(id, fromAllPage = true) {
     t.onclick = () => {
       mainImg.style.opacity='0'; setTimeout(()=>{ mainImg.src=img; mainImg.style.opacity='1'; },200);
       document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+      currentGalleryIndex = i;
     };
     thumbs.appendChild(t);
   });
+  mainImg.onclick = () => openLightbox(currentGalleryIndex);
+  const galZoomBtn = document.getElementById('gal-zoom-btn');
+  if (galZoomBtn) galZoomBtn.onclick = (e) => { e.stopPropagation(); openLightbox(currentGalleryIndex); };
 
   const meta = document.getElementById('pd-meta'); meta.innerHTML = '';
   [['Category',prod.category||'—'],['Added',new Date(prod.createdAt).toLocaleDateString('en-DZ')]].forEach(([l,v]) => {
@@ -3089,6 +3189,206 @@ function closeProductDetail() {
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', 'DIGITCH — buy digital products online in Algeria: subscriptions, software, templates and more, with secure CIB/EDAHABIA payment and instant delivery.');
 }
+
+// ===== IMAGE ZOOM LIGHTBOX =====
+let currentGalleryImages = [];
+let currentGalleryIndex  = 0;
+
+const LB = (() => {
+  const MIN_SCALE = 1, MAX_SCALE = 5, STEP = 1.4, DBLTAP_SCALE = 2.5;
+  let scale = 1, tx = 0, ty = 0;
+  let dragging = false, dragStartX = 0, dragStartY = 0, txStart = 0, tyStart = 0;
+  let lastTapTime = 0;
+  // Pinch state
+  let pinchStartDist = 0, pinchStartScale = 1, pinchMidX = 0, pinchMidY = 0;
+
+  let lightbox, stage, img, zoomLevelEl, counterEl, prevBtn, nextBtn;
+
+  function els() {
+    if (!lightbox) {
+      lightbox    = document.getElementById('img-lightbox');
+      stage       = document.getElementById('lb-stage');
+      img         = document.getElementById('lb-img');
+      zoomLevelEl = document.getElementById('lb-zoom-level');
+      counterEl   = document.getElementById('lb-counter');
+      prevBtn     = document.getElementById('lb-prev');
+      nextBtn     = document.getElementById('lb-next');
+    }
+  }
+
+  function clampPan() {
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const maxX = Math.max(0, (scale - 1) * rect.width / 2);
+    const maxY = Math.max(0, (scale - 1) * rect.height / 2);
+    tx = Math.min(maxX, Math.max(-maxX, tx));
+    ty = Math.min(maxY, Math.max(-maxY, ty));
+  }
+
+  function render(animate) {
+    els();
+    img.classList.toggle('lb-anim', !!animate);
+    img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    stage.classList.toggle('zoomed', scale > 1);
+    document.getElementById('lb-zoom-out').disabled = scale <= MIN_SCALE + 0.001;
+    document.getElementById('lb-zoom-in').disabled  = scale >= MAX_SCALE - 0.001;
+  }
+
+  function setScale(newScale, cx, cy, animate) {
+    els();
+    newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+    if (cx === undefined) { // zoom towards stage center
+      const rect = stage.getBoundingClientRect();
+      cx = 0; cy = 0;
+    }
+    const ratio = newScale / scale;
+    tx = cx - (cx - tx) * ratio;
+    ty = cy - (cy - ty) * ratio;
+    scale = newScale;
+    if (scale <= MIN_SCALE + 0.001) { scale = 1; tx = 0; ty = 0; }
+    clampPan();
+    render(animate);
+  }
+
+  function resetZoom(animate) { scale = 1; tx = 0; ty = 0; render(animate !== false); }
+
+  function updateNav() {
+    els();
+    const multi = currentGalleryImages.length > 1;
+    prevBtn.style.display = multi ? '' : 'none';
+    nextBtn.style.display = multi ? '' : 'none';
+    counterEl.textContent = multi ? `${currentGalleryIndex + 1} / ${currentGalleryImages.length}` : '';
+  }
+
+  function showImage(index, animate) {
+    els();
+    if (!currentGalleryImages.length) return;
+    currentGalleryIndex = (index + currentGalleryImages.length) % currentGalleryImages.length;
+    img.src = currentGalleryImages[currentGalleryIndex];
+    resetZoom(false);
+    updateNav();
+  }
+
+  function open(index) {
+    els();
+    if (!currentGalleryImages.length) return;
+    lightbox.classList.add('active');
+    document.body.classList.add('no-scroll');
+    showImage(index, false);
+    document.addEventListener('keydown', onKeydown);
+  }
+
+  function close() {
+    els();
+    lightbox.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+    resetZoom(false);
+    document.removeEventListener('keydown', onKeydown);
+  }
+
+  function onKeydown(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === '+' || e.key === '=') setScale(scale * STEP, 0, 0, true);
+    else if (e.key === '-' || e.key === '_') setScale(scale / STEP, 0, 0, true);
+    else if (e.key === '0') resetZoom(true);
+    else if (e.key === 'ArrowLeft' && currentGalleryImages.length > 1) showImage(currentGalleryIndex - 1, false);
+    else if (e.key === 'ArrowRight' && currentGalleryImages.length > 1) showImage(currentGalleryIndex + 1, false);
+  }
+
+  function stageCenterOffset(clientX, clientY) {
+    const rect = stage.getBoundingClientRect();
+    return { cx: clientX - rect.left - rect.width / 2, cy: clientY - rect.top - rect.height / 2 };
+  }
+
+  function initEvents() {
+    els();
+    document.getElementById('lb-close').addEventListener('click', close);
+    document.getElementById('lb-zoom-in').addEventListener('click', () => setScale(scale * STEP, 0, 0, true));
+    document.getElementById('lb-zoom-out').addEventListener('click', () => setScale(scale / STEP, 0, 0, true));
+    document.getElementById('lb-zoom-reset').addEventListener('click', () => resetZoom(true));
+    prevBtn.addEventListener('click', () => showImage(currentGalleryIndex - 1, false));
+    nextBtn.addEventListener('click', () => showImage(currentGalleryIndex + 1, false));
+
+    // Wheel zoom, centered on cursor
+    stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const { cx, cy } = stageCenterOffset(e.clientX, e.clientY);
+      const dir = e.deltaY < 0 ? 1 : -1;
+      setScale(scale * (dir > 0 ? STEP : 1 / STEP), cx, cy, false);
+    }, { passive: false });
+
+    // Mouse drag to pan
+    stage.addEventListener('mousedown', (e) => {
+      if (scale <= 1) return;
+      dragging = true; stage.classList.add('dragging');
+      dragStartX = e.clientX; dragStartY = e.clientY; txStart = tx; tyStart = ty;
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      tx = txStart + (e.clientX - dragStartX);
+      ty = tyStart + (e.clientY - dragStartY);
+      clampPan(); render(false);
+    });
+    window.addEventListener('mouseup', () => { dragging = false; stage.classList.remove('dragging'); });
+
+    // Double-click to toggle zoom
+    stage.addEventListener('dblclick', (e) => {
+      const { cx, cy } = stageCenterOffset(e.clientX, e.clientY);
+      if (scale > 1) resetZoom(true);
+      else setScale(DBLTAP_SCALE, cx, cy, true);
+    });
+
+    // Touch: pinch-zoom + single-finger pan + double-tap
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const [t1, t2] = e.touches;
+        pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        pinchStartScale = scale;
+        const midX = (t1.clientX + t2.clientX) / 2, midY = (t1.clientY + t2.clientY) / 2;
+        const off = stageCenterOffset(midX, midY);
+        pinchMidX = off.cx; pinchMidY = off.cy;
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          const off = stageCenterOffset(e.touches[0].clientX, e.touches[0].clientY);
+          if (scale > 1) resetZoom(true); else setScale(DBLTAP_SCALE, off.cx, off.cy, true);
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+        if (scale > 1) {
+          dragging = true;
+          dragStartX = e.touches[0].clientX; dragStartY = e.touches[0].clientY;
+          txStart = tx; tyStart = ty;
+        }
+      }
+    }, { passive: true });
+
+    stage.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const [t1, t2] = e.touches;
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const newScale = pinchStartScale * (dist / pinchStartDist);
+        setScale(newScale, pinchMidX, pinchMidY, false);
+      } else if (e.touches.length === 1 && dragging) {
+        e.preventDefault();
+        tx = txStart + (e.touches[0].clientX - dragStartX);
+        ty = tyStart + (e.touches[0].clientY - dragStartY);
+        clampPan(); render(false);
+      }
+    }, { passive: false });
+
+    stage.addEventListener('touchend', () => { dragging = false; });
+  }
+
+  return { open, close, init: initEvents };
+})();
+
+document.addEventListener('DOMContentLoaded', () => LB.init());
+function openLightbox(index) { LB.open(index); }
 
 // ===== SHOW MAIN =====
 function showMain() {
