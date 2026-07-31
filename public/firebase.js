@@ -785,6 +785,45 @@ const Cart = {
     if (kept.length !== items.length) { this._save(kept); return items.length - kept.length; }
     return 0;
   },
+  // `add()` freezes the product's price into the cart line at the moment
+  // it's added (localStorage cache). If the seller edits the price in
+  // admin afterwards — e.g. adding the 40 DA SlickPay fee on top — any
+  // cart already holding that product silently keeps charging the OLD
+  // price forever, since nothing ever re-reads it. That's the exact bug
+  // behind "product page says 400, cart still says 360": the cart line
+  // was cached before the price was updated. This resyncs every cart
+  // line's price (and image) against the live catalog so the cart can
+  // never drift from what the storefront and checkout actually charge.
+  // `products` is the current DB.getAll('products') array. Returns true
+  // if anything changed (caller can re-render).
+  syncPrices(products){
+    if (!Array.isArray(products) || !products.length) return false;
+    const byId = new Map(products.map(p => [p.id, p]));
+    const items = this.get();
+    let changed = false;
+    items.forEach(item => {
+      const p = byId.get(item.productId || item.id);
+      if (!p) return; // handled separately by prune()
+      let newPrice = p.price;
+      if (item.variantLabel) {
+        // Match the same "first group decides price" logic used on the
+        // product detail page (see computeActiveVariant()): the variant
+        // label may be a joined "GroupA / GroupB" string, but only the
+        // first group's item price is actually charged.
+        const firstLabel = item.variantLabel.split(' / ')[0];
+        let variantItems = null;
+        if (p.variables && p.variables.length) variantItems = p.variables[0].items;
+        else if (p.variants && p.variants.length) variantItems = p.variants;
+        const match = (variantItems || []).find(v => v.label === firstLabel);
+        newPrice = match && match.price != null ? match.price : p.price;
+      }
+      if (item.price !== newPrice) { item.price = newPrice; changed = true; }
+      const newImg = (p.images || [])[0] || null;
+      if (newImg && item.img !== newImg) { item.img = newImg; changed = true; }
+    });
+    if (changed) this._save(items);
+    return changed;
+  },
 };
 
 // Cross-tab sync: dz_cart lives in localStorage, and the browser's native

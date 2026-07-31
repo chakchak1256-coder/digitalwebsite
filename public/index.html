@@ -2570,12 +2570,17 @@ function handleDbUpdate() {
     // longer buy a removed product, and the wishlist badge count stays
     // accurate. Guarded on validIds.size so this never wipes carts before
     // the product list has actually loaded.
-    const validIds = new Set(DB.getAll('products').map(p => p.id));
+    const allProducts = DB.getAll('products');
+    const validIds = new Set(allProducts.map(p => p.id));
     if (validIds.size) {
       const removedFromCart = Cart.prune(validIds);
       if (removedFromCart > 0) {
         showToast(`${removedFromCart} item${removedFromCart > 1 ? 's' : ''} removed from your cart — no longer available`);
       }
+      // Keep any cached cart-line prices in sync with the live catalog —
+      // otherwise a price edited in admin after the item was already in
+      // someone's cart keeps showing/charging the stale amount.
+      Cart.syncPrices(allProducts);
       Wishlist.prune(validIds);
     }
     renderProducts();
@@ -3266,8 +3271,10 @@ function toggleCart() {
 }
 
 function renderCartItems() {
-  const validIds = new Set(DB.getAll('products').map(p => p.id));
+  const allProducts = DB.getAll('products');
+  const validIds = new Set(allProducts.map(p => p.id));
   if (validIds.size) Cart.prune(validIds); // drop items for products the seller has since removed
+  if (validIds.size) Cart.syncPrices(allProducts); // never show a cached/stale price
   const items = Cart.get(); const s = Settings.get();
   const body = document.getElementById('cart-body');
   const foot = document.getElementById('cart-foot');
@@ -3311,8 +3318,10 @@ let _coUseAccount = false;
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
-  const validIds = new Set(DB.getAll('products').map(p => p.id));
+  const allProducts = DB.getAll('products');
+  const validIds = new Set(allProducts.map(p => p.id));
   if (validIds.size) Cart.prune(validIds); // never let someone check out a product that was removed
+  if (validIds.size) Cart.syncPrices(allProducts); // never charge a cached/stale price
   const cartItems = Cart.get();
   if (cartItems.length && Cart.total() <= 0) {
     // Entire cart is free (e.g. free items added before this update) —
