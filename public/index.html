@@ -3551,14 +3551,10 @@ function buildOrderSummaryHTML(surchargeRate, surchargeFlat) {
   const flatFeeAmount = flat > 0 ? flat : 0;
   const feeAmount = pctFeeAmount + flatFeeAmount;
   const finalTotal = baseTotal + feeAmount;
-  const feeLabel = flatFeeAmount > 0
-    ? 'Payment processing fee'
-    : `Service fee (+${Math.round(rate*100)}%)`;
-  const feeRow = feeAmount > 0 ? `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.45rem">
-      <span style="font-size:.8rem;color:#F59E0B;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-circle-exclamation" style="font-size:.72rem"></i> ${feeLabel}</span>
-      <span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#F59E0B">+${feeAmount.toLocaleString()} ${s.currency||'DA'}</span>
-    </div>` : '';
+  // Fee is still folded into finalTotal/grandTotal below (so the amount
+  // charged is unchanged) — it's just no longer broken out as its own
+  // line in the summary UI.
+  const feeRow = '';
   // Coupon discount row (if a coupon has been applied)
   let couponRow = '';
   let couponDiscount = 0;
