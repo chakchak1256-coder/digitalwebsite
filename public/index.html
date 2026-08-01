@@ -3547,13 +3547,12 @@ function buildOrderSummaryHTML(surchargeRate, surchargeFlat) {
     </div>`;
   }).join('');
   const baseTotal = Cart.total();
-  const pctFeeAmount = rate > 0 ? Math.round(baseTotal * rate) : 0;
-  const flatFeeAmount = flat > 0 ? flat : 0;
-  const feeAmount = pctFeeAmount + flatFeeAmount;
-  const finalTotal = baseTotal + feeAmount;
-  // Fee is still folded into finalTotal/grandTotal below (so the amount
-  // charged is unchanged) — it's just no longer broken out as its own
-  // line in the summary UI.
+  // The SlickPay gateway fee is intentionally NOT added to the total shown
+  // here — the order summary always mirrors the admin-panel price. The fee
+  // is only ever shown to the customer on SlickPay's own payment page,
+  // where it's added to the actual charge server-side (see
+  // coInitiateSlickPayCheckout / worker.js), independent of this display.
+  const finalTotal = baseTotal;
   const feeRow = '';
   // Coupon discount row (if a coupon has been applied)
   let couponRow = '';
