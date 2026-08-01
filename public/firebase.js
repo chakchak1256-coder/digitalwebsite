@@ -740,21 +740,18 @@ const Settings = {
   }
 };
 
-// SlickPay's flat 40 DA gateway commission is now folded into every price
-// shown on the storefront (product cards, detail page, best sellers,
-// wishlist, cart, reviews, etc.) via formatPrice() below — so what a
-// customer sees listed IS what they'll pay for a single-item purchase.
-// This must match SLICKPAY_GATEWAY_FEE_DA in worker.js.
+// SlickPay's flat 40 DA gateway commission — used at checkout (card payment
+// surcharge) only. This must match SLICKPAY_GATEWAY_FEE_DA in worker.js.
 const SLICKPAY_FEE_DA = 40;
 
 // Formats a product price for display — shows "FREE" for 0/empty prices
 // instead of "0 DA", everywhere a price is rendered on the storefront.
-// Non-free prices include the SlickPay gateway fee (see SLICKPAY_FEE_DA
-// above) so the number shown matches what gets charged at checkout.
+// Shows the raw admin-panel price; the SlickPay fee is applied separately
+// at checkout, not baked into the listed price.
 function formatPrice(price, currency) {
   const n = Number(price) || 0;
   if (n <= 0) return 'FREE';
-  return (n + SLICKPAY_FEE_DA).toLocaleString() + ' ' + (currency || 'DA');
+  return n.toLocaleString() + ' ' + (currency || 'DA');
 }
 window.formatPrice = formatPrice;
 
