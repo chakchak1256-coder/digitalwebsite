@@ -1163,36 +1163,52 @@ select.form-input option{background:var(--bg2)}
 })();
 
 // ===== AUTH =====
-// AUTH_KEY and ADMIN_PASS are defined in firebase.js — do not redeclare here
+// Real sign-in happens through Firebase Auth (see the `Auth` object in
+// firebase.js). This just wires the login form to it and shows/hides
+// the admin shell based on Firebase's own auth state — not a flag in
+// localStorage/sessionStorage that anyone could set by hand from the
+// browser console to bypass the login screen.
+
+let _adminBooted = false;
+function bootAdminShell() {
+  if (_adminBooted) return; // guard against double-boot (login + onAuthStateChanged both firing)
+  _adminBooted = true;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('admin-shell').classList.remove('hidden');
+  initAdmin();
+  showPanel('dashboard');
+}
 
 function doLogin() {
   const pass = document.getElementById('login-pass').value;
   const remember = document.getElementById('remember-me') && document.getElementById('remember-me').checked;
   const errEl = document.getElementById('login-error');
-  if (pass === ADMIN_PASS) {
-    try { sessionStorage.setItem(AUTH_KEY, 'ok'); } catch(e) {}
-    if (remember) {
-      try { localStorage.setItem(AUTH_KEY + '_persist', 'ok'); } catch(e) {}
+  const btn = document.querySelector('.login-btn');
+  if (btn) btn.disabled = true;
+
+  firebase.auth().setPersistence(
+    remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION
+  ).then(() => Auth.login(pass)).then(ok => {
+    if (btn) btn.disabled = false;
+    if (ok) {
+      bootAdminShell();
+    } else {
+      document.getElementById('login-pass').classList.add('error');
+      errEl.classList.add('show');
+      document.getElementById('login-pass').focus();
+      setTimeout(() => document.getElementById('login-pass').classList.remove('error'), 1500);
     }
-    showAdminShell();
-  } else {
+  }).catch(() => {
+    if (btn) btn.disabled = false;
     document.getElementById('login-pass').classList.add('error');
     errEl.classList.add('show');
-    document.getElementById('login-pass').focus();
-    setTimeout(() => document.getElementById('login-pass').classList.remove('error'), 1500);
-  }
+  });
 }
 
 function doLogout() {
-  sessionStorage.removeItem(AUTH_KEY);
-  localStorage.removeItem(AUTH_KEY + '_persist');
+  _adminBooted = false;
+  Auth.logout();
   location.reload();
-}
-
-function showAdminShell() {
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('admin-shell').classList.remove('hidden');
-  initAdmin();
 }
 
 function toggleEye() {
@@ -1202,27 +1218,19 @@ function toggleEye() {
   else { inp.type = 'password'; icon.className = 'fa-solid fa-eye login-eye'; }
 }
 
-// Check if already remembered — auto-login and init dashboard
-(function() {
-  const ok = sessionStorage.getItem(AUTH_KEY) === 'ok' ||
-             localStorage.getItem(AUTH_KEY + '_persist') === 'ok';
-  if (ok) {
-    try { sessionStorage.setItem(AUTH_KEY, 'ok'); } catch(e) {}
-    // Init after DOM is ready — use both paths to handle any timing
-    function _bootAdmin() {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('admin-shell').classList.remove('hidden');
-      initAdmin();
-      showPanel('dashboard');
-    }
+// Firebase restores its own session on reload (per the persistence set
+// at login) — wait for it to report whether the admin is already
+// signed in, instead of trusting a locally-set flag.
+firebase.auth().onAuthStateChanged(function(user) {
+  const isAdmin = !!user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  if (isAdmin) {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _bootAdmin);
+      document.addEventListener('DOMContentLoaded', bootAdminShell);
     } else {
-      // DOM already ready (script ran after parse) — call immediately
-      _bootAdmin();
+      bootAdminShell();
     }
   }
-})();
+});
 
 // ===== INIT =====
 let currentPanel = 'dashboard';

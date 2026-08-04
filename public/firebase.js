@@ -492,23 +492,51 @@ function generatePlaceholder(text, w = 400, h = 300) {
 }
 
 // ================================================================
-// ADMIN AUTH — sessionStorage only
+// ADMIN AUTH — real Firebase Authentication
 // ================================================================
-const AUTH_KEY   = 'dz_admin_auth';
-const ADMIN_PASS = '121212';
-
-// Shared secret sent to the Worker on admin-only routes (upload/delete
-// file). This is separate from ADMIN_PASS above — it's what actually
-// protects /api/upload-file and /api/delete-file server-side, since a
-// client-side password check alone can't stop someone from calling the
-// Worker's API directly. Set the exact same value on the Worker with:
-//   npx wrangler secret put ADMIN_API_KEY
-const ADMIN_API_KEY_HEADER = 'fSkGsXIzV_F2Zhr3P6ro9ZKaLHI4sLTLol5SPMgSke0';
+// Admin sign-in used to be a plaintext password compared in this file
+// (which every visitor downloads, since firebase.js also loads on the
+// public storefront) plus a separate static "admin API key" sent to
+// the Worker. Both were effectively public — view-source gave anyone
+// the password AND the key needed to call the admin-only upload/delete
+// routes directly, without ever touching /admin.html.
+//
+// Admin login is now a real Firebase Auth account. The password is
+// never stored here or checked client-side — Firebase verifies it
+// server-side and hands back a signed ID token, which is what actually
+// protects the Worker's admin routes (see requireAdminAuth in
+// worker.js). ADMIN_EMAIL below is not a secret (an email address
+// isn't sensitive on its own); it just tells this file which signed-in
+// account counts as "the admin."
+//
+// One-time setup:
+//   1. Firebase console → Authentication → Users → Add user
+//      (pick the admin's real login email + a strong password).
+//   2. Put that same email below.
+//   3. On the Worker: npx wrangler secret put ADMIN_EMAIL  (same email).
+const ADMIN_EMAIL = 'admin@example.com'; // ← replace with your real admin account's email
 
 const Auth = {
-  isLoggedIn() { return sessionStorage.getItem(AUTH_KEY) === 'ok'; },
-  login(pass)  { if (pass !== ADMIN_PASS) return false; try { sessionStorage.setItem(AUTH_KEY,'ok'); } catch(e){} return true; },
-  logout()     { sessionStorage.removeItem(AUTH_KEY); }
+  isLoggedIn() {
+    const u = _auth.currentUser;
+    return !!u && (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  },
+  async login(pass) {
+    try {
+      await _auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass);
+      return this.isLoggedIn();
+    } catch (e) {
+      return false;
+    }
+  },
+  logout() { _auth.signOut(); },
+  // ID token to send as `Authorization: Bearer <token>` on admin-only
+  // Worker calls. getIdToken() auto-refreshes an expired token.
+  async getIdToken(forceRefresh) {
+    if (!this.isLoggedIn()) return null;
+    try { return await _auth.currentUser.getIdToken(!!forceRefresh); }
+    catch (e) { return null; }
+  }
 };
 
 // ================================================================
@@ -1119,10 +1147,16 @@ const Storage = {
   // folder:     storage path prefix, e.g. 'deliveries/<purchaseId>'
   // onProgress: optional callback(percent:number)
   uploadFile(file, folder, onProgress) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
       if (!backendUrl) {
         reject(new Error('DIGISTORE_BACKEND_URL is not configured.'));
+        return;
+      }
+
+      const idToken = await Auth.getIdToken();
+      if (!idToken) {
+        reject(new Error('Not signed in as admin — please log in again.'));
         return;
       }
 
@@ -1132,7 +1166,7 @@ const Storage = {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${backendUrl}/api/upload-file`, true);
-      xhr.setRequestHeader('X-Admin-Key', ADMIN_API_KEY_HEADER);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + idToken);
 
       xhr.upload.onprogress = e => {
         if (onProgress && e.lengthComputable) {
@@ -1173,10 +1207,15 @@ const Storage = {
       console.warn('Storage.deleteFile: DIGISTORE_BACKEND_URL is not configured.');
       return;
     }
+    const idToken = await Auth.getIdToken();
+    if (!idToken) {
+      console.warn('Storage.deleteFile: not signed in as admin.');
+      return;
+    }
     try {
       const res = await fetch(`${backendUrl}/api/delete-file`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_API_KEY_HEADER },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({ path }),
       });
       if (!res.ok) {

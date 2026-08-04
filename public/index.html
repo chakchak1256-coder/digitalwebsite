@@ -2281,14 +2281,6 @@ footer::before{
         <button type="button" class="btn btn-primary" id="co-submit-btn" onclick="coHandleNextStep()" style="flex:2"><i class="fa-solid fa-arrow-right"></i> Next</button>
       </div>
 
-      <!-- TEST-ONLY: simulate a successful payment so you can confirm products
-           actually land in "My Products" without going through real SlickPay.
-           Remove this button before sharing the store publicly. -->
-      <button type="button" id="co-test-pay-btn" onclick="coSimulateTestPayment()"
-        style="width:100%;margin-top:.6rem;padding:.65rem 1rem;border-radius:9px;border:1px dashed rgba(var(--accent-rgb),.4);
-        background:rgba(var(--accent-rgb),.06);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer">
-        <i class="fa-solid fa-flask"></i> Simulate Test Payment (Dev Only)
-      </button>
     </div>
 
     <!-- Proof of payment upload step -->
@@ -4026,90 +4018,6 @@ async function placeOrderWithProof() {
   _showCoStep('success');
 }
 
-// ── TEST-ONLY: simulate a successful payment ────────────────────────
-// Skips SlickPay entirely and writes real purchase records straight to
-// Firestore, exactly like a live order — so you can confirm products
-// actually show up (and auto-deliver correctly) in "My Products" without
-// waiting on a real card payment. Marked with paymentMethod:'test-simulated'
-// and an order-notes flag so it's obvious in the admin panel which orders
-// were test runs. Remove the button in the HTML above when you're done testing.
-async function coSimulateTestPayment() {
-  const currentUser = UserAuth.current();
-  if (!currentUser) { openLoginModal('checkout'); closeCheckout(); return; }
-  const cartItems = Cart.get();
-  if (!cartItems.length) { closeCheckout(); return; }
-
-  const owned = await coGetAlreadyOwnedCartItems(currentUser.id);
-  if (owned.length) { coShowAlreadyOwnedError(owned); return; }
-
-  const name  = (document.getElementById('co-name')?.value || currentUser.name || 'Test Customer').trim();
-  const email = (document.getElementById('co-email')?.value || currentUser.email || '').trim();
-  const _testPhonePfx    = (document.getElementById('co-phone-prefix')?.value || '07');
-  const _testPhoneDigits = (document.getElementById('co-phone')?.value || '').trim();
-  const phone = currentUser.phone || (_testPhoneDigits ? (_testPhonePfx + _testPhoneDigits) : '');
-  const products = DB.getAll ? DB.getAll('products') : [];
-  const orderId = 'TEST-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
-
-  const btn = document.getElementById('co-test-pay-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Simulating...'; }
-
-  const errors = [];
-  for (const item of cartItems) {
-    const fullProd = products.find(p => p.id === item.id || p.id === item.productId) || {};
-    try {
-      const purchase = await Purchases.add(
-        currentUser.id, email,
-        {
-          id:       item.productId || item.id,
-          name:     item.name,
-          images:   fullProd.images || (item.img ? [item.img] : []),
-          category: fullProd.category || ''
-        },
-        {
-          customerName:  name,
-          customerEmail: email,
-          customerPhone: phone,
-          paymentMethod: 'test-simulated',
-          orderNotes:    '⚠️ TEST PAYMENT — simulated, no real charge was made',
-          orderId,
-          variantLabel:  item.variantLabel || null,
-        }
-      );
-
-      if (fullProd.autoDeliver && fullProd.deliveryLink) {
-        // Product has auto-delivery configured — deliver it immediately,
-        // exactly like a real completed payment would.
-        const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : (fullProd.deliveryType === 'both' ? 'both' : 'link');
-        const accessData = { '_DeliveryType': dtype, 'Download Link': fullProd.deliveryLink };
-        if (Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
-          accessData['_Files'] = fullProd.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
-        }
-        await Purchases.update(purchase.id, { accessData, accessLink: fullProd.deliveryLink, deliveryType: dtype });
-      } else {
-        // No auto-delivery configured on this product — still mark it paid
-        // so you can see it land as "completed" and check the admin flow.
-        await Purchases.update(purchase.id, { status: 'completed', deliveredAt: new Date().toISOString() });
-      }
-    } catch (err) {
-      errors.push(item.name + ': ' + (err.message || String(err)));
-      console.error('[Test Payment] failed:', err);
-    }
-  }
-
-  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-flask"></i> Simulate Test Payment (Dev Only)'; }
-
-  if (errors.length) {
-    coShowFormError(errors.join(', '));
-    return;
-  }
-
-  const cartOverlay = document.getElementById('cart-overlay');
-  const cartDrawer = document.getElementById('cart-drawer');
-  if (cartDrawer) cartDrawer.classList.remove('open');
-  if (cartOverlay) cartOverlay.classList.remove('open');
-  Cart.clear();
-  _showCoStep('success');
-}
 // ===== TOPBAR SOCIALS ===== (source: Settings > social, editable in admin's Social Links panel)
 function renderTopbarSocials() {
   const s = Settings.get(); const socials = s.social||{};
