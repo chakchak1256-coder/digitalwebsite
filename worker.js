@@ -22,26 +22,73 @@
 // ---------------------------------------------------------------
 // Routes that let the caller write/delete storage (upload-file,
 // delete-file) must never be reachable by an anonymous visitor —
-// only the admin panel should be able to call them. The admin panel
-// itself already gates its UI with a password (see firebase.js /
-// admin.html), but that only hides the *page*; it does nothing to
-// protect the API if someone calls it directly. This shared-secret
-// header is the actual server-side lock.
+// only the admin should be able to call them.
 //
-// Set the matching value on the Worker with:
-//   npx wrangler secret put ADMIN_API_KEY
-// and keep the exact same string in firebase.js (ADMIN_API_KEY_HEADER).
-function requireAdminKey(request, env) {
-  if (!env.ADMIN_API_KEY) {
+// This used to be a static shared-secret header baked into firebase.js.
+// That file ships to every visitor (it's loaded by the public storefront
+// too), so the "secret" was really public — anyone could view-source it
+// and call these routes directly. There is no fix that keeps a
+// client-visible static secret; the caller's identity has to be proven
+// server-side instead.
+//
+// The admin panel now signs the admin into real Firebase Authentication
+// (see the `Auth` object in firebase.js) and sends the resulting ID
+// token as `Authorization: Bearer <token>`. This function hands that
+// token to Google's Identity Toolkit, which verifies its signature and
+// expiry and tells us which Firebase account it actually belongs to —
+// a token can't be forged or reused for a different account. We then
+// check that account against the configured admin email.
+//
+// Set up once:
+//   1. Firebase console → Authentication → Users → Add user (the admin's
+//      real login email + a strong password).
+//   2. Put that same email in ADMIN_EMAIL in firebase.js.
+//   3. npx wrangler secret put ADMIN_EMAIL   (same email, on the Worker)
+async function requireAdminAuth(request, env) {
+  if (!env.ADMIN_EMAIL) {
     // Fail closed: if the secret was never configured, refuse rather
     // than silently allowing unauthenticated access.
-    return { ok: false, status: 500, error: 'ADMIN_API_KEY is not configured on this Worker.' };
+    return { ok: false, status: 500, error: 'ADMIN_EMAIL is not configured on this Worker.' };
   }
-  const provided = request.headers.get('X-Admin-Key') || '';
-  if (provided !== env.ADMIN_API_KEY) {
+
+  const authHeader = request.headers.get('Authorization') || '';
+  const m = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!m) {
+    return { ok: false, status: 401, error: 'Missing bearer token.' };
+  }
+  const idToken = m[1];
+
+  // Ask Google to verify the token (signature, expiry, issuer/audience)
+  // and return the account it belongs to. This avoids re-implementing
+  // JWT/JWKS verification by hand — Firebase's apiKey is not a secret,
+  // it's the same value already public in firebaseConfig.
+  let lookup;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(env.FIREBASE_API_KEY || '')}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+    lookup = await res.json();
+    if (!res.ok) {
+      return { ok: false, status: 401, error: (lookup && lookup.error && lookup.error.message) || 'Invalid or expired session — please log in again.' };
+    }
+  } catch (e) {
+    return { ok: false, status: 401, error: 'Could not verify session: ' + e.message };
+  }
+
+  const user = lookup && lookup.users && lookup.users[0];
+  if (!user || !user.email) {
     return { ok: false, status: 401, error: 'Unauthorized.' };
   }
-  return { ok: true };
+  if (user.email.toLowerCase() !== env.ADMIN_EMAIL.toLowerCase()) {
+    return { ok: false, status: 403, error: 'This account is not the admin account.' };
+  }
+
+  return { ok: true, uid: user.localId, email: user.email };
 }
 
 // ---------------------------------------------------------------
@@ -534,7 +581,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age':       '86400',
     };
 
@@ -561,7 +608,7 @@ export default {
     // binding and returns its public URL.
     // ============================================================
     if (path === '/api/upload-file' && method === 'POST') {
-      const auth = requireAdminKey(request, env);
+      const auth = await requireAdminAuth(request, env);
       if (!auth.ok) return json({ error: auth.error }, auth.status);
       try {
         let form;
@@ -629,7 +676,7 @@ export default {
     // Deletes the object from R2 via the native `env.BUCKET` binding.
     // ============================================================
     if (path === '/api/delete-file' && method === 'POST') {
-      const auth = requireAdminKey(request, env);
+      const auth = await requireAdminAuth(request, env);
       if (!auth.ok) return json({ error: auth.error }, auth.status);
       try {
         let body;
