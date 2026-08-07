@@ -840,8 +840,11 @@ select.form-input option{background:var(--bg2)}
       <!-- USERS -->
       <div class="panel" id="panel-users">
         <div class="sec-header"><span class="sec-title">Registered Users <span id="users-count" style="font-size:.8rem;color:var(--text-muted)"></span></span></div>
+        <div class="pur-filters-bar">
+          <input class="form-input" id="users-search" style="flex:1;min-width:180px;max-width:300px" placeholder="Search by name, email or phone..." oninput="renderUsersAdmin()"/>
+        </div>
         <div class="table-wrap">
-          <table><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Purchases</th></tr></thead><tbody id="users-tbody"></tbody></table>
+          <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Registered</th><th>Last Login</th><th>Purchases</th><th>Actions</th></tr></thead><tbody id="users-tbody"></tbody></table>
         </div>
       </div>
 
@@ -2222,28 +2225,80 @@ function restoreOrder(id) {
 }
 
 // ===== USERS ADMIN =====
+
+// Firestore Timestamp objects (from the client SDK) have a toDate()
+// method — plain `new Date(timestamp)` doesn't parse them correctly, so
+// this handles both that and ISO-string timestamps, and missing values.
+function _userTsToDate(ts) {
+  if (!ts) return null;
+  try {
+    const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+    return isNaN(d.getTime()) ? null : d;
+  } catch { return null; }
+}
+function _fmtUserDate(ts) {
+  const d = _userTsToDate(ts);
+  if (!d) return '—';
+  return d.toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'}) + ' · ' +
+         d.toLocaleTimeString('en-DZ',{hour:'2-digit',minute:'2-digit'});
+}
+
+let _adminAllUsers = [];
+
 async function renderUsersAdmin() {
-  const users = await UserAuth.getAll();
+  _adminAllUsers = await AdminUsers.list();
   const purchases = await Purchases.getAll();
+  const q = (document.getElementById('users-search')?.value || '').trim().toLowerCase();
+
+  const users = !q ? _adminAllUsers : _adminAllUsers.filter(u =>
+    (u.name||'').toLowerCase().includes(q) ||
+    (u.email||'').toLowerCase().includes(q) ||
+    (u.phone||'').toLowerCase().includes(q)
+  );
+
+  // Most recently active first — users who never logged in (or predate
+  // lastLogin tracking) sort to the bottom.
+  users.sort((a, b) => (_userTsToDate(b.lastLogin)?.getTime()||0) - (_userTsToDate(a.lastLogin)?.getTime()||0));
+
   const count = document.getElementById('users-count');
-  if (count) count.textContent = `(${users.length})`;
+  if (count) count.textContent = `(${users.length}${q ? ` of ${_adminAllUsers.length}` : ''})`;
   const tbody = document.getElementById('users-tbody');
+  if (!_adminAllUsers.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-users" style="font-size:2rem;opacity:.2;margin-bottom:.5rem;display:block"></i><p>No registered users yet.</p></div></td></tr>`;
+    return;
+  }
   if (!users.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-users" style="font-size:2rem;opacity:.2;margin-bottom:.5rem;display:block"></i><p>No registered users yet.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="border:none;padding:2rem"><p>No users match "${escapeHtml(q)}".</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = '';
   users.forEach(u => {
     const tr = document.createElement('tr');
     const userPurchases = purchases.filter(p => p.userId === u.id).length;
-    const date = new Date(u.createdAt).toLocaleDateString('en-DZ',{year:'numeric',month:'short',day:'numeric'});
+    const safeName = escapeHtml(u.name || '—');
     tr.innerHTML = `
-      <td style="font-weight:600">${u.name||'—'}</td>
-      <td style="font-family:monospace;font-size:.83rem">${u.email}</td>
-      <td style="font-size:.82rem;color:var(--text-muted)">${date}</td>
-      <td><span class="status-badge ${userPurchases?'status-done':'status-pending'}">${userPurchases} purchase${userPurchases!==1?'s':''}</span></td>`;
+      <td style="font-weight:600">${safeName}</td>
+      <td style="font-family:monospace;font-size:.83rem">${escapeHtml(u.email||'—')}</td>
+      <td style="font-family:monospace;font-size:.83rem">${escapeHtml(u.phone||'—')}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${_fmtUserDate(u.createdAt)}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${_fmtUserDate(u.lastLogin)}</td>
+      <td><span class="status-badge ${userPurchases?'status-done':'status-pending'}">${userPurchases} purchase${userPurchases!==1?'s':''}</span></td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteUserAdmin('${u.id}','${safeName.replace(/'/g,"\\'")}')" title="Delete user"><i class="fa-solid fa-trash"></i></button></td>`;
     tbody.appendChild(tr);
   });
+}
+
+function deleteUserAdmin(uid, name) {
+  confirmAction(
+    'Delete User',
+    `Delete "${name}"? This removes their account and profile — they'll no longer be able to sign in. Their past purchase records are kept. This cannot be undone.`,
+    async () => {
+      const result = await AdminUsers.remove(uid);
+      if (result.error) { showToast(result.error); return; }
+      showToast('User deleted.');
+      renderUsersAdmin();
+    }
+  );
 }
 
 // ===== DELIVER PRODUCT =====

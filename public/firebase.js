@@ -80,7 +80,8 @@ const UserAuth = {
         id: cred.user.uid, email: email.toLowerCase(), name: displayName,
         phone: phone || '',
         phoneVerified: !!phone,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
       });
       this._current = { id: cred.user.uid, email: cred.user.email, name: displayName, phone: phone || '' };
       window.dispatchEvent(new Event('auth:change'));
@@ -97,6 +98,11 @@ const UserAuth = {
       const cred = await _auth.signInWithEmailAndPassword(email, password);
       this._current = { id: cred.user.uid, email: cred.user.email, name: cred.user.displayName || cred.user.email.split('@')[0] };
       window.dispatchEvent(new Event('auth:change'));
+      // Record this sign-in for the admin's "last seen" view. Non-blocking —
+      // if it fails (e.g. offline) it shouldn't stop the user from logging in.
+      _db.collection('users').doc(cred.user.uid).set({
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(() => {});
       return { user: this._current };
     } catch(e) { return { error: this._msg(e.code) }; }
   },
@@ -115,6 +121,7 @@ const UserAuth = {
         // Returning user — just update timestamp and return
         await _db.collection('users').doc(user.uid).set({
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
         const data = existing.data();
         this._current = { id: user.uid, email: user.email, name: data.name || user.displayName, phone: data.phone };
@@ -173,6 +180,7 @@ const UserAuth = {
         phone: phone || '',
         photoURL: googleProfile.photoURL || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
       this._current = { id: user.uid, email: user.email, name: displayName, phone: phone || '' };
       window.dispatchEvent(new Event('auth:change'));
@@ -514,7 +522,7 @@ function generatePlaceholder(text, w = 400, h = 300) {
 //      (pick the admin's real login email + a strong password).
 //   2. Put that same email below.
 //   3. On the Worker: npx wrangler secret put ADMIN_EMAIL  (same email).
-const ADMIN_EMAIL = 'admin@example.com'; // ← replace with your real admin account's email
+const ADMIN_EMAIL = 'chaqx12@gmail.com';
 
 const Auth = {
   isLoggedIn() {
@@ -537,6 +545,47 @@ const Auth = {
     try { return await _auth.currentUser.getIdToken(!!forceRefresh); }
     catch (e) { return null; }
   }
+};
+
+// ================================================================
+// ADMIN USERS — list registered users + delete a user (admin panel)
+// ================================================================
+// Listing reads the `users` collection directly (same as UserAuth.getAll,
+// kept separate here so this section is self-contained for the admin UI).
+// Deleting requires the Worker: removing a Firebase Auth account can't be
+// done from the client SDK for anyone but the account itself, so the
+// Worker does it server-side with the service-account credentials (see
+// POST /api/delete-user in worker.js), same Bearer-token pattern as
+// Storage.uploadFile/deleteFile below.
+const AdminUsers = {
+  async list() {
+    try {
+      const snap = await _db.collection('users').get();
+      return snap.docs.map(d => d.data());
+    } catch (e) {
+      console.error('[AdminUsers] list failed:', e.message);
+      return [];
+    }
+  },
+
+  async remove(uid) {
+    const idToken = await Auth.getIdToken();
+    if (!idToken) return { error: 'Not authenticated as admin.' };
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backendUrl) return { error: 'DIGISTORE_BACKEND_URL is not configured.' };
+    try {
+      const res = await fetch(`${backendUrl}/api/delete-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+        body: JSON.stringify({ uid }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: data.error || 'Failed to delete user.' };
+      return { ok: true };
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
 };
 
 // ================================================================
