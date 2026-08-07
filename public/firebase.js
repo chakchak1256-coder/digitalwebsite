@@ -548,6 +548,45 @@ const Auth = {
 };
 
 // ================================================================
+// ADMIN AUDIT — login activity trail for the admin panel
+// ================================================================
+// The point: if the admin password is ever shared/leaked, this is how you'd
+// notice — every successful sign-in gets a record with IP, approximate
+// location, device, and time. It can only capture SUCCESSFUL sign-ins:
+// a wrong password is rejected by Firebase's own servers before this site
+// is ever involved, so failed attempts don't produce a record.
+const AdminAudit = {
+  // Called once after the admin panel confirms a signed-in admin session
+  // (fresh login or restored session on page load).
+  async logAccess() {
+    const idToken = await Auth.getIdToken();
+    if (!idToken) return;
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backendUrl) return;
+    try {
+      await fetch(`${backendUrl}/api/admin/log-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      });
+    } catch (e) { /* non-critical — don't block the admin from using the panel */ }
+  },
+
+  async list(limit = 100) {
+    const idToken = await Auth.getIdToken();
+    if (!idToken) return [];
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backendUrl) return [];
+    try {
+      const res = await fetch(`${backendUrl}/api/admin/login-history?limit=${limit}`, {
+        headers: { 'Authorization': 'Bearer ' + idToken },
+      });
+      const data = await res.json().catch(() => ({}));
+      return Array.isArray(data.entries) ? data.entries : [];
+    } catch (e) { return []; }
+  },
+};
+
+// ================================================================
 // ADMIN USERS — list registered users + delete a user (admin panel)
 // ================================================================
 // Listing reads the `users` collection directly (same as UserAuth.getAll,
