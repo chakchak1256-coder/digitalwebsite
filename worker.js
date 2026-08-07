@@ -192,7 +192,7 @@ const SlickPay = {
 // Firestore REST helper, authenticated via Google service-account JWT
 // (RS256, signed with Web Crypto — no firebase-admin, no jose/jsonwebtoken)
 // ---------------------------------------------------------------
-let _cachedAccessToken = null; // { token, expiresAt } — per-isolate cache
+let _cachedAccessTokens = {}; // { [scope]: { token, expiresAt } } — per-isolate cache
 
 function base64url(input) {
   let bytes;
@@ -223,10 +223,11 @@ function pemToArrayBuffer(pem) {
   return buf.buffer;
 }
 
-async function getFirebaseAccessToken(env) {
+async function getFirebaseAccessToken(env, scope = 'https://www.googleapis.com/auth/datastore') {
   const now = Math.floor(Date.now() / 1000);
-  if (_cachedAccessToken && _cachedAccessToken.expiresAt > now + 30) {
-    return _cachedAccessToken.token;
+  const cached = _cachedAccessTokens[scope];
+  if (cached && cached.expiresAt > now + 30) {
+    return cached.token;
   }
 
   if (!env.FIREBASE_SERVICE_ACCOUNT) {
@@ -256,7 +257,7 @@ async function getFirebaseAccessToken(env) {
     aud:   'https://oauth2.googleapis.com/token',
     iat:   now,
     exp:   now + 3600,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope,
   };
 
   const unsigned = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(claims))}`;
@@ -286,7 +287,7 @@ async function getFirebaseAccessToken(env) {
     throw new Error('Failed to get Firebase access token: ' + JSON.stringify(tokenData));
   }
 
-  _cachedAccessToken = { token: tokenData.access_token, expiresAt: now + tokenData.expires_in };
+  _cachedAccessTokens[scope] = { token: tokenData.access_token, expiresAt: now + tokenData.expires_in };
   return tokenData.access_token;
 }
 
@@ -376,6 +377,17 @@ const Firestore = {
     return docToObject(await res.json());
   },
 
+  async deleteDoc(env, collection, id) {
+    const token = await getFirebaseAccessToken(env);
+    const base  = await this._baseUrl(env);
+    const res = await fetch(`${base}/${collection}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Deleting a doc that's already gone is fine — treat 404 as success.
+    if (!res.ok && res.status !== 404) throw new Error(`Firestore deleteDoc failed: ${res.status} ${await res.text()}`);
+  },
+
   // Run a structured query, e.g. find a purchase by a field value.
   async queryCollection(env, collection, fieldFilters, limit = 10) {
     const token = await getFirebaseAccessToken(env);
@@ -406,6 +418,32 @@ const Firestore = {
     return rows.filter(r => r.document).map(r => docToObject(r.document));
   },
 };
+
+// ---------------------------------------------------------------
+// Identity Toolkit admin calls — deleting a Firebase Auth account can only
+// be done server-side (the client SDK can only delete the currently signed
+// in user's own account). Uses the same service-account JWT flow as
+// Firestore, but with the identitytoolkit scope instead.
+// ---------------------------------------------------------------
+async function deleteFirebaseAuthUser(env, uid) {
+  const token = await getFirebaseAccessToken(env, 'https://www.googleapis.com/auth/identitytoolkit');
+  let projectId;
+  try { projectId = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT).project_id; }
+  catch (e) { throw new Error('FIREBASE_SERVICE_ACCOUNT secret is not valid JSON: ' + e.message); }
+
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ localId: uid }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = JSON.stringify(await res.json()); } catch {}
+    // A user that's already gone shouldn't block cleanup of our own records.
+    if (res.status === 400 && /USER_NOT_FOUND/i.test(detail)) return;
+    throw new Error(`Failed to delete Firebase Auth account: ${res.status} ${detail}`);
+  }
+}
 
 // ---------------------------------------------------------------
 // Pricing — re-derived server-side from the product doc, never trusted
@@ -697,6 +735,40 @@ export default {
       } catch (err) {
         console.error('[delete-file] error:', err.message);
         return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
+    // ============================================================
+    // ROUTE: POST /api/delete-user
+    // Deletes a customer: their Firestore `users/{uid}` doc AND their real
+    // Firebase Auth account (the latter can only be done server-side, with
+    // the service account — the client SDK can't delete other users).
+    // Their `purchases` docs are left in place — deleting a user shouldn't
+    // silently wipe order history/analytics.
+    // ============================================================
+    if (path === '/api/delete-user' && method === 'POST') {
+      const auth = await requireAdminAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
+
+        const uid = (body.uid || '').toString().trim();
+        if (!uid) return json({ error: 'uid is required.' }, 400);
+
+        // Guard rail: the admin can't delete the account they're signed in
+        // as — that would be an easy way to accidentally lock yourself out.
+        if (uid === auth.uid) {
+          return json({ error: "You can't delete the account you're currently signed in as." }, 400);
+        }
+
+        await Firestore.deleteDoc(env, 'users', uid);
+        await deleteFirebaseAuthUser(env, uid);
+
+        return json({ ok: true });
+      } catch (err) {
+        console.error('[delete-user] error:', err.message);
+        return json({ error: 'Internal server error.', message: err.message }, 500);
       }
     }
 
