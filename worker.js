@@ -388,6 +388,25 @@ const Firestore = {
     if (!res.ok && res.status !== 404) throw new Error(`Firestore deleteDoc failed: ${res.status} ${await res.text()}`);
   },
 
+  // List a collection ordered/limited — e.g. the most recent admin login
+  // records. Unlike queryCollection, this has no filters, just ordering.
+  async listCollection(env, collection, { orderByField, direction = 'DESCENDING', limit = 50 } = {}) {
+    const token = await getFirebaseAccessToken(env);
+    const base  = await this._baseUrl(env);
+    const structuredQuery = { from: [{ collectionId: collection }], limit };
+    if (orderByField) {
+      structuredQuery.orderBy = [{ field: { fieldPath: orderByField }, direction }];
+    }
+    const res = await fetch(`${base}:runQuery`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery }),
+    });
+    if (!res.ok) throw new Error(`Firestore listCollection failed: ${res.status} ${await res.text()}`);
+    const rows = await res.json();
+    return rows.filter(r => r.document).map(r => docToObject(r.document));
+  },
+
   // Run a structured query, e.g. find a purchase by a field value.
   async queryCollection(env, collection, fieldFilters, limit = 10) {
     const token = await getFirebaseAccessToken(env);
@@ -734,6 +753,58 @@ export default {
 
       } catch (err) {
         console.error('[delete-file] error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
+    // ============================================================
+    // ROUTE: POST /api/admin/log-access
+    // Called once by admin.html right after a successful admin sign-in
+    // (fresh login or a restored session). Records who/when/where/how for
+    // a security audit trail — e.g. to notice a sign-in that wasn't you.
+    // IP + geolocation come from Cloudflare's own request metadata
+    // (request.cf) — nothing external is called, nothing is guessed.
+    // ============================================================
+    if (path === '/api/admin/log-access' && method === 'POST') {
+      const auth = await requireAdminAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        const cf = request.cf || {};
+        await Firestore.addDoc(env, 'admin_login_log', {
+          email:     auth.email,
+          uid:       auth.uid,
+          ip:        request.headers.get('CF-Connecting-IP') || 'unknown',
+          country:   cf.country  || '',
+          region:    cf.region   || '',
+          city:      cf.city     || '',
+          timezone:  cf.timezone || '',
+          userAgent: request.headers.get('User-Agent') || 'unknown',
+          at:        new Date().toISOString(),
+        });
+        return json({ ok: true });
+      } catch (err) {
+        console.error('[log-access] error:', err.message);
+        // Non-critical — don't block the admin from using the panel just
+        // because the audit log write failed.
+        return json({ ok: false }, 200);
+      }
+    }
+
+    // ============================================================
+    // ROUTE: GET /api/admin/login-history
+    // Returns recent admin sign-in records, most recent first.
+    // ============================================================
+    if (path === '/api/admin/login-history' && method === 'GET') {
+      const auth = await requireAdminAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10) || 100, 500);
+        const entries = await Firestore.listCollection(env, 'admin_login_log', {
+          orderByField: 'at', direction: 'DESCENDING', limit,
+        });
+        return json({ entries });
+      } catch (err) {
+        console.error('[login-history] error:', err.message);
         return json({ error: 'Internal server error.' }, 500);
       }
     }
