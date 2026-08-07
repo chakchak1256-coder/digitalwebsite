@@ -1204,6 +1204,25 @@ function doLogin() {
   const btn = document.querySelector('.login-btn');
   if (btn) btn.disabled = true;
 
+  function showLoginError(message) {
+    if (message) errEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${message}`;
+    document.getElementById('login-pass').classList.add('error');
+    errEl.classList.add('show');
+    document.getElementById('login-pass').focus();
+    setTimeout(() => document.getElementById('login-pass').classList.remove('error'), 1500);
+  }
+
+  const AUTH_ERROR_MESSAGES = {
+    'auth/wrong-password':        'Incorrect password. Please try again.',
+    'auth/invalid-login-credentials': 'Incorrect email or password.',
+    'auth/invalid-credential':    'Incorrect email or password.',
+    'auth/user-not-found':        'No account exists for the configured ADMIN_EMAIL. Check firebase.js / redeploy.',
+    'auth/user-disabled':         'This admin account has been disabled in Firebase Authentication.',
+    'auth/too-many-requests':     'Too many failed attempts — Firebase has temporarily locked this account. Try again later or reset the password.',
+    'auth/network-request-failed':'Network error reaching Firebase. Check your connection.',
+    'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Firebase API key is invalid or restricted.',
+  };
+
   firebase.auth().setPersistence(
     remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION
   ).then(() => Auth.login(pass)).then(ok => {
@@ -1211,15 +1230,13 @@ function doLogin() {
     if (ok) {
       bootAdminShell();
     } else {
-      document.getElementById('login-pass').classList.add('error');
-      errEl.classList.add('show');
-      document.getElementById('login-pass').focus();
-      setTimeout(() => document.getElementById('login-pass').classList.remove('error'), 1500);
+      showLoginError();
     }
-  }).catch(() => {
+  }).catch(e => {
     if (btn) btn.disabled = false;
-    document.getElementById('login-pass').classList.add('error');
-    errEl.classList.add('show');
+    const code = e && e.code;
+    const friendly = (code && AUTH_ERROR_MESSAGES[code]) || (e && e.message) || 'Sign-in failed. Check the browser console for details.';
+    showLoginError(friendly + (code ? ` <span style="opacity:.6">(${code})</span>` : ''));
   });
 }
 

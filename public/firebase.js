@@ -522,11 +522,7 @@ function generatePlaceholder(text, w = 400, h = 300) {
 //      (pick the admin's real login email + a strong password).
 //   2. Put that same email below.
 //   3. On the Worker: npx wrangler secret put ADMIN_EMAIL  (same email).
-// SET THIS TO YOUR OWN FIREBASE AUTH ADMIN ACCOUNT EMAIL.
-// It must exactly match the ADMIN_EMAIL secret set on the Worker
-// (npx wrangler secret put ADMIN_EMAIL) and an account you created
-// yourself under Firebase Console → Authentication → Users.
-const ADMIN_EMAIL = 'REPLACE_WITH_YOUR_ADMIN_EMAIL';
+const ADMIN_EMAIL = 'chaqx12@gmail.com';
 
 const Auth = {
   isLoggedIn() {
@@ -538,7 +534,15 @@ const Auth = {
       await _auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass);
       return this.isLoggedIn();
     } catch (e) {
-      return false;
+      // Surface the real Firebase error code/message instead of silently
+      // returning false — "wrong password" was being shown for every
+      // possible failure (wrong password, no such user, disabled account,
+      // rate-limited, bad API key, etc), which makes real problems
+      // impossible to diagnose. See console for e.code / e.message.
+      console.error('[Auth.login] Firebase sign-in failed:', e.code, e.message);
+      const err = new Error(e.message || 'Sign-in failed');
+      err.code = e.code || 'auth/unknown-error';
+      throw err;
     }
   },
   logout() { _auth.signOut(); },
