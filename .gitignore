@@ -11,6 +11,9 @@ firebase-sa.json
 node_modules/
 npm-debug.log*
 
+# Cloudflare Wrangler local cache/session — regenerates automatically
+.wrangler/
+
 # OS
 .DS_Store
 Thumbs.db
