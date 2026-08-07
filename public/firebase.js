@@ -66,6 +66,15 @@ const UserAuth = {
 
   async register(email, password, name, phone) {
     try {
+      // Never let the public sign-up form create an account using the
+      // reserved admin email — that is the exact path used to hijack
+      // admin access before (register on the storefront, then log into
+      // /admin.html with the account you just made). This is a
+      // client-side speed bump, not a hard guarantee — see the note
+      // above the ADMIN_EMAIL constant for the real fix.
+      if ((email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        return { error: 'This email address is not available.' };
+      }
       // ── Duplicate phone check ─────────────────────────────────
       if (phone) {
         const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
