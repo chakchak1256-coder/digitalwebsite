@@ -12,6 +12,13 @@
 
   "vars": {
     "APP_URL": "https://digital-website.digitch.workers.dev",
+    // Same value as firebaseConfig.apiKey in firebase.js — this is NOT a
+    // secret (Firebase's client apiKey is meant to be public), it just
+    // identifies the Firebase project when the Worker verifies an admin
+    // login token via Google's Identity Toolkit (see requireAdminAuth()
+    // in worker.js). Without this, every admin-only route (upload-file,
+    // delete-file, delete-user, login-history, log-access) fails auth.
+    "FIREBASE_API_KEY": "AIzaSyAz6LUNMFRHOo4_pvLoB9UMg_u-VRc_RHA",
     "FIREBASE_PROJECT_ID": "generalwebsite-580f9",
     "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com",
     // "sandbox" uses devapi.slick-pay.com  |  "production" uses prodapi.slick-pay.com

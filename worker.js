@@ -241,6 +241,24 @@ async function getFirebaseAccessToken(env, scope = 'https://www.googleapis.com/a
   try {
     serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
   } catch (e) {
+    // Diagnose the common cause without ever logging the secret itself:
+    // pasting multi-line JSON into an interactive `wrangler secret put`
+    // prompt often mangles it (a stray leading "-" from inside the
+    // private_key's "-----BEGIN PRIVATE KEY-----" line is a classic sign
+    // the JSON structure around it got dropped). Log a safe fingerprint —
+    // length and first character only — never the content.
+    const raw = env.FIREBASE_SERVICE_ACCOUNT || '';
+    const looksTruncated = raw.trimStart()[0] !== '{';
+    console.error(
+      '[FIREBASE_SERVICE_ACCOUNT] JSON.parse failed:', e.message,
+      '| length:', raw.length,
+      '| starts with "{":', !looksTruncated,
+      looksTruncated
+        ? '| This usually means the secret was pasted interactively and got corrupted. Fix: pipe the key file in instead of pasting — e.g. '
+          + '`Get-Content .\\key.json -Raw | npx wrangler secret put FIREBASE_SERVICE_ACCOUNT` (PowerShell) or '
+          + '`type key.json | npx wrangler secret put FIREBASE_SERVICE_ACCOUNT` (cmd.exe), then `npx wrangler deploy`.'
+        : ''
+    );
     throw new Error('FIREBASE_SERVICE_ACCOUNT secret is not valid JSON: ' + e.message);
   }
   if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
@@ -950,7 +968,14 @@ export default {
         try {
           pricedItems = await priceCartItems(env, normalizedItems);
         } catch (err) {
-          return json({ error: 'Failed to price cart items: ' + err.message }, 400);
+          // Full detail goes to the Worker's own logs (visible to you via
+          // `npx wrangler tail` or the Cloudflare dashboard) — never to the
+          // customer. A raw config/secret error was previously shown
+          // directly in the checkout modal, which leaked internal backend
+          // state (e.g. "FIREBASE_SERVICE_ACCOUNT secret is not valid
+          // JSON") to shoppers.
+          console.error('[checkout] priceCartItems failed:', err.message);
+          return json({ error: 'We could not process your cart right now. Please try again in a moment, or contact support if this persists.' }, 400);
         }
         const computedAmount = pricedItems.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
 
