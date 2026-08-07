@@ -522,7 +522,11 @@ function generatePlaceholder(text, w = 400, h = 300) {
 //      (pick the admin's real login email + a strong password).
 //   2. Put that same email below.
 //   3. On the Worker: npx wrangler secret put ADMIN_EMAIL  (same email).
-const ADMIN_EMAIL = 'chaqx12@gmail.com';
+// SET THIS TO YOUR OWN FIREBASE AUTH ADMIN ACCOUNT EMAIL.
+// It must exactly match the ADMIN_EMAIL secret set on the Worker
+// (npx wrangler secret put ADMIN_EMAIL) and an account you created
+// yourself under Firebase Console → Authentication → Users.
+const ADMIN_EMAIL = 'REPLACE_WITH_YOUR_ADMIN_EMAIL';
 
 const Auth = {
   isLoggedIn() {
