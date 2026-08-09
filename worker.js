@@ -146,13 +146,16 @@ async function slickpayRequest(env, path, { method = 'GET', body } = {}) {
   return data;
 }
 
-// SlickPay deducts a flat commission from every transaction regardless of
-// amount (currently 40 DA). Rather than silently eating that fee (which
-// just makes each sale net less than the listed price), we add it on top
-// of the products' price so the customer pays it transparently and the
-// merchant still receives the full listed amount. Kept as a single
-// constant so it's easy to update if SlickPay's fee ever changes.
-const SLICKPAY_GATEWAY_FEE_DA = 40;
+// SlickPay's commission is configured per merchant account and is NOT
+// guaranteed to be a flat amount — it can be a percentage (the guide's own
+// example shows 190 DA commission on a 10,000 DA sale, ~1.9%, not a flat
+// fee). Hardcoding a guessed number here would silently undercharge the
+// customer and eat into the merchant's payout whenever the real rate is
+// higher. So the real fee is looked up from SlickPay's own commission
+// endpoint at checkout time (see getGatewayFee below) and used everywhere
+// instead. This constant is kept ONLY as a fallback for the rare case
+// where that lookup call itself fails, so checkout never hard-breaks.
+const SLICKPAY_GATEWAY_FEE_DA_FALLBACK = 40;
 
 const SlickPay = {
   async createInvoice(env, { amount, items, firstname, lastname, email, phone, address, returnUrl, webhookUrl, webhookSignature, webhookMetaData, fees = 100 }) {
@@ -187,6 +190,28 @@ const SlickPay = {
     return slickpayRequest(env, '/users/accounts', { method: 'GET' });
   },
 };
+
+// Ask SlickPay what this merchant's account will actually be charged in
+// commission for a given base amount, so the surcharge shown to and
+// collected from the customer matches what SlickPay will really deduct
+// (we pass fees: 0 on invoice creation — see the checkout route — meaning
+// SlickPay deducts its real commission from the payout rather than adding
+// it again at the payment page; this fee lookup is what makes sure we've
+// already collected exactly that much from the customer up front, so the
+// merchant nets the full listed product price).
+// Falls back to SLICKPAY_GATEWAY_FEE_DA_FALLBACK if the lookup itself
+// fails, so a transient SlickPay API hiccup never blocks checkout.
+async function getGatewayFee(env, baseAmount) {
+  try {
+    const res = await SlickPay.commission(env, baseAmount);
+    const fee = Number(res && res.commission);
+    if (Number.isFinite(fee) && fee > 0) return fee;
+    throw new Error('Unexpected response shape: ' + JSON.stringify(res));
+  } catch (err) {
+    console.error('[checkout] commission lookup failed, using fallback fee:', err.message);
+    return SLICKPAY_GATEWAY_FEE_DA_FALLBACK;
+  }
+}
 
 // ---------------------------------------------------------------
 // Firestore REST helper, authenticated via Google service-account JWT
@@ -922,6 +947,22 @@ export default {
     }
 
     // ============================================================
+    // ROUTE: GET /api/checkout/fee?amount=NNN
+    // Lets the cart/checkout UI show the REAL SlickPay commission for the
+    // current total before the customer submits, instead of a guessed flat
+    // number — so what's shown in the cart matches what's actually charged
+    // when POST /api/checkout runs the same lookup.
+    // ============================================================
+    if (path === '/api/checkout/fee' && method === 'GET') {
+      const amount = Number(url.searchParams.get('amount'));
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return json({ error: 'Missing or invalid amount.' }, 400);
+      }
+      const fee = await getGatewayFee(env, amount);
+      return json({ fee });
+    }
+
+    // ============================================================
     // ROUTE: POST /api/checkout
     // Creates a SlickPay invoice and returns { order_id, payment_url, amount }
     // Body: { product_id, product_name, amount, firstname, lastname, email, phone }
@@ -988,11 +1029,13 @@ export default {
           return json({ error: 'Amount must be greater than 100 DZD.' }, 400);
         }
 
-        // The customer is charged the products total PLUS SlickPay's flat
-        // commission — see SLICKPAY_GATEWAY_FEE_DA above. This is the actual
-        // amount charged on the invoice, itemized as its own line so it's
-        // never hidden inside the product price.
-        const chargeAmount = Number(computedAmount) + SLICKPAY_GATEWAY_FEE_DA;
+        // The customer is charged the products total PLUS SlickPay's real
+        // commission for this order — looked up fresh via getGatewayFee()
+        // rather than assumed, since the rate isn't necessarily flat (see
+        // comment above SLICKPAY_GATEWAY_FEE_DA_FALLBACK). Itemized as its
+        // own line so it's never hidden inside the product price.
+        const gatewayFee   = await getGatewayFee(env, Number(computedAmount));
+        const chargeAmount = Number(computedAmount) + gatewayFee;
 
         const appUrl = env.APP_URL || 'https://digital-website.digitch.workers.dev';
         const returnUrl = `${appUrl}/payment-return.html`;
@@ -1008,7 +1051,7 @@ export default {
               ...(pricedItems
                 ? pricedItems.map(it => ({ name: it.name, price: it.unitPrice, quantity: it.qty }))
                 : [{ name: finalProductName, price: Number(computedAmount), quantity: 1 }]),
-              { name: 'Payment processing fee', price: SLICKPAY_GATEWAY_FEE_DA, quantity: 1 },
+              { name: 'Payment processing fee', price: gatewayFee, quantity: 1 },
             ],
             firstname,
             lastname,
@@ -1055,7 +1098,7 @@ export default {
             product_name: finalProductName || '',
             amount:       Number(chargeAmount),      // total actually charged to the customer (products + gateway fee)
             productsAmount: Number(computedAmount),  // products-only subtotal, for reference
-            gatewayFee:   SLICKPAY_GATEWAY_FEE_DA,
+            gatewayFee:   gatewayFee,
             items:        pricedItems || null,
             userId:       user_id    || '',
             userEmail:    user_email || email || '',
