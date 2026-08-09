@@ -2355,21 +2355,6 @@ async function renderLoginActivity() {
 // ── Deliver modal — field management ───────────────────────────
 let _deliverFieldCount = 0;
 
-function _deliverFieldHTML(label, value, index, removable) {
-  return `
-  <div class="deliver-field-row" id="dfr-${index}" style="margin-bottom:.75rem">
-    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
-      <input class="form-input deliver-field-label" id="dfl-${index}" value="${label}"
-        placeholder="Label (e.g. Email)" style="flex:1;font-size:.78rem;padding:6px 9px;font-weight:700"/>
-      ${removable ? `<button type="button" onclick="removeDeliverField(${index})" title="Remove"
-        style="width:26px;height:26px;border-radius:6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#EF4444;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-        <i class="fa-solid fa-xmark" style="font-size:.7rem"></i></button>` : ''}
-    </div>
-    <input class="form-input deliver-field-value" id="dfv-${index}" value="${value}"
-      placeholder="Value" style="font-size:.85rem;font-family:monospace"/>
-  </div>`;
-}
-
 function openDeliverModal(purchaseId) {
   const purchase = _adminAllPurchases.find(p => p.id === purchaseId);
   if (!purchase) { showToast('Purchase not found'); return; }
