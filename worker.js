@@ -179,7 +179,7 @@ const SlickPay = {
   },
 
   async getInvoice(env, id) {
-    return slickpayRequest(env, `/users/invoices/${id}`, { method: 'GET' });
+    return slickpayRequest(env, `/users/invoices/${encodeURIComponent(id)}`, { method: 'GET' });
   },
 
   async commission(env, amount) {
@@ -363,6 +363,27 @@ function docToObject(doc) {
   return { id, ...Object.fromEntries(Object.entries(doc.fields).map(([k, v]) => [k, fromFirestoreValue(v)])) };
 }
 
+// Every Firestore helper below builds a REST URL by interpolating a document
+// ID directly into the path (`${base}/${collection}/${id}`). Several of
+// those IDs originate from client input (cart productIds, the order_id in
+// the public /api/checkout/status/:order_id URL, etc.) and were previously
+// passed through unsanitized. A value like `../users/<uid>` or
+// `..%2Fusers%2F<uid>` would escape the intended collection and let an
+// unauthenticated caller read or write an arbitrary document in ANY
+// collection — a path-traversal bug, not just a Firestore-permissions one,
+// since these requests go out authenticated as our own service account.
+// Real Firestore document IDs never contain "/", so we hard-reject anything
+// that does (after decoding %2F too) rather than trying to encode around it.
+function assertSafeDocId(id) {
+  const raw = String(id ?? '');
+  let decoded = raw;
+  try { decoded = decodeURIComponent(raw); } catch { /* leave as-is */ }
+  if (!raw || raw.includes('/') || decoded.includes('/') || raw === '.' || raw === '..') {
+    throw new Error(`Invalid document ID: ${JSON.stringify(raw)}`);
+  }
+  return encodeURIComponent(raw);
+}
+
 const Firestore = {
   async _baseUrl(env) {
     const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
@@ -370,9 +391,10 @@ const Firestore = {
   },
 
   async getDoc(env, collection, id) {
+    const safeId = assertSafeDocId(id);
     const token = await getFirebaseAccessToken(env);
     const base  = await this._baseUrl(env);
-    const res = await fetch(`${base}/${collection}/${id}`, {
+    const res = await fetch(`${base}/${collection}/${safeId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.status === 404) return null;
@@ -394,11 +416,12 @@ const Firestore = {
   },
 
   async updateDoc(env, collection, id, data) {
+    const safeId = assertSafeDocId(id);
     const token = await getFirebaseAccessToken(env);
     const base  = await this._baseUrl(env);
     const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toFirestoreValue(v)]));
     const mask = Object.keys(data).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
-    const res = await fetch(`${base}/${collection}/${id}?${mask}`, {
+    const res = await fetch(`${base}/${collection}/${safeId}?${mask}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields }),
@@ -408,10 +431,11 @@ const Firestore = {
   },
 
   async setDoc(env, collection, id, data) {
+    const safeId = assertSafeDocId(id);
     const token = await getFirebaseAccessToken(env);
     const base  = await this._baseUrl(env);
     const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toFirestoreValue(v)]));
-    const res = await fetch(`${base}/${collection}/${id}`, {
+    const res = await fetch(`${base}/${collection}/${safeId}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields }),
@@ -421,9 +445,10 @@ const Firestore = {
   },
 
   async deleteDoc(env, collection, id) {
+    const safeId = assertSafeDocId(id);
     const token = await getFirebaseAccessToken(env);
     const base  = await this._baseUrl(env);
-    const res = await fetch(`${base}/${collection}/${id}`, {
+    const res = await fetch(`${base}/${collection}/${safeId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -513,19 +538,37 @@ async function deleteFirebaseAuthUser(env, uid) {
 // index.html (prod.variables[].items[].price, legacy prod.variants[].price,
 // falling back to prod.price).
 // ---------------------------------------------------------------
-function resolveVariantPrice(product, variantLabel) {
-  if (!variantLabel) return product.price;
+// Returns { price, label }. `label` is only ever a variant label that
+// actually exists on the product doc (i.e. text an admin typed into the
+// dashboard) — never the raw client-supplied string. That matters because
+// this label later gets persisted into `slickpay_orders` / `purchases`
+// (as `productName` / `variantLabel`) and rendered with innerHTML in both
+// admin.html and index.html. If we accepted the client's variantLabel
+// verbatim, anyone could send `variant_label: "<img src=x onerror=...>"`
+// at checkout — it'd still price at the base product.price (no match), but
+// the payload would be stored and later executed in the admin's or a
+// buyer's browser. Requiring an exact match against the product's own
+// variant list closes that off at the source, before it's ever written.
+function resolveVariant(product, variantLabel) {
+  if (!variantLabel) return { price: product.price, label: null };
   if (Array.isArray(product.variables)) {
     for (const grp of product.variables) {
       const item = (grp.items || []).find(it => it.label === variantLabel || variantLabel.split(' / ').includes(it.label));
-      if (item && item.price != null) return item.price;
+      if (item && item.price != null) return { price: item.price, label: variantLabel };
     }
   }
   if (Array.isArray(product.variants)) {
     const item = product.variants.find(v => v.label === variantLabel);
-    if (item && item.price != null) return item.price;
+    if (item && item.price != null) return { price: item.price, label: variantLabel };
   }
-  return product.price;
+  // No match — this isn't a real variant of the product, so don't trust or
+  // persist the label. Fall back to the base price with no variant text.
+  return { price: product.price, label: null };
+}
+
+// Kept as a thin wrapper for callers that only need the price.
+function resolveVariantPrice(product, variantLabel) {
+  return resolveVariant(product, variantLabel).price;
 }
 
 async function priceCartItems(env, cartItems) {
@@ -536,16 +579,16 @@ async function priceCartItems(env, cartItems) {
     const productId = item.productId || item.id;
     const product = await Firestore.getDoc(env, 'products', productId);
     if (!product) throw new Error(`Product not found: ${productId}`);
-    const unitPrice = resolveVariantPrice(product, item.variantLabel);
+    const { price: unitPrice, label: variantLabel } = resolveVariant(product, item.variantLabel);
     const qty = Math.max(1, parseInt(item.qty, 10) || 1);
     return {
       productId,
-      name: item.variantLabel ? `${product.name} — ${item.variantLabel}` : product.name,
+      name: variantLabel ? `${product.name} — ${variantLabel}` : product.name,
       images: product.images || [],
       category: product.category || '',
       unitPrice,
       qty,
-      variantLabel: item.variantLabel || null,
+      variantLabel,
       // Carried along so deliverOrder() doesn't need a second product fetch.
       autoDeliver:   !!product.autoDeliver,
       deliveryLink:  product.deliveryLink  || '',

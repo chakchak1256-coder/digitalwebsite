@@ -23,11 +23,12 @@
     "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-fbsvc@generalwebsite-580f9.iam.gserviceaccount.com",
     // "sandbox" uses devapi.slick-pay.com  |  "production" uses prodapi.slick-pay.com
     "SLICKPAY_ENV": "production",
-    // NOTE: ADMIN_API_KEY is NOT set here (secrets never go in "vars").
-    // Before deploying, run:
-    //   npx wrangler secret put ADMIN_API_KEY
-    // and paste the exact same value that's in ADMIN_API_KEY_HEADER in firebase.js.
-    // This protects /api/upload-file and /api/delete-file from public access.
+    // NOTE: admin-only routes (upload-file, delete-file, delete-user,
+    // login-history, log-access) are protected by requireAdminAuth() in
+    // worker.js, which verifies a Firebase ID token (Authorization: Bearer
+    // <token>) against ADMIN_EMAIL — not a static API key. There is no
+    // ADMIN_API_KEY in this codebase; don't set one expecting it to do
+    // anything.
     // Public base URL of your R2 bucket (r2.dev URL or connected custom domain,
     // NO trailing slash) — required by POST /api/upload-file in worker.js.
     // Example: "https://pub-xxxxxxxxxxxxxxxx.r2.dev"
