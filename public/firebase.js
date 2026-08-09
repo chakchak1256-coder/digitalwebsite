@@ -433,7 +433,7 @@ const Reviews = {
       // rules) — same pattern as DB.add() above, so this failure is no
       // longer silently swallowed.
       if (e.code === 'permission-denied' || (e.message && e.message.includes('Missing or insufficient permissions'))) {
-        console.error('[DIGITCH] Review delete BLOCKED by Firestore security rules. The admin panel does not sign in with Firebase Auth, so make sure your rules allow "delete" on /reviews/{id} without requiring request.auth.');
+        console.error('[DIGITCH] Review delete BLOCKED by Firestore security rules. The admin panel signs in with Firebase Auth as ADMIN_EMAIL (see Auth.login above) — make sure your rules allow "delete" on /reviews/{id} when request.auth.token.email == "<your ADMIN_EMAIL>", not by removing the request.auth requirement entirely (that would let anyone on the internet delete reviews).');
       } else {
         console.error('Reviews.delete:', e);
       }

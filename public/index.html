@@ -4363,11 +4363,11 @@ function mpMakeCard(purchase) {
   const safeLink = (purchase.accessLink||'').replace(/'/g, "\'").replace(/"/g, '&quot;');
   card.innerHTML = `
     <div class="pc-image">
-      <img src="${img}" alt="${purchase.productName}" loading="lazy"/>
-      <span class="pc-type-badge">${typeIcon} ${purchase.productType || 'Digital'}</span>
+      <img src="${img}" alt="${escapeHtml(purchase.productName||'')}" loading="lazy"/>
+      <span class="pc-type-badge">${typeIcon} ${escapeHtml(purchase.productType || 'Digital')}</span>
     </div>
     <div class="pc-body">
-      <div class="pc-name">${purchase.productName}</div>
+      <div class="pc-name">${escapeHtml(purchase.productName||'')}</div>
       <div class="pc-date"><i class="fa-regular fa-calendar"></i> Purchased ${date}</div>
       <div class="pc-actions">
         <button class="pc-access-btn" onclick="mpOpenDetailModal(_mpPurchases.find(p=>p.id==='${purchase.id}') || {id:'${purchase.id}'})">
@@ -4480,7 +4480,7 @@ function mpOpenDetailModal(purchase) {
       accessHtml = `<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:var(--radius-sm);padding:1rem">
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
           <i class="fa-solid fa-book-open" style="font-size:1.3rem;color:#3B82F6"></i>
-          <div><div style="font-size:.75rem;color:#3B82F6;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Ebook</div>${title?`<div style="font-size:.88rem;font-weight:600;color:var(--text)">${title}</div>`:''} ${author?`<div style="font-size:.78rem;color:var(--text-muted)">by ${author}</div>`:''}</div>
+          <div><div style="font-size:.75rem;color:#3B82F6;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Ebook</div>${title?`<div style="font-size:.88rem;font-weight:600;color:var(--text)">${escapeHtml(title)}</div>`:''} ${author?`<div style="font-size:.78rem;color:var(--text-muted)">by ${escapeHtml(author)}</div>`:''}</div>
         </div>
         ${openCopyBtns(url, 'Download Ebook')}
       </div>`;
@@ -4515,7 +4515,7 @@ function mpOpenDetailModal(purchase) {
     // Append note if any
     if (note) {
       accessHtml += `<div style="margin-top:.8rem;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.83rem;color:var(--text);line-height:1.6">
-        <i class="fa-solid fa-circle-info" style="color:#F59E0B;margin-right:.4rem"></i> ${note}
+        <i class="fa-solid fa-circle-info" style="color:#F59E0B;margin-right:.4rem"></i> ${escapeHtml(note)}
       </div>`;
     }
   } else {
@@ -4529,8 +4529,8 @@ function mpOpenDetailModal(purchase) {
     <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.2rem">
       <img src="${img}" alt="" style="width:90px;height:68px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--bg3)"/>
       <div>
-        <div style="font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.2rem">${purchase.productType || 'Digital'}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;line-height:1.3">${purchase.productName || '—'}</div>
+        <div style="font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.2rem">${escapeHtml(purchase.productType || 'Digital')}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;line-height:1.3">${escapeHtml(purchase.productName || '—')}</div>
       </div>
     </div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem">

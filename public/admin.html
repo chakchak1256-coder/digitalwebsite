@@ -2013,9 +2013,13 @@ function _renderPurchasesTable(all) {
       const effStatus = getEffectiveStatus(p);
       const isCanceled = effStatus === 'canceled_by_admin' || effStatus === 'canceled_by_client';
       const isCompleted = effStatus === 'completed' || effStatus === 'picked_up';
-      const safePN = (p.productName||'').replace(/'/g,"\\'");
+      // HTML-escape (handles ", <, >, &, ') so this is safe both as element
+      // content and inside the single-quoted JS string literal passed to
+      // the onclick handler below — escapeHtml() turning ' into &#039;
+      // neutralizes it for both contexts at once.
+      const safePN = escapeHtml(p.productName||'');
       const accessSnippet = isCompleted
-        ? (p.accessLink ? `<div class="pur-item-access" title="${p.accessLink}">✓ ${p.accessLink}</div>`
+        ? (p.accessLink ? `<div class="pur-item-access" title="${escapeHtml(p.accessLink)}">✓ ${escapeHtml(p.accessLink)}</div>`
           : `<div style="font-size:.68rem;color:var(--accent);margin-top:.2rem">✓ Access fields set</div>`) : '';
       const imgEl = p.productImage
         ? `<img class="pur-item-img" src="${p.productImage}" alt="">`
@@ -2030,9 +2034,9 @@ function _renderPurchasesTable(all) {
       return `<div class="pur-item-row">
         ${imgEl}
         <div class="pur-item-info">
-          <div class="pur-item-name">${p.productName||'—'}</div>
-          ${p.variantLabel ? `<span class="pur-item-variant">${p.variantLabel}</span>` : ''}
-          ${p.productType ? `<div style="font-size:.68rem;color:var(--text-muted);margin-top:.1rem">${p.productType}</div>` : ''}
+          <div class="pur-item-name">${escapeHtml(p.productName||'—')}</div>
+          ${p.variantLabel ? `<span class="pur-item-variant">${escapeHtml(p.variantLabel)}</span>` : ''}
+          ${p.productType ? `<div style="font-size:.68rem;color:var(--text-muted);margin-top:.1rem">${escapeHtml(p.productType)}</div>` : ''}
           ${accessSnippet}
         </div>
         <div class="pur-item-actions">${deliverBtn}${cancelRestoreBtn}${deleteBtn}</div>
@@ -3101,7 +3105,19 @@ function exportPurchasesCSV() {
       (p.orderNotes || '').replace(/\n/g, ' ')
     ]);
   });
-  const csv = rows.map(r => r.map(c => '"' + String(c || '').replace(/"/g, '""') + '"').join(',')).join('\n');
+  // CSV-injection guard: several of these fields (customer name/phone,
+  // product/variant text, notes) are ultimately customer-submitted. If a
+  // value starts with =, +, -, @, or a tab/CR, Excel/Sheets can interpret
+  // it as a formula when the file is opened (e.g. a "name" of
+  // `=cmd|'/c calc'!A1` or `=HYPERLINK(...)`). Prefixing such values with a
+  // leading apostrophe forces spreadsheet apps to treat them as plain text
+  // instead of evaluating them, without changing how the value looks in
+  // the CSV itself for everything else.
+  const csvSafe = (v) => {
+    const s = String(v || '');
+    return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  };
+  const csv = rows.map(r => r.map(c => '"' + csvSafe(c).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF' + csv);
   a.download = 'purchases_' + new Date().toISOString().split('T')[0] + '.csv';
