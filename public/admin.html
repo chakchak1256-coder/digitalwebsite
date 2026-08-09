@@ -402,20 +402,6 @@ select.form-input option{background:var(--bg2)}
 }
 .announcement-preview.visible{display:block}
 
-/* ===== COUPON MANAGER ===== */
-.coupon-table{width:100%;border-collapse:collapse}
-.coupon-table th{padding:.6rem .9rem;text-align:left;font-size:.7rem;font-weight:700;
-  letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);white-space:nowrap}
-.coupon-table td{padding:.7rem .9rem;border-top:1px solid var(--border);font-size:.84rem;vertical-align:middle}
-.coupon-code{font-family:monospace;font-weight:800;font-size:.9rem;
-  background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);
-  color:var(--accent);padding:2px 8px;border-radius:5px;letter-spacing:.06em}
-.coupon-add-form{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:1.1rem;margin-top:1rem;display:none}
-.coupon-add-form.visible{display:block}
-.coupon-form-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:.6rem;align-items:end}
-@media(max-width:700px){.coupon-form-grid{grid-template-columns:1fr 1fr}}
-
 /* ===== NEW ORDER NOTIFICATION ===== */
 #order-notif-bar{
   position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(100px);
@@ -548,7 +534,6 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-group">
         <div class="nav-group-label">Store</div>
         <div class="nav-item" onclick="showPanel('reviews')"><i class="fa-solid fa-star"></i> Reviews</div>
-        <div class="nav-item" onclick="showPanel('coupons')"><i class="fa-solid fa-tag"></i> Coupons</div>
         <div class="nav-item" onclick="showPanel('announcement')"><i class="fa-solid fa-bullhorn"></i> Announcement</div>
         <div class="nav-item" onclick="showPanel('social-links')"><i class="fa-solid fa-share-nodes"></i> Social Links</div>
         <div class="nav-item" onclick="showPanel('branding')"><i class="fa-solid fa-palette"></i> Branding</div>
@@ -859,52 +844,6 @@ select.form-input option{background:var(--bg2)}
         </p>
         <div class="table-wrap">
           <table><thead><tr><th>Date &amp; Time</th><th>IP Address</th><th>Location</th><th>Device</th></tr></thead><tbody id="login-activity-tbody"></tbody></table>
-        </div>
-      </div>
-
-      <!-- COUPONS -->
-      <div class="panel" id="panel-coupons">
-        <div class="sec-header">
-          <span class="sec-title">Coupon Manager</span>
-          <button class="btn btn-primary" onclick="toggleCouponForm()"><i class="fa-solid fa-plus"></i> New Coupon</button>
-        </div>
-
-        <!-- Add coupon form -->
-        <div class="coupon-add-form" id="coupon-add-form">
-          <div style="font-size:.85rem;font-weight:700;margin-bottom:.85rem;color:var(--text)"><i class="fa-solid fa-tag" style="color:var(--accent);margin-right:.35rem"></i>New Coupon</div>
-          <div class="coupon-form-grid">
-            <div class="form-group">
-              <label class="form-label">Code</label>
-              <input class="form-input" id="cp-code" placeholder="PROMO20" style="text-transform:uppercase;font-family:monospace;font-weight:700;letter-spacing:.06em"/>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Type</label>
-              <select class="form-input" id="cp-type">
-                <option value="percent">% Percent</option>
-                <option value="fixed">DA Fixed</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Value</label>
-              <input class="form-input" id="cp-value" type="number" min="1" placeholder="20"/>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Expiry</label>
-              <input class="form-input" id="cp-expiry" type="date"/>
-            </div>
-          </div>
-          <div style="display:flex;gap:.6rem;margin-top:.85rem">
-            <button class="btn btn-primary btn-sm" onclick="saveCoupon()"><i class="fa-solid fa-check"></i> Save Coupon</button>
-            <button class="btn btn-outline btn-sm" onclick="toggleCouponForm()"><i class="fa-solid fa-xmark"></i> Cancel</button>
-          </div>
-        </div>
-
-        <!-- Coupon table -->
-        <div class="table-wrap" style="margin-top:1rem">
-          <table class="coupon-table">
-            <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Expiry</th><th>Actions</th></tr></thead>
-            <tbody id="coupons-tbody"></tbody>
-          </table>
         </div>
       </div>
 
@@ -1314,7 +1253,6 @@ function showPanel(name) {
   if (name === 'reviews') { startReviewsListener(); }
   if (name === 'users') { renderUsersAdmin(); } // async — ok
   if (name === 'login-activity') { renderLoginActivity(); } // async — ok
-  if (name === 'coupons') { renderCoupons(); }
   if (name === 'announcement') { loadAnnouncementForm(); }
   if (name === 'social-links') { loadSocialLinksForm(); }
   if (name === 'branding') { loadBrandingForm(); }
@@ -1322,7 +1260,7 @@ function showPanel(name) {
   const el = document.getElementById('panel-' + name);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', 'login-activity':'Login Activity', coupons:'Coupon Manager', announcement:'Announcement Banner', reviews:'Reviews', 'social-links':'Social Media Links', 'branding':'Store Branding' };
+  const titles = { dashboard:'Dashboard', analytics:'Product Analytics', products:'Products List', 'add-product':'Add Product', categories:'Categories', 'add-category':'Add Category', purchases:'Manage Purchases', users:'Users', 'login-activity':'Login Activity', announcement:'Announcement Banner', reviews:'Reviews', 'social-links':'Social Media Links', 'branding':'Store Branding' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   currentPanel = name;
   if (name === 'add-product') loadProductForm();
@@ -3056,68 +2994,6 @@ async function saveSocialLinks() {
 }
 
 // ================================================================
-// ===== FEATURE: COUPON MANAGER =====
-// ================================================================
-function toggleCouponForm() {
-  const f = document.getElementById('coupon-add-form');
-  f.classList.toggle('visible');
-  if (f.classList.contains('visible')) {
-    document.getElementById('cp-code').value = '';
-    document.getElementById('cp-value').value = '';
-    document.getElementById('cp-expiry').value = '';
-    document.getElementById('cp-type').value = 'percent';
-    document.getElementById('cp-code').focus();
-  }
-}
-
-function renderCoupons() {
-  const s = Settings.get();
-  const coupons = s.coupons || {};
-  const tbody = document.getElementById('coupons-tbody');
-  const entries = Object.entries(coupons);
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="border:none;padding:2rem"><i class="fa-solid fa-tag" style="font-size:2rem;opacity:.15;display:block;margin-bottom:.5rem"></i><p>No coupons yet. Add your first one above.</p></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = entries.map(([code, c]) => {
-    const expired = c.expiry && new Date(c.expiry) < new Date();
-    const expiryStr = c.expiry ? new Date(c.expiry).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' }) : '—';
-    return `<tr>
-      <td><span class="coupon-code">${code}</span></td>
-      <td><span class="status-badge" style="background:rgba(99,102,241,.1);color:#818CF8;border:1px solid rgba(99,102,241,.2)">${c.type === 'percent' ? 'Percent' : 'Fixed DA'}</span></td>
-      <td style="font-weight:700;color:var(--accent)">${c.type === 'percent' ? c.value + '%' : c.value + ' DA'}</td>
-      <td style="font-size:.8rem;${expired ? 'color:#EF4444' : 'color:var(--text-muted)'}">${expiryStr}${expired ? ' <span style="font-size:.68rem;background:rgba(239,68,68,.1);padding:1px 6px;border-radius:3px;border:1px solid rgba(239,68,68,.2)">Expired</span>' : ''}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteCoupon('${code}')"><i class="fa-solid fa-trash"></i></button></td>
-    </tr>`;
-  }).join('');
-}
-
-async function saveCoupon() {
-  const code = document.getElementById('cp-code').value.trim().toUpperCase();
-  const type = document.getElementById('cp-type').value;
-  const value = parseFloat(document.getElementById('cp-value').value);
-  const expiry = document.getElementById('cp-expiry').value;
-  if (!code || !value || isNaN(value)) { showToast('Enter a code and value'); return; }
-  const s = Settings.get();
-  const coupons = { ...(s.coupons || {}) };
-  coupons[code] = { type, value, expiry: expiry || null };
-  await Settings.save({ coupons });
-  renderCoupons();
-  toggleCouponForm();
-  showToast('✅ Coupon saved: ' + code);
-}
-
-async function deleteCoupon(code) {
-  if (!confirm('Delete coupon ' + code + '?')) return;
-  const s = Settings.get();
-  const coupons = { ...(s.coupons || {}) };
-  delete coupons[code];
-  await Settings.save({ coupons });
-  renderCoupons();
-  showToast('Coupon deleted.');
-}
-
-// ================================================================
 // ===== FEATURE: NEW ORDER NOTIFICATION =====
 // ================================================================
 let _lastKnownOrderCount = -1;
@@ -3298,15 +3174,28 @@ function renderReviewsAdmin() {
   tbody.innerHTML = rows.map(r => {
     const stars = '★'.repeat(r.stars || 0) + '☆'.repeat(5 - (r.stars || 0));
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-DZ', { year:'numeric', month:'short', day:'numeric' }) : '—';
-    const comment = r.comment ? `<span title="${r.comment.replace(/"/g,'&quot;')}">${r.comment.length > 50 ? r.comment.slice(0,50) + '…' : r.comment}</span>` : '<span style="color:var(--text-muted);font-style:italic">—</span>';
+    // Stored XSS fix: r.userName, r.productName and r.comment are
+    // customer-submitted (a review's comment/name is free text from the
+    // storefront) and were previously interpolated into innerHTML
+    // unescaped. A malicious review (e.g. a comment containing
+    // <img src=x onerror=...>) would execute in the admin's session the
+    // moment this panel rendered — before the review was even approved,
+    // since onSnapshotAll() streams pending reviews too. Every dynamic
+    // field below is now run through escapeHtml(), matching how the rest
+    // of admin.html (Users, Purchases, Login Activity) already handles
+    // untrusted data.
+    const safeComment = r.comment
+      ? `<span title="${escapeHtml(r.comment)}">${escapeHtml(r.comment.length > 50 ? r.comment.slice(0,50) + '…' : r.comment)}</span>`
+      : '<span style="color:var(--text-muted);font-style:italic">—</span>';
+    const safeId = escapeHtml(r.id);
     return `<tr>
-      <td style="font-weight:600">${r.userName || '—'}</td>
-      <td>${r.productName || '—'}</td>
+      <td style="font-weight:600">${escapeHtml(r.userName || '—')}</td>
+      <td>${escapeHtml(r.productName || '—')}</td>
       <td style="color:#F59E0B;letter-spacing:.05em;font-size:1rem">${stars}</td>
-      <td style="max-width:200px;font-size:.82rem;color:var(--text-muted)">${comment}</td>
+      <td style="max-width:200px;font-size:.82rem;color:var(--text-muted)">${safeComment}</td>
       <td style="font-size:.8rem;color:var(--text-muted)">${date}</td>
       <td>
-        <button class="btn btn-sm btn-danger" onclick="confirmDeleteReview('${r.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDeleteReview('${safeId}')"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');

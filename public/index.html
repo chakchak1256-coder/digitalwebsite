@@ -1305,20 +1305,6 @@ body.flash-on #mobile-nav{top:182px}
 .pd-stars i{font-size:.85rem;color:#F59E0B}
 .pd-stars i.empty{color:var(--border-strong)}
 
-/* ===== COUPON ===== */
-#co-coupon-wrap{margin-bottom:1rem}
-.co-coupon-row{display:flex;gap:.5rem}
-.co-coupon-input{flex:1;padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg3);
-  border:1px solid var(--border-strong);color:var(--text);font-size:.88rem;outline:none;font-family:inherit;
-  transition:border-color var(--transition);text-transform:uppercase;letter-spacing:.06em}
-.co-coupon-input:focus{border-color:var(--accent)}
-.co-coupon-apply{padding:10px 16px;border-radius:var(--radius-sm);background:rgba(var(--accent-rgb),.1);
-  border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent);font-size:.83rem;font-weight:700;
-  cursor:pointer;transition:all var(--transition);white-space:nowrap;font-family:inherit}
-.co-coupon-apply:hover{background:rgba(var(--accent-rgb),.2)}
-#co-coupon-feedback{font-size:.78rem;margin-top:.3rem;display:none}
-#co-coupon-feedback.ok{color:#10B981;display:block}
-#co-coupon-feedback.err{color:#EF4444;display:block}
 
 /* ===== AUTH STATE — CSS-driven, no flash ===== */
 /* Default (logged out): show sign-in, hide user btn + my products */
@@ -2264,16 +2250,6 @@ footer::before{
       <div class="form-group">
         <label>Notes <span style="font-size:.74rem;color:var(--text-muted)">(optional)</span></label>
         <textarea class="form-input" id="co-notes" rows="2" placeholder="Special requests..."></textarea>
-      </div>
-
-      <!-- Coupon / Promo Code -->
-      <div id="co-coupon-wrap">
-        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:.35rem">Promo Code <span style="font-size:.74rem;font-weight:400">(optional)</span></label>
-        <div class="co-coupon-row">
-          <input class="co-coupon-input" id="co-coupon-input" type="text" placeholder="ENTER CODE"/>
-          <button class="co-coupon-apply" onclick="applyCoupon()">Apply</button>
-        </div>
-        <div id="co-coupon-feedback"></div>
       </div>
 
       <div style="display:flex;gap:.7rem;margin-top:1rem">
@@ -3546,27 +3522,13 @@ function buildOrderSummaryHTML(surchargeRate, surchargeFlat) {
   // coInitiateSlickPayCheckout / worker.js), independent of this display.
   const finalTotal = baseTotal;
   const feeRow = '';
-  // Coupon discount row (if a coupon has been applied)
-  let couponRow = '';
-  let couponDiscount = 0;
-  if (typeof _appliedCoupon !== 'undefined' && _appliedCoupon) {
-    couponDiscount = _appliedCoupon.type === 'percent'
-      ? Math.round(finalTotal * _appliedCoupon.value / 100)
-      : Math.min(_appliedCoupon.value, finalTotal);
-    couponRow = `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:.45rem">
-      <span style="font-size:.8rem;color:#10B981;display:flex;align-items:center;gap:.35rem"><i class="fa-solid fa-tag"></i> Promo: ${_appliedCoupon.code}</span>
-      <span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#10B981">-${couponDiscount.toLocaleString()} ${s.currency||'DA'}</span>
-    </div>`;
-  }
-  const grandTotal = finalTotal - couponDiscount;
   return `<div style="border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);padding:.85rem 1rem;margin-bottom:1rem">
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem"><i class="fa-solid fa-receipt" style="color:var(--accent)"></i> Order Summary</div>
     ${rows}
     ${feeRow}
-    ${couponRow}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem;${(couponDiscount>0)?'border-top:1px solid var(--border);':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.55rem;margin-top:.1rem;">
       <span style="font-size:.88rem;font-weight:700;color:var(--text)">Total</span>
-      <span style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent)">${grandTotal.toLocaleString()} ${s.currency||'DA'}</span>
+      <span style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent)">${finalTotal.toLocaleString()} ${s.currency||'DA'}</span>
     </div>
   </div>`;
 }
@@ -3863,12 +3825,6 @@ function _doCloseCheckout() {
 
 function closeCheckout() {
   _doCloseCheckout();
-  // Reset any applied coupon
-  if (typeof _appliedCoupon !== 'undefined') { _appliedCoupon = null; }
-  const _couponInp = document.getElementById('co-coupon-input');
-  if (_couponInp) _couponInp.value = '';
-  const _couponFb = document.getElementById('co-coupon-feedback');
-  if (_couponFb) { _couponFb.className = ''; _couponFb.textContent = ''; }
   // Re-open cart only if the success screen is NOT showing
   const successShown = document.getElementById('co-success')?.style.display === 'block';
   if (!successShown) {
@@ -4769,27 +4725,6 @@ function initFlashBanner() {
   }
 }
 // (initFlashBanner is called from the db:update handler above)
-
-// ================================================================
-// ===== FEATURE: COUPON / PROMO CODE =====
-// ================================================================
-let _appliedCoupon = null;
-
-function applyCoupon() {
-  const code = (document.getElementById('co-coupon-input').value || '').trim().toUpperCase();
-  const fb = document.getElementById('co-coupon-feedback');
-  if (!code) { fb.className = 'err'; fb.textContent = 'Enter a promo code.'; return; }
-  const s = Settings.get();
-  const coupons = s.coupons || {};
-  if (!coupons[code]) {
-    fb.className = 'err'; fb.textContent = '✕ Invalid or expired code.'; return;
-  }
-  const c = coupons[code];
-  _appliedCoupon = { code, ...c };
-  fb.className = 'ok';
-  fb.textContent = `✓ ${c.type === 'percent' ? c.value + '% off' : c.value + ' DA off'} applied!`;
-  _coRefreshOrderSummary();
-}
 
 // ================================================================
 // ===== FEATURE: REVIEWS =====
