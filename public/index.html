@@ -2687,44 +2687,29 @@ async function claimFreeProduct(prod) {
     // Fail open — a transient read error shouldn't block a legitimate claim.
   }
 
-  const fullProd = (DB.getById ? DB.getById('products', prod.id) : null) || prod;
-  const orderId  = 'FREE-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
-
+  // The actual claim goes through the Worker (/api/claim-free) rather than
+  // writing the purchase doc straight from this browser. The server
+  // re-derives the price and delivery info from the product doc itself —
+  // the same "never trust the client" principle /api/checkout already
+  // applies to paid orders — instead of trusting whatever this tab sends.
   try {
-    const purchase = await Purchases.add(
-      user.id, user.email,
-      {
-        id:       prod.id,
-        name:     prod.variantLabel ? `${prod.name} — ${prod.variantLabel}` : prod.name,
-        images:   fullProd.images || [],
-        category: fullProd.category || '',
-      },
-      {
-        customerName:  user.name  || '',
-        customerEmail: user.email || '',
-        paymentMethod: 'free',
-        orderId,
-        variantLabel:  prod.variantLabel || null,
-      }
-    );
+    const idToken = await UserAuth.getIdToken();
+    if (!idToken) { openLoginModal('checkout'); return; }
 
-    if (fullProd.autoDeliver && fullProd.deliveryLink) {
-      const dtype = fullProd.deliveryType === 'pdf' ? 'pdf' : (fullProd.deliveryType === 'both' ? 'both' : 'link');
-      const accessData = {
-        '_DeliveryType': dtype,
-        'Download Link': fullProd.deliveryLink,
-      };
-      // Multi-file delivery: attach the full file list (if any) so My Products
-      // can offer every uploaded file, not just the first one. Independent of
-      // dtype so a merged link+files product delivers both together.
-      if (Array.isArray(fullProd.deliveryFiles) && fullProd.deliveryFiles.length) {
-        accessData['_Files'] = fullProd.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
-      }
-      await Purchases.update(purchase.id, {
-        accessData,
-        accessLink:   fullProd.deliveryLink,
-        deliveryType: dtype,
-      });
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    const res = await fetch(`${backendUrl}/api/claim-free`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+      body: JSON.stringify({ productId: prod.id, variantLabel: prod.variantLabel || null }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
+
+    if (data.alreadyOwned) {
+      showToast(`ℹ️ You already have "${prod.name}" — check My Products`);
+    } else if (data.purchase && data.purchase.status === 'completed') {
       showToast(`✅ "${prod.name}" is free — added to My Products!`);
     } else {
       showToast(`✅ "${prod.name}" added — the seller will deliver it shortly.`);

@@ -1505,7 +1505,17 @@ function loadProductForm() {
     if (btnText) btnText.textContent = 'Update Product';
   }
 }
-function editProduct(id) { editProductData = DB.getById('products', id); showPanel('add-product'); }
+async function editProduct(id) {
+  const base = DB.getById('products', id);
+  // Delivery fields no longer live on the public product doc — fetch them
+  // separately from products/{id}/private/delivery (admin-only) and merge
+  // them in before opening the form, so loadProductForm() below sees them
+  // exactly like it used to when they were on the same doc.
+  let delivery = null;
+  try { delivery = await DB.getProductDelivery(id); } catch(e) { /* best-effort */ }
+  editProductData = { ...base, ...(delivery || {}) };
+  showPanel('add-product');
+}
 function resetProductForm() {
   editProductData = null; productImages = []; variableGroups = [];
   document.getElementById('product-form').reset();
@@ -1728,6 +1738,14 @@ async function saveProduct(e) {
     description: document.getElementById('prod-desc').value.trim(),
     images: productImages,
     variables: variables,
+  };
+  // Delivery fields (deliveryLink / deliveryType / deliveryFiles / autoDeliver)
+  // are saved separately to products/{id}/private/delivery instead of onto
+  // the public product doc — that doc is what every storefront visitor's
+  // Firestore read (and DB._load()'s localStorage cache) picks up, so
+  // download links/files no longer belong on it. See DB.setProductDelivery
+  // in firebase.js and the matching Firestore security rule.
+  const deliveryData = {
     autoDeliver: autoDeliver && !!(deliveryLink || deliveryFiles.length),
     deliveryType: deliveryType,
     deliveryLink: deliveryLink,
@@ -1738,7 +1756,13 @@ async function saveProduct(e) {
   const btn = document.getElementById('save-prod-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span id="save-prod-btn-text">Saving…</span>'; }
   try {
-    if (id) await DB.update('products', id, data); else await DB.add('products', data);
+    let savedId = id;
+    if (id) {
+      await DB.update('products', id, data);
+    } else {
+      savedId = (await DB.add('products', data)).id;
+    }
+    await DB.setProductDelivery(savedId, deliveryData);
     // Only now that the new deliveryLink/deliveryFiles are safely persisted
     // is it safe to actually remove the old files from R2.
     if (_pendingDeliveryFileDeletions.length) {

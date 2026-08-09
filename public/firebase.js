@@ -38,6 +38,20 @@ const _storage = firebase.storage();
 const UserAuth = {
   _current: null,
 
+  // ID token for the currently signed-in customer (any user, not just the
+  // admin — unlike Auth.getIdToken() above, which is deliberately gated to
+  // ADMIN_EMAIL). Used to authenticate ordinary customers to Worker routes
+  // that need to know *which* signed-in user is calling, e.g.
+  // /api/claim-free. The token proves identity; it grants no special
+  // privilege by itself — the Worker verifies it independently and decides
+  // what that specific uid is allowed to do.
+  async getIdToken(forceRefresh) {
+    const u = _auth.currentUser;
+    if (!u) return null;
+    try { return await u.getIdToken(!!forceRefresh); }
+    catch (e) { return null; }
+  },
+
   init() {
     _auth.onAuthStateChanged(user => {
       if (user) {
@@ -774,6 +788,37 @@ const DB = {
       try { localStorage.setItem('dz_fc_' + col, JSON.stringify(this._cache[col])); } catch(e) {}
       this._emit(col);
     } catch(e) { console.error('DB.delete:', e); }
+  },
+
+  // --- Product delivery info (admin-only) -------------------------------
+  // deliveryLink / deliveryType / deliveryFiles / autoDeliver live in
+  // products/{id}/private/delivery instead of on the public product doc.
+  // That subdoc is never part of the products collection load above, so
+  // it never ends up in every visitor's Firestore read or the
+  // dz_fc_products localStorage cache — only the admin panel fetches it,
+  // one product at a time, when actually opening that product to edit it.
+  // Firestore security rules should restrict read/write on
+  // products/{id}/private/{doc} to the admin, same as other admin-only
+  // writes in this file.
+  async getProductDelivery(id) {
+    try {
+      const doc = await _db.collection('products').doc(id).collection('private').doc('delivery').get();
+      return doc.exists ? doc.data() : null;
+    } catch(e) {
+      console.error('DB.getProductDelivery:', e);
+      return null;
+    }
+  },
+
+  async setProductDelivery(id, data) {
+    try {
+      await _db.collection('products').doc(id).collection('private').doc('delivery')
+        .set({ ...data, updatedAt: new Date().toISOString() });
+      return true;
+    } catch(e) {
+      console.error('DB.setProductDelivery:', e);
+      throw e;
+    }
   },
 
   _emit(col) { window.dispatchEvent(new CustomEvent('db:update', { detail: col })); }
