@@ -44,6 +44,38 @@
 //      real login email + a strong password).
 //   2. Put that same email in ADMIN_EMAIL in firebase.js.
 //   3. npx wrangler secret put ADMIN_EMAIL   (same email, on the Worker)
+// Like requireAdminAuth, but for any signed-in customer — no ADMIN_EMAIL
+// check. Verifies the bearer token is a real, currently-valid Firebase
+// session via Google's own accounts:lookup endpoint (same mechanism as
+// requireAdminAuth), and returns who it belongs to. Used by routes that
+// need to know *which* customer is calling (e.g. /api/claim-free) without
+// requiring that caller to be the admin.
+async function requireUserAuth(request, env) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const m = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!m) return { ok: false, status: 401, error: 'Missing bearer token.' };
+  const idToken = m[1];
+
+  let lookup;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(env.FIREBASE_API_KEY || '')}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
+    );
+    lookup = await res.json();
+    if (!res.ok) {
+      return { ok: false, status: 401, error: (lookup && lookup.error && lookup.error.message) || 'Invalid or expired session — please log in again.' };
+    }
+  } catch (e) {
+    return { ok: false, status: 401, error: 'Could not verify session: ' + e.message };
+  }
+
+  const user = lookup && lookup.users && lookup.users[0];
+  if (!user || !user.localId) return { ok: false, status: 401, error: 'Unauthorized.' };
+
+  return { ok: true, uid: user.localId, email: user.email || '' };
+}
+
 async function requireAdminAuth(request, env) {
   if (!env.ADMIN_EMAIL) {
     // Fail closed: if the secret was never configured, refuse rather
@@ -571,6 +603,38 @@ function resolveVariantPrice(product, variantLabel) {
   return resolveVariant(product, variantLabel).price;
 }
 
+// ---------------------------------------------------------------
+// Delivery info — deliveryLink / deliveryType / deliveryFiles / autoDeliver
+// now live in products/{id}/private/delivery, an admin-only subdocument,
+// instead of on the public product doc. That's what keeps them out of
+// every storefront visitor's Firestore read (and the localStorage cache
+// DB._load() writes from it in firebase.js) before they've bought anything.
+// See admin.html's saveProduct(), which now writes here instead of onto
+// the product doc.
+//
+// Falls back to the legacy fields directly on the product doc for any
+// product that hasn't been re-saved from the admin panel since this
+// migration — safe to delete that fallback once every product has been
+// re-saved (or you've run a one-time migration) so nothing still has
+// delivery fields sitting on the public doc.
+// ---------------------------------------------------------------
+async function getProductDelivery(env, productId, productDoc) {
+  let priv = null;
+  try {
+    const safeId = assertSafeDocId(productId);
+    priv = await Firestore.getDoc(env, `products/${safeId}/private`, 'delivery');
+  } catch (e) {
+    console.error('[getProductDelivery] private doc fetch failed:', e.message);
+  }
+  const src = priv || productDoc || {};
+  return {
+    autoDeliver:   !!src.autoDeliver,
+    deliveryLink:  src.deliveryLink  || '',
+    deliveryType:  src.deliveryType  || 'link',
+    deliveryFiles: Array.isArray(src.deliveryFiles) ? src.deliveryFiles : [],
+  };
+}
+
 async function priceCartItems(env, cartItems) {
   // Fetch every product in the cart concurrently instead of one at a time —
   // a 5-item cart used to mean 5 sequential Firestore round-trips before
@@ -581,6 +645,7 @@ async function priceCartItems(env, cartItems) {
     if (!product) throw new Error(`Product not found: ${productId}`);
     const { price: unitPrice, label: variantLabel } = resolveVariant(product, item.variantLabel);
     const qty = Math.max(1, parseInt(item.qty, 10) || 1);
+    const delivery = await getProductDelivery(env, productId, product);
     return {
       productId,
       name: variantLabel ? `${product.name} — ${variantLabel}` : product.name,
@@ -590,10 +655,10 @@ async function priceCartItems(env, cartItems) {
       qty,
       variantLabel,
       // Carried along so deliverOrder() doesn't need a second product fetch.
-      autoDeliver:   !!product.autoDeliver,
-      deliveryLink:  product.deliveryLink  || '',
-      deliveryType:  product.deliveryType  || 'link',
-      deliveryFiles: product.deliveryFiles || [],
+      autoDeliver:   delivery.autoDeliver,
+      deliveryLink:  delivery.deliveryLink,
+      deliveryType:  delivery.deliveryType,
+      deliveryFiles: delivery.deliveryFiles,
     };
   }));
   return priced;
@@ -643,10 +708,11 @@ async function deliverOrder(env, order) {
       try {
         const product = await Firestore.getDoc(env, 'products', item.productId);
         if (product) {
-          autoDeliver   = !!product.autoDeliver;
-          deliveryLink  = product.deliveryLink || '';
-          deliveryType  = product.deliveryType || 'link';
-          deliveryFiles = product.deliveryFiles || [];
+          const delivery = await getProductDelivery(env, item.productId, product);
+          autoDeliver   = delivery.autoDeliver;
+          deliveryLink  = delivery.deliveryLink;
+          deliveryType  = delivery.deliveryType;
+          deliveryFiles = delivery.deliveryFiles;
           images        = product.images || [];
           category      = product.category || '';
           name          = name || product.name;
@@ -1238,6 +1304,97 @@ export default {
 
       } catch (err) {
         console.error('[checkout/status] unexpected error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
+    // ============================================================
+    // ROUTE: POST /api/claim-free
+    // Lets a signed-in customer claim a $0 product into their My Products,
+    // without trusting the client to say what's free or what it delivers.
+    // Mirrors deliverOrder()'s logic but re-derives everything server-side
+    // from the product doc — the same principle /api/checkout already
+    // follows for paid orders ("price is ALWAYS re-derived server-side,
+    // never trusted from the client"). This used to be done by the
+    // customer's own browser writing straight to Firestore, which meant
+    // anyone could, in principle, call the same Firestore write directly
+    // and hand themselves a purchase record with a fabricated accessLink —
+    // moving it here closes that off.
+    // ============================================================
+    if (path === '/api/claim-free' && method === 'POST') {
+      const auth = await requireUserAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
+
+        const productId = (body.productId || body.product_id || '').toString().trim();
+        if (!productId) return json({ error: 'productId is required.' }, 400);
+
+        const product = await Firestore.getDoc(env, 'products', productId);
+        if (!product) return json({ error: 'Product not found.' }, 404);
+
+        const { price, label: variantLabel } = resolveVariant(product, body.variantLabel || body.variant_label || null);
+        if (Number(price) > 0) {
+          return json({ error: 'This product is not free.' }, 400);
+        }
+
+        // Don't hand out a second copy of the same free product/variant.
+        const existing = await Firestore.queryCollection(env, 'purchases', [
+          ['userId', auth.uid], ['productId', productId], ['variantLabel', variantLabel],
+        ], 1);
+        if (existing[0]) {
+          return json({ ok: true, purchase: existing[0], alreadyOwned: true });
+        }
+
+        const now = new Date().toISOString();
+        const delivery = await getProductDelivery(env, productId, product);
+        const isAuto = !!(delivery.autoDeliver && delivery.deliveryLink);
+
+        let accessData = {};
+        if (isAuto) {
+          accessData = { '_DeliveryType': delivery.deliveryType || 'link', 'Download Link': delivery.deliveryLink };
+          if (Array.isArray(delivery.deliveryFiles) && delivery.deliveryFiles.length) {
+            accessData['_Files'] = delivery.deliveryFiles.map(f => ({ url: f.url, name: f.name }));
+          }
+        }
+
+        // Best-effort profile fields for the admin's Purchases view — not
+        // security-relevant (nobody else can read another user's purchase
+        // doc), just display context, so a missing users/{uid} doc doesn't
+        // block the claim.
+        let profile = {};
+        try { profile = (await Firestore.getDoc(env, 'users', auth.uid)) || {}; } catch { /* best-effort */ }
+
+        const purchaseDoc = {
+          userId:        auth.uid,
+          userEmail:     auth.email || profile.email || '',
+          productId,
+          productName:   variantLabel ? `${product.name || ''} — ${variantLabel}` : (product.name || ''),
+          productImage:  (product.images || [])[0] || '',
+          productType:   product.category || 'Digital',
+          accessLink:    isAuto ? delivery.deliveryLink : '',
+          accessData,
+          proofImages:   [],
+          customerName:  profile.name || '',
+          customerPhone: profile.phone || '',
+          customerEmail: auth.email || profile.email || '',
+          paymentMethod: 'free',
+          orderNotes:    '',
+          status:        isAuto ? 'completed' : 'pending',
+          purchaseDate:  now,
+          createdAt:     now,
+          orderId:       'FREE-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+          variantLabel,
+          deliveryType:  isAuto ? (delivery.deliveryType || 'link') : '',
+        };
+        if (isAuto) purchaseDoc.deliveredAt = now;
+
+        const created = await Firestore.addDoc(env, 'purchases', purchaseDoc);
+        return json({ ok: true, purchase: created });
+
+      } catch (err) {
+        console.error('[claim-free] error:', err.message);
         return json({ error: 'Internal server error.' }, 500);
       }
     }
