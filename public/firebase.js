@@ -253,18 +253,36 @@ const UserAuth = {
 
       // Duplicate username check (now authenticated)
       if (username) {
-        const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
-        if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
-          await _auth.signOut();
-          return { error: 'This username is already taken. Please choose another one.' };
+        try {
+          const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
+          if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
+            await _auth.signOut();
+            return { error: 'This username is already taken. Please choose another one.' };
+          }
+        } catch (qe) {
+          if (qe.code === 'permission-denied') {
+            console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
+            await _auth.signOut();
+            return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
+          }
+          throw qe;
         }
       }
       // Duplicate phone check
       if (phone) {
-        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
-        if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
-          await _auth.signOut();
-          return { error: 'This phone number is already linked to another account.' };
+        try {
+          const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
+          if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
+            await _auth.signOut();
+            return { error: 'This phone number is already linked to another account.' };
+          }
+        } catch (qe) {
+          if (qe.code === 'permission-denied') {
+            console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
+            await _auth.signOut();
+            return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
+          }
+          throw qe;
         }
       }
       const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
@@ -706,7 +724,11 @@ const AdminUsers = {
       const snap = await _db.collection('users').get();
       return snap.docs.map(d => d.data());
     } catch (e) {
-      console.error('[AdminUsers] list failed:', e.message);
+      if (e.code === 'permission-denied') {
+        console.error('[AdminUsers] list BLOCKED by Firestore rules: reading the whole \'users\' collection (a "list" operation) is not allowed. Add an "allow list" rule for /users/{userId} scoped to the admin — see firestore-users-rules-snippet.txt.');
+      } else {
+        console.error('[AdminUsers] list failed:', e.message);
+      }
       return [];
     }
   },
