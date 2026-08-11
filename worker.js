@@ -1405,6 +1405,22 @@ export default {
     }
 
     // ── Non-API routes: serve static files via the ASSETS binding ──
-    return env.ASSETS.fetch(request);
+    // The ASSETS binding sends a default `Cross-Origin-Opener-Policy:
+    // same-origin` header on every page. That header cuts the opener/popup
+    // relationship the browser normally keeps between a page and any popup
+    // window it opens — which breaks Firebase's signInWithPopup() (Google
+    // sign-in), since Firebase relies on the opener being able to watch the
+    // popup (window.closed) to know when auth finishes. That's the source of
+    // the "Cross-Origin-Opener-Policy... would block the window.closed call"
+    // console errors and the permission-denied error on sign-up: the second
+    // popup in completeGoogleRegistration() never resolves cleanly, so the
+    // Firestore calls that follow run without a properly attached auth
+    // token. Relaxing it to same-origin-allow-popups keeps the normal
+    // cross-origin-opener protections but explicitly allows this popup
+    // pattern.
+    const assetResponse = await env.ASSETS.fetch(request);
+    const response = new Response(assetResponse.body, assetResponse);
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    return response;
   },
 };
