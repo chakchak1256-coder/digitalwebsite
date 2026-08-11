@@ -53,6 +53,11 @@ const UserAuth = {
   },
 
   init() {
+    // Pick up any pending signInWithRedirect() from the popup-blocked
+    // fallback in loginWithGoogle(). Safe to call even when the page
+    // wasn't reached via a redirect — it just resolves to nothing.
+    this._handleRedirectResult();
+
     _auth.onAuthStateChanged(user => {
       // ── Reserved-account guard (defense in depth) ─────────────────
       // Belt-and-suspenders on top of the checks in loginWithGoogle()
@@ -146,58 +151,121 @@ const UserAuth = {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const cred = await _auth.signInWithPopup(provider);
-      const user = cred.user;
-
-      // ── Reserved-account guard ──────────────────────────────────
-      // The admin account (ADMIN_EMAIL) must only ever be reached via
-      // the dedicated admin.html email+password login (Auth.login).
-      // This file shares one Firebase Auth instance between the
-      // storefront (UserAuth) and the admin panel (Auth), so if the
-      // browser's active/cached Google session happens to be the
-      // admin's Google account, signInWithPopup could silently
-      // authenticate *that* account here — which would then also
-      // satisfy Auth.isLoggedIn() (it just compares email), handing
-      // out admin access through the public sign-in button. Hard-block
-      // that outcome unconditionally, no matter how it happened.
-      if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-        await _auth.signOut();
-        return { error: 'This Google account is not available for sign-in. Please use a different account.' };
-      }
-
-      const isNew = cred.additionalUserInfo && cred.additionalUserInfo.isNewUser;
-
-      // Check if user doc already exists with a phone (returning Google user)
-      const existing = await _db.collection('users').doc(user.uid).get();
-      if (existing.exists && existing.data().phone) {
-        // Returning user — just update timestamp and return
-        await _db.collection('users').doc(user.uid).set({
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        const data = existing.data();
-        this._current = { id: user.uid, email: user.email, name: data.name || user.displayName, phone: data.phone };
-        window.dispatchEvent(new Event('auth:change'));
-        return { user: this._current, isNewUser: false };
-      }
-
-      // New Google user (or existing without phone) — sign them out temporarily
-      // so they can complete the username+phone+OTP step before being fully registered
-      await _auth.signOut();
-      return {
-        isNewUser: true,
-        googleProfile: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
+      let cred;
+      try {
+        cred = await _auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        // ── Popup-blocked fallback ───────────────────────────────
+        // Many browsers/environments (Safari's popup rules, browsers
+        // with strict third-party-cookie/popup policies, the site
+        // running inside an iframe/preview pane, some mobile browsers)
+        // block window.open() even though it's the direct result of a
+        // click, which surfaces as auth/popup-blocked (and sometimes
+        // auth/operation-not-supported-in-this-environment). Falling
+        // back to a full-page redirect avoids that entirely — the
+        // browser navigates to Google, then back to this page, where
+        // _handleRedirectResult() (called from init(), below) picks up
+        // the result and resumes the sign-in exactly as if the popup
+        // had succeeded.
+        if (popupErr.code === 'auth/popup-blocked' ||
+            popupErr.code === 'auth/operation-not-supported-in-this-environment') {
+          await _auth.signInWithRedirect(provider);
+          // The page is now navigating away — this promise intentionally
+          // never resolves normally from here.
+          return { redirecting: true };
         }
-      };
+        throw popupErr;
+      }
+      return await this._afterGoogleAuth(cred);
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return { error: null };
       }
       return { error: this._msg(e.code) };
+    }
+  },
+
+  // Shared logic for "just got a Google credential, now what" — used by
+  // both the popup path above and the redirect-result path below, so the
+  // two don't drift out of sync.
+  async _afterGoogleAuth(cred) {
+    const user = cred.user;
+    const isNew = cred.additionalUserInfo && cred.additionalUserInfo.isNewUser;
+
+    // ── Reserved-account guard ──────────────────────────────────
+    // The admin account (ADMIN_EMAIL) must only ever be reached via
+    // the dedicated admin.html email+password login (Auth.login).
+    // This file shares one Firebase Auth instance between the
+    // storefront (UserAuth) and the admin panel (Auth), so if the
+    // browser's active/cached Google session happens to be the
+    // admin's Google account, signInWithPopup/Redirect could silently
+    // authenticate *that* account here — which would then also
+    // satisfy Auth.isLoggedIn() (it just compares email), handing
+    // out admin access through the public sign-in button. Hard-block
+    // that outcome unconditionally, no matter how it happened.
+    if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      await _auth.signOut();
+      return { error: 'This Google account is not available for sign-in. Please use a different account.' };
+    }
+
+    // Check if user doc already exists with a phone (returning Google user)
+    const existing = await _db.collection('users').doc(user.uid).get();
+    if (existing.exists && existing.data().phone) {
+      // Returning user — just update timestamp and return
+      await _db.collection('users').doc(user.uid).set({
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const data = existing.data();
+      this._current = { id: user.uid, email: user.email, name: data.name || user.displayName, phone: data.phone };
+      window.dispatchEvent(new Event('auth:change'));
+      return { user: this._current, isNewUser: false };
+    }
+
+    // New Google user (or existing without phone) — sign them out temporarily
+    // so they can complete the username+phone+OTP step before being fully registered
+    await _auth.signOut();
+    return {
+      isNewUser: true,
+      googleProfile: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || '',
+      }
+    };
+  },
+
+  // Called once at page load (see init() below) to pick up the result of
+  // a signInWithRedirect() started in loginWithGoogle()'s popup-blocked
+  // fallback. If the page wasn't reached via a redirect return, this
+  // resolves with no user and is a no-op. Dispatches a
+  // 'google-redirect-result' event with the same shape doGoogleSignIn()
+  // would have received directly, so the UI can react identically
+  // whether the popup or the redirect path was used.
+  async _handleRedirectResult() {
+    try {
+      const result = await _auth.getRedirectResult();
+      if (!result || !result.user) return;
+
+      // If completeGoogleRegistration()'s popup-blocked fallback stashed an
+      // in-progress registration before redirecting, finish that instead of
+      // treating this return as a plain login.
+      let pendingReg = null;
+      try {
+        const raw = sessionStorage.getItem('_pendingGoogleReg');
+        if (raw) { pendingReg = JSON.parse(raw); sessionStorage.removeItem('_pendingGoogleReg'); }
+      } catch (se) { /* sessionStorage unavailable */ }
+
+      const r = pendingReg
+        ? await this._finishGoogleRegistration(result.user, pendingReg.googleProfile, pendingReg.username, pendingReg.phone)
+        : await this._afterGoogleAuth(result);
+
+      window.dispatchEvent(new CustomEvent('google-redirect-result', { detail: r }));
+    } catch (e) {
+      if (e.code && e.code !== 'auth/popup-closed-by-user') {
+        window.dispatchEvent(new CustomEvent('google-redirect-result', { detail: { error: this._msg(e.code) } }));
+      }
     }
   },
 
@@ -214,97 +282,119 @@ const UserAuth = {
       // whether the name/phone was actually taken.
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
-      const cred = await _auth.signInWithPopup(provider);
-      const user = cred.user;
-
-      // ── Reserved-account guard ──────────────────────────────────
-      // Same protection as in loginWithGoogle() above: this step uses
-      // prompt:'none', which signs in SILENTLY using whatever Google
-      // session is already active in the browser. If that happens to
-      // be the admin's Google account, never let it complete — that
-      // would create/overwrite the admin's Firestore 'users' doc from
-      // the public signup form and, since Auth.isLoggedIn() just
-      // compares email against the same shared _auth instance, hand
-      // out admin access. Check this before the uid identity check
-      // below, since an admin-account sign-in could otherwise still
-      // match if googleProfile.uid happened to be the admin's uid.
-      if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-        await _auth.signOut();
-        return { error: 'This Google account is not available for sign-in. Please use a different account.' };
-      }
-
-      // ── Identity guard ──────────────────────────────────────────
-      // prompt:'none' signs in SILENTLY using whatever Google session is
-      // already active in the browser — login_hint is only a hint, not a
-      // guarantee. If the browser has a different Google account active
-      // (very common with multiple logged-in accounts), Google can silently
-      // authenticate that *other* account instead, with no prompt and no
-      // error. Without this check we'd then happily write the form's
-      // username/phone onto a completely different person's account. Bail
-      // out hard if the re-authenticated uid doesn't match the account that
-      // actually started registration.
-      if (user.uid !== googleProfile.uid) {
-        await _auth.signOut();
-        return {
-          error: `Signed in as ${user.email}, but registration was started with ${googleProfile.email}. ` +
-                 `Please make sure only that Google account is active in this browser, then try again.`
-        };
-      }
-
-      // Duplicate username check (now authenticated)
-      if (username) {
-        try {
-          const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
-          if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
-            await _auth.signOut();
-            return { error: 'This username is already taken. Please choose another one.' };
-          }
-        } catch (qe) {
-          if (qe.code === 'permission-denied') {
-            console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
-            await _auth.signOut();
-            return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
-          }
-          throw qe;
+      let cred;
+      try {
+        cred = await _auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        // ── Popup-blocked fallback ───────────────────────────────
+        // Same reasoning as loginWithGoogle(): some browsers/environments
+        // block this popup even though it's silent (prompt:'none'). Stash
+        // the in-progress registration in sessionStorage and fall back to
+        // a redirect — _handleRedirectResult() detects the stashed state
+        // on return and finishes registration instead of treating the
+        // return as a plain login.
+        if (popupErr.code === 'auth/popup-blocked' ||
+            popupErr.code === 'auth/operation-not-supported-in-this-environment') {
+          try {
+            sessionStorage.setItem('_pendingGoogleReg', JSON.stringify({ googleProfile, username, phone }));
+          } catch (se) { /* sessionStorage unavailable — redirect will fall back to a plain login prompt */ }
+          await _auth.signInWithRedirect(provider);
+          return { redirecting: true };
         }
+        throw popupErr;
       }
-      // Duplicate phone check
-      if (phone) {
-        try {
-          const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
-          if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
-            await _auth.signOut();
-            return { error: 'This phone number is already linked to another account.' };
-          }
-        } catch (qe) {
-          if (qe.code === 'permission-denied') {
-            console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
-            await _auth.signOut();
-            return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
-          }
-          throw qe;
-        }
-      }
-      const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
-      await user.updateProfile({ displayName });
-      await _db.collection('users').doc(user.uid).set({
-        id: user.uid,
-        email: user.email,
-        name: displayName,
-        phone: phone || '',
-        photoURL: googleProfile.photoURL || '',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-      this._current = { id: user.uid, email: user.email, name: displayName, phone: phone || '' };
-      window.dispatchEvent(new Event('auth:change'));
-      return { user: this._current };
+      return await this._finishGoogleRegistration(cred.user, googleProfile, username, phone);
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return { error: 'Google sign-in was cancelled. Please try again.' };
       }
       return { error: this._msg(e.code) };
     }
+  },
+
+  // Shared by completeGoogleRegistration()'s popup path and its
+  // redirect-fallback resume path in _handleRedirectResult().
+  async _finishGoogleRegistration(user, googleProfile, username, phone) {
+    // ── Reserved-account guard ──────────────────────────────────
+    // Same protection as in loginWithGoogle(): this re-auth step can
+    // sign in SILENTLY using whatever Google session is already active
+    // in the browser. If that happens to be the admin's Google account,
+    // never let it complete — that would create/overwrite the admin's
+    // Firestore 'users' doc from the public signup form and, since
+    // Auth.isLoggedIn() just compares email against the same shared
+    // _auth instance, hand out admin access. Check this before the uid
+    // identity check below, since an admin-account sign-in could
+    // otherwise still match if googleProfile.uid happened to be the
+    // admin's uid.
+    if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      await _auth.signOut();
+      return { error: 'This Google account is not available for sign-in. Please use a different account.' };
+    }
+
+    // ── Identity guard ──────────────────────────────────────────
+    // The silent re-auth (prompt:'none', or the redirect fallback) can
+    // authenticate a different Google account than the one that started
+    // registration if the browser has more than one active session.
+    // login_hint is only a hint, not a guarantee. Without this check
+    // we'd happily write the form's username/phone onto a completely
+    // different person's account. Bail out hard if the authenticated
+    // uid doesn't match the account that actually started registration.
+    if (user.uid !== googleProfile.uid) {
+      await _auth.signOut();
+      return {
+        error: `Signed in as ${user.email}, but registration was started with ${googleProfile.email}. ` +
+               `Please make sure only that Google account is active in this browser, then try again.`
+      };
+    }
+
+    // Duplicate username check (now authenticated)
+    if (username) {
+      try {
+        const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
+        if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
+          await _auth.signOut();
+          return { error: 'This username is already taken. Please choose another one.' };
+        }
+      } catch (qe) {
+        if (qe.code === 'permission-denied') {
+          console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
+          await _auth.signOut();
+          return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
+        }
+        throw qe;
+      }
+    }
+    // Duplicate phone check
+    if (phone) {
+      try {
+        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
+        if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
+          await _auth.signOut();
+          return { error: 'This phone number is already linked to another account.' };
+        }
+      } catch (qe) {
+        if (qe.code === 'permission-denied') {
+          console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
+          await _auth.signOut();
+          return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
+        }
+        throw qe;
+      }
+    }
+    const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
+    await user.updateProfile({ displayName });
+    await _db.collection('users').doc(user.uid).set({
+      id: user.uid,
+      email: user.email,
+      name: displayName,
+      phone: phone || '',
+      photoURL: googleProfile.photoURL || '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    this._current = { id: user.uid, email: user.email, name: displayName, phone: phone || '' };
+    window.dispatchEvent(new Event('auth:change'));
+    return { user: this._current };
   },
 
   logout() { _auth.signOut(); this._current = null; window.dispatchEvent(new Event('auth:change')); },

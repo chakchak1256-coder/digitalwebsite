@@ -4112,6 +4112,51 @@ function doUserLogout() {
   showToast('Signed out.');
 }
 
+// ── Redirect-fallback resume ─────────────────────────────────────
+// If loginWithGoogle()/completeGoogleRegistration() had to fall back to
+// signInWithRedirect() because the popup was blocked, the click handlers
+// above (doGoogleSignIn / doCompleteGoogleSignup) never got a normal
+// return value — the page navigated away to Google and back. This picks
+// up the result once firebase.js's _handleRedirectResult() finishes
+// processing that return, mirroring the exact same UI reactions those
+// two functions use for the popup path, so sign-in behaves identically
+// either way.
+window.addEventListener('google-redirect-result', (evt) => {
+  const r = evt.detail || {};
+  if (r.redirecting) return; // shouldn't happen here, but ignore defensively
+
+  if (r.error) {
+    // Best-effort: show the error wherever the login modal happens to be.
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.style.display = 'flex';
+    const gsStep = document.getElementById('am-google-step');
+    if (gsStep && gsStep.style.display === 'block') {
+      const errEl = document.getElementById('am-gs-error');
+      errEl.textContent = r.error; errEl.style.display = 'block';
+    } else {
+      showAuthModalError(r.error);
+    }
+    return;
+  }
+
+  if (r.isNewUser) {
+    _googleProfile = r.googleProfile;
+    const modal = document.getElementById('auth-modal');
+    modal.style.display = 'flex';
+    document.getElementById('am-login').style.display = 'none';
+    document.getElementById('am-google-step').style.display = 'block';
+    document.getElementById('am-gs-email-display').textContent = r.googleProfile.email;
+    document.getElementById('am-gs-username').value = r.googleProfile.displayName || '';
+    document.getElementById('am-gs-error').style.display = 'none';
+    return;
+  }
+
+  if (r.user) {
+    closeLoginModal(); initUserAuth();
+    showToast('Welcome, ' + r.user.name + '! 👋');
+  }
+});
+
 
 // ===== THEME TOGGLE =====
 // Swaps the navbar logo for the current theme. This always defers to
