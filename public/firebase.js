@@ -851,15 +851,26 @@ const AdminAudit = {
 // Storage.uploadFile/deleteFile below.
 const AdminUsers = {
   async list() {
+    // Same fix as the earlier signup bug: reading the whole 'users'
+    // collection from the client SDK is a "list" query, which needs a
+    // separate Firestore rules permission from "get" (read one doc by
+    // ID) — most rule setups only grant the latter, so this came back
+    // empty (or permission-denied) no matter how many users actually
+    // existed. Routed through the Worker's service account instead,
+    // which bypasses client Firestore rules entirely.
     try {
-      const snap = await _db.collection('users').get();
-      return snap.docs.map(d => d.data());
+      const idToken = await Auth.getIdToken();
+      if (!idToken) { console.error('[AdminUsers] list: not authenticated as admin.'); return []; }
+      const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+      if (!backendUrl) { console.error('[AdminUsers] list: DIGISTORE_BACKEND_URL is not configured.'); return []; }
+      const res = await fetch(`${backendUrl}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { console.error('[AdminUsers] list failed:', data.error || res.status); return []; }
+      return data.users || [];
     } catch (e) {
-      if (e.code === 'permission-denied') {
-        console.error('[AdminUsers] list BLOCKED by Firestore rules: reading the whole \'users\' collection (a "list" operation) is not allowed. Add an "allow list" rule for /users/{userId} scoped to the admin — see firestore-users-rules-snippet.txt.');
-      } else {
-        console.error('[AdminUsers] list failed:', e.message);
-      }
+      console.error('[AdminUsers] list failed:', e.message);
       return [];
     }
   },
