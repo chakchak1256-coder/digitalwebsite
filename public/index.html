@@ -4109,6 +4109,12 @@ async function doCompleteGoogleSignup() {
 function doUserLogout() {
   UserAuth.logout(); initUserAuth();
   document.getElementById('user-menu').style.display = 'none';
+  // If My Products (or any other overlay page) is open, signing out should
+  // land back on the main storefront, not leave the person stranded on a
+  // now-inaccessible "logged in" page.
+  showMain();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (location.hash && location.hash !== '#hero') history.replaceState(null, '', location.pathname + location.search);
   showToast('Signed out.');
 }
 
