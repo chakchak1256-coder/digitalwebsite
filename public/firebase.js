@@ -188,6 +188,24 @@ const UserAuth = {
       const cred = await _auth.signInWithPopup(provider);
       const user = cred.user;
 
+      // ── Identity guard ──────────────────────────────────────────
+      // prompt:'none' signs in SILENTLY using whatever Google session is
+      // already active in the browser — login_hint is only a hint, not a
+      // guarantee. If the browser has a different Google account active
+      // (very common with multiple logged-in accounts), Google can silently
+      // authenticate that *other* account instead, with no prompt and no
+      // error. Without this check we'd then happily write the form's
+      // username/phone onto a completely different person's account. Bail
+      // out hard if the re-authenticated uid doesn't match the account that
+      // actually started registration.
+      if (user.uid !== googleProfile.uid) {
+        await _auth.signOut();
+        return {
+          error: `Signed in as ${user.email}, but registration was started with ${googleProfile.email}. ` +
+                 `Please make sure only that Google account is active in this browser, then try again.`
+        };
+      }
+
       // Duplicate username check (now authenticated)
       if (username) {
         const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
