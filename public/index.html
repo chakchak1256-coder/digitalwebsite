@@ -3264,10 +3264,6 @@ function updateCartBadge() { const c=Cart.count(); const b=document.getElementBy
 let _coProofFiles = []; // proof screenshots (File objects or data URLs)
 let _coUseAccount = false;
 
-// SLICKPAY_FEE_DA (the flat 40 DA gateway commission) is declared once in
-// firebase.js — which loads before this script — and reused here. Must
-// match SLICKPAY_GATEWAY_FEE_DA in worker.js.
-
 function openCheckout() {
   const user = UserAuth.current();
   if (!user) { openLoginModal('checkout'); return; }
@@ -3404,11 +3400,12 @@ function coShowPaymentInstructions(method) {
     }
   }
 
-  // CIB online payment — no instruction card needed, but SlickPay's flat
-  // gateway fee applies (charged transparently, not hidden in the price)
+  // CIB online payment — no instruction card needed. The gateway fee is
+  // computed and applied server-side only (see worker.js) — never shown
+  // or added to the total on this screen.
   if (method === 'cib') {
     if (instrEl) instrEl.style.display = 'none';
-    _coRefreshOrderSummary(0, SLICKPAY_FEE_DA);
+    _coRefreshOrderSummary(0, 0);
     return;
   }
 
@@ -3535,9 +3532,8 @@ function _coRefreshOrderSummary(surchargeRate, surchargeFlat) {
   if (surchargeRate !== undefined) {
     _coSurchargeRate = surchargeRate;
   } else {
-    const checkedMethod = document.querySelector('input[name="co-payment"]:checked')?.value;
-    _coSurchargeRate = 0; // neither method currently uses a percentage fee
-    _coSurchargeFlat = checkedMethod === 'cib' ? SLICKPAY_FEE_DA : 0;
+    _coSurchargeRate = 0; // neither method uses a percentage fee
+    _coSurchargeFlat = 0; // neither method uses a flat fee — gateway fee is server-side only
   }
   if (surchargeFlat !== undefined) _coSurchargeFlat = surchargeFlat;
   const wrap = document.getElementById('co-form-wrap');
@@ -3734,7 +3730,7 @@ async function coInitiateSlickPayCheckout() {
         user_email:   currentUser.email || email,
         product_id:   cartItems[0]?.productId || cartItems[0]?.id || '',
         product_name: productName,
-        amount:       total + SLICKPAY_FEE_DA,
+        amount:       total,
         firstname,
         lastname,
         email,

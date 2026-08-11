@@ -175,25 +175,35 @@ const UserAuth = {
   // Called after Google user completes username + phone step
   async completeGoogleRegistration(googleProfile, username, phone) {
     try {
-      // Duplicate username check
+      // Re-authenticate with Google FIRST. loginWithGoogle() signs the user
+      // out right after the initial popup (so a half-registered account
+      // can't act as "logged in"), which means we're signed out at this
+      // point. The duplicate-name/phone checks below read the 'users'
+      // collection, and Firestore rules require request.auth != null for
+      // that — running the reads before this re-auth caused every
+      // completion attempt to fail with permission-denied, regardless of
+      // whether the name/phone was actually taken.
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
+      const cred = await _auth.signInWithPopup(provider);
+      const user = cred.user;
+
+      // Duplicate username check (now authenticated)
       if (username) {
         const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
-        if (!nameSnap.empty) {
+        if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
+          await _auth.signOut();
           return { error: 'This username is already taken. Please choose another one.' };
         }
       }
       // Duplicate phone check
       if (phone) {
         const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
-        if (!phoneSnap.empty) {
+        if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
+          await _auth.signOut();
           return { error: 'This phone number is already linked to another account.' };
         }
       }
-      // Re-authenticate with Google to get credentials back
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
-      const cred = await _auth.signInWithPopup(provider);
-      const user = cred.user;
       const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
       await user.updateProfile({ displayName });
       await _db.collection('users').doc(user.uid).set({
@@ -917,10 +927,6 @@ const Settings = {
     }
   }
 };
-
-// SlickPay's flat 40 DA gateway commission — used at checkout (card payment
-// surcharge) only. This must match SLICKPAY_GATEWAY_FEE_DA in worker.js.
-const SLICKPAY_FEE_DA = 40;
 
 // Formats a product price for display — shows "FREE" for 0/empty prices
 // instead of "0 DA", everywhere a price is rendered on the storefront.
