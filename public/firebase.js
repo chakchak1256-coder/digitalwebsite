@@ -106,15 +106,54 @@ const UserAuth = {
       if ((email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         return { error: 'This email address is not available.' };
       }
-      // ── Duplicate phone check ─────────────────────────────────
-      if (phone) {
-        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
-        if (!phoneSnap.empty) {
-          return { error: 'This phone number is already linked to another account.' };
-        }
-      }
+
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       const displayName = name || email.split('@')[0];
+
+      // ── Duplicate phone check + user-doc write, server-side ─────
+      // This used to query `.where('phone', '==', phone)` from the
+      // client BEFORE the account existed (request.auth was null), so
+      // it always failed with permission-denied under any Firestore
+      // rules that require authentication to query the 'users'
+      // collection — it never actually worked. Now that the account
+      // exists we have a valid ID token, so route the phone check and
+      // the doc write through the Worker's service account instead,
+      // the same way the Google sign-up flow does. checkUsername:false
+      // preserves this form's original behavior of not requiring
+      // unique display names (only the Google flow does that).
+      if (phone) {
+        const idToken = await cred.user.getIdToken();
+        const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+        if (backendUrl) {
+          try {
+            const res = await fetch(`${backendUrl}/api/complete-google-registration`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+              body: JSON.stringify({ username: displayName, phone, checkUsername: false }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+              // Duplicate phone (or any other failure) — roll back the
+              // auth account we just created so the email is free to
+              // retry with, rather than leaving an orphaned account.
+              await cred.user.delete().catch(() => {});
+              return { error: data.error || 'Registration failed. Please try again.' };
+            }
+            // Worker already wrote the full user doc — just update the
+            // Auth profile's displayName and finish.
+            await cred.user.updateProfile({ displayName });
+            this._current = data.user;
+            window.dispatchEvent(new Event('auth:change'));
+            return { user: this._current };
+          } catch (ne) {
+            await cred.user.delete().catch(() => {});
+            return { error: 'Could not reach the server. Please check your connection and try again.' };
+          }
+        }
+        // If backendUrl isn't configured, fall through and write directly
+        // below rather than blocking signup entirely over a missing check.
+      }
+
       await cred.user.updateProfile({ displayName });
       await _db.collection('users').doc(cred.user.uid).set({
         id: cred.user.uid, email: email.toLowerCase(), name: displayName,
@@ -122,7 +161,7 @@ const UserAuth = {
         phoneVerified: !!phone,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }, { merge: true });
       this._current = { id: cred.user.uid, email: cred.user.email, name: displayName, phone: phone || '' };
       window.dispatchEvent(new Event('auth:change'));
       return { user: this._current };
@@ -347,52 +386,45 @@ const UserAuth = {
       };
     }
 
-    // Duplicate username check (now authenticated)
-    if (username) {
-      try {
-        const nameSnap = await _db.collection('users').where('name', '==', username).limit(1).get();
-        if (!nameSnap.empty && nameSnap.docs[0].id !== user.uid) {
-          await _auth.signOut();
-          return { error: 'This username is already taken. Please choose another one.' };
-        }
-      } catch (qe) {
-        if (qe.code === 'permission-denied') {
-          console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
-          await _auth.signOut();
-          return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
-        }
-        throw qe;
-      }
+    // ── Complete registration server-side ────────────────────────
+    // Duplicate-username/phone checks and the actual user-doc write now
+    // happen in the Worker (/api/complete-google-registration), using the
+    // service account instead of this client SDK. Firestore security
+    // rules split "get" (read one doc by ID) from "list"/query
+    // permissions — most default rule setups only grant the former, so
+    // the client-side `.where('name', '==', ...)` duplicate check here
+    // was hitting permission-denied on every single signup, regardless
+    // of what's configured in the Firebase Console. Routing this through
+    // the Worker's service account sidesteps that class of problem
+    // entirely — no Firestore Rules changes needed.
+    const idToken = await user.getIdToken();
+    const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backendUrl) {
+      await _auth.signOut();
+      return { error: 'Sign-up is temporarily unavailable (server not configured). Please contact support.' };
     }
-    // Duplicate phone check
-    if (phone) {
-      try {
-        const phoneSnap = await _db.collection('users').where('phone', '==', phone).limit(1).get();
-        if (!phoneSnap.empty && phoneSnap.docs[0].id !== user.uid) {
-          await _auth.signOut();
-          return { error: 'This phone number is already linked to another account.' };
-        }
-      } catch (qe) {
-        if (qe.code === 'permission-denied') {
-          console.error('[DIGITCH] Signup BLOCKED by Firestore rules: querying the \'users\' collection (a "list" operation) is not allowed for signed-in users. Add an "allow list" rule for /users/{userId} — see firestore-users-rules-snippet.txt.');
-          await _auth.signOut();
-          return { error: 'Sign-up is temporarily unavailable (server configuration). Please try again later or contact support.' };
-        }
-        throw qe;
-      }
+    let res, data;
+    try {
+      res = await fetch(`${backendUrl}/api/complete-google-registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ username, phone, photoURL: googleProfile.photoURL || '' }),
+      });
+      data = await res.json();
+    } catch (ne) {
+      await _auth.signOut();
+      return { error: 'Could not reach the server. Please check your connection and try again.' };
     }
-    const displayName = username || googleProfile.displayName || googleProfile.email.split('@')[0];
-    await user.updateProfile({ displayName });
-    await _db.collection('users').doc(user.uid).set({
-      id: user.uid,
-      email: user.email,
-      name: displayName,
-      phone: phone || '',
-      photoURL: googleProfile.photoURL || '',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-    this._current = { id: user.uid, email: user.email, name: displayName, phone: phone || '' };
+    if (!res.ok || data.error) {
+      // Duplicate username/phone (409) is a normal validation outcome —
+      // let the user fix the field and stay on the form rather than
+      // signing them out.
+      if (res.status !== 409) await _auth.signOut();
+      return { error: data.error || 'Registration failed. Please try again.' };
+    }
+
+    await user.updateProfile({ displayName: data.user.name }).catch(() => {});
+    this._current = data.user;
     window.dispatchEvent(new Event('auth:change'));
     return { user: this._current };
   },
