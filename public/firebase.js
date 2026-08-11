@@ -61,13 +61,22 @@ const UserAuth = {
     _auth.onAuthStateChanged(user => {
       // ── Reserved-account guard (defense in depth) ─────────────────
       // Belt-and-suspenders on top of the checks in loginWithGoogle()
-      // and completeGoogleRegistration(): no matter which code path
-      // caused it, the storefront (UserAuth) must never treat a
-      // signed-in ADMIN_EMAIL session as a regular customer. Sign it
-      // out immediately and stop — do not set _current or dispatch
-      // auth:change for it, so no UI or logic ever sees "logged in as
-      // chaqx12" outside of the dedicated admin.html panel.
-      if (user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      // and completeGoogleRegistration(): the STOREFRONT (UserAuth) must
+      // never treat a signed-in ADMIN_EMAIL session as a regular
+      // customer. Sign it out immediately and stop — do not set
+      // _current or dispatch auth:change for it, so no storefront UI or
+      // logic ever sees "logged in as chaqx12".
+      //
+      // CRITICAL: this guard must NOT run on admin.html. firebase.js is
+      // shared between both pages and this listener is global to the
+      // one Firebase Auth instance, so without the __IS_ADMIN check
+      // below this signed the admin BACK OUT the instant they logged in
+      // successfully via Auth.login() — every real admin login looked
+      // like it failed, and repeated attempts then tripped Firebase's
+      // own too-many-requests lockout. admin.html sets
+      // window.__IS_ADMIN = true before loading this file specifically
+      // so this file can tell the two pages apart.
+      if (!window.__IS_ADMIN && user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         _auth.signOut();
         return;
       }
