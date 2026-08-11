@@ -54,6 +54,18 @@ const UserAuth = {
 
   init() {
     _auth.onAuthStateChanged(user => {
+      // ── Reserved-account guard (defense in depth) ─────────────────
+      // Belt-and-suspenders on top of the checks in loginWithGoogle()
+      // and completeGoogleRegistration(): no matter which code path
+      // caused it, the storefront (UserAuth) must never treat a
+      // signed-in ADMIN_EMAIL session as a regular customer. Sign it
+      // out immediately and stop — do not set _current or dispatch
+      // auth:change for it, so no UI or logic ever sees "logged in as
+      // chaqx12" outside of the dedicated admin.html panel.
+      if (user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        _auth.signOut();
+        return;
+      }
       if (user) {
         // Dispatch auth:change immediately from Auth data so UI renders without waiting for Firestore
         this._current = { id: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
@@ -136,6 +148,23 @@ const UserAuth = {
       provider.setCustomParameters({ prompt: 'select_account' });
       const cred = await _auth.signInWithPopup(provider);
       const user = cred.user;
+
+      // ── Reserved-account guard ──────────────────────────────────
+      // The admin account (ADMIN_EMAIL) must only ever be reached via
+      // the dedicated admin.html email+password login (Auth.login).
+      // This file shares one Firebase Auth instance between the
+      // storefront (UserAuth) and the admin panel (Auth), so if the
+      // browser's active/cached Google session happens to be the
+      // admin's Google account, signInWithPopup could silently
+      // authenticate *that* account here — which would then also
+      // satisfy Auth.isLoggedIn() (it just compares email), handing
+      // out admin access through the public sign-in button. Hard-block
+      // that outcome unconditionally, no matter how it happened.
+      if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        await _auth.signOut();
+        return { error: 'This Google account is not available for sign-in. Please use a different account.' };
+      }
+
       const isNew = cred.additionalUserInfo && cred.additionalUserInfo.isNewUser;
 
       // Check if user doc already exists with a phone (returning Google user)
@@ -187,6 +216,22 @@ const UserAuth = {
       provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
       const cred = await _auth.signInWithPopup(provider);
       const user = cred.user;
+
+      // ── Reserved-account guard ──────────────────────────────────
+      // Same protection as in loginWithGoogle() above: this step uses
+      // prompt:'none', which signs in SILENTLY using whatever Google
+      // session is already active in the browser. If that happens to
+      // be the admin's Google account, never let it complete — that
+      // would create/overwrite the admin's Firestore 'users' doc from
+      // the public signup form and, since Auth.isLoggedIn() just
+      // compares email against the same shared _auth instance, hand
+      // out admin access. Check this before the uid identity check
+      // below, since an admin-account sign-in could otherwise still
+      // match if googleProfile.uid happened to be the admin's uid.
+      if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        await _auth.signOut();
+        return { error: 'This Google account is not available for sign-in. Please use a different account.' };
+      }
 
       // ── Identity guard ──────────────────────────────────────────
       // prompt:'none' signs in SILENTLY using whatever Google session is
