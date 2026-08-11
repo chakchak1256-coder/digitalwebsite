@@ -962,6 +962,38 @@ export default {
     }
 
     // ============================================================
+    // ROUTE: GET /api/admin/users
+    // Returns all registered users for the admin panel's Users page.
+    // The panel previously read `_db.collection('users').get()` directly
+    // from the client SDK — a "list" query across the whole collection,
+    // which needs a separate Firestore rules permission from "get" (read
+    // one doc by ID). Most rule setups only grant the latter, so this
+    // always came back empty/permission-denied regardless of how many
+    // users actually existed — same root cause as the earlier signup
+    // bug. Routing through the service account here bypasses that
+    // entirely, same as /api/admin/login-history above.
+    // ============================================================
+    if (path === '/api/admin/users' && method === 'GET') {
+      const auth = await requireAdminAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        const limit = Math.min(parseInt(url.searchParams.get('limit') || '1000', 10) || 1000, 5000);
+        // Deliberately no orderByField here: Firestore's orderBy excludes
+        // any document that's missing the ordered field entirely (not
+        // just sorts it last), which would silently drop older user docs
+        // that predate a `createdAt` field being added. Fetch everything,
+        // then sort here where a missing field just falls back to 0
+        // instead of vanishing the user from the list.
+        const users = await Firestore.listCollection(env, 'users', { limit });
+        users.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        return json({ users });
+      } catch (err) {
+        console.error('[admin/users] error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
+    // ============================================================
     // ROUTE: POST /api/delete-user
     // Deletes a customer: their Firestore `users/{uid}` doc AND their real
     // Firebase Auth account (the latter can only be done server-side, with
