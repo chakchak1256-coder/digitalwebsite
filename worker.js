@@ -1399,6 +1399,73 @@ export default {
       }
     }
 
+    // ROUTE: POST /api/complete-google-registration
+    // Finishes a Google sign-up (username + phone) server-side, using the
+    // service account, instead of the client SDK writing to Firestore
+    // directly. The client-side path required Firestore security rules to
+    // grant a "list" permission on /users (for the duplicate username/phone
+    // checks) in addition to "get" — which most default rule sets don't
+    // grant, and got missed here — so every signup attempt failed with
+    // permission-denied regardless of the Firebase Console rules. Routing
+    // this through the Worker's service account bypasses client Firestore
+    // rules entirely (same as /api/claim-free, /api/delete-user, etc.), so
+    // it works immediately with no Firestore Rules changes required.
+    // ============================================================
+    if (path === '/api/complete-google-registration' && method === 'POST') {
+      const auth = await requireUserAuth(request, env);
+      if (!auth.ok) return json({ error: auth.error }, auth.status);
+      try {
+        // The admin account must only ever be reached via admin.html's
+        // dedicated email+password login — never through this public
+        // signup route, no matter which Google session authenticated it.
+        if (env.ADMIN_EMAIL && (auth.email || '').toLowerCase() === env.ADMIN_EMAIL.toLowerCase()) {
+          return json({ error: 'This Google account is not available for sign-in. Please use a different account.' }, 403);
+        }
+
+        let body;
+        try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
+
+        const username = (body.username || '').toString().trim().slice(0, 60);
+        const phone    = (body.phone || '').toString().trim().slice(0, 20);
+        const photoURL = (body.photoURL || '').toString().trim().slice(0, 500);
+        const checkUsername = body.checkUsername !== false; // default true (Google flow); email/password signup passes false to preserve its original behavior of allowing duplicate display names
+        if (!username) return json({ error: 'Please enter a username.' }, 400);
+        if (!phone)    return json({ error: 'Please enter a phone number.' }, 400);
+
+        // Duplicate checks — run server-side with the service account, so
+        // they always work regardless of client Firestore rules.
+        if (checkUsername) {
+          const nameMatches = await Firestore.queryCollection(env, 'users', [['name', username]], 2);
+          if (nameMatches.some(u => u.id !== auth.uid)) {
+            return json({ error: 'This username is already taken. Please choose another one.' }, 409);
+          }
+        }
+        const phoneMatches = await Firestore.queryCollection(env, 'users', [['phone', phone]], 2);
+        if (phoneMatches.some(u => u.id !== auth.uid)) {
+          return json({ error: 'This phone number is already linked to another account.' }, 409);
+        }
+
+        const now = new Date().toISOString();
+        const existing = await Firestore.getDoc(env, 'users', auth.uid);
+        const userDoc = {
+          id: auth.uid,
+          email: auth.email || '',
+          name: username,
+          phone,
+          photoURL: photoURL || (existing && existing.photoURL) || '',
+          createdAt: (existing && existing.createdAt) || now,
+          lastLogin: now,
+        };
+        await Firestore.setDoc(env, 'users', auth.uid, userDoc);
+
+        return json({ ok: true, user: { id: auth.uid, email: userDoc.email, name: userDoc.name, phone: userDoc.phone } });
+
+      } catch (err) {
+        console.error('[complete-google-registration] error:', err.message);
+        return json({ error: 'Internal server error.' }, 500);
+      }
+    }
+
     // ── 404 for unknown /api routes ───────────────────────────────
     if (path.startsWith('/api/')) {
       return json({ error: 'Not found.' }, 404);
