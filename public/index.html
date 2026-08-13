@@ -1751,6 +1751,55 @@ footer::before{
 
 
 /* =========================================================
+   CLICK MICRO-INTERACTIONS — cart / wishlist feedback
+   Fresh, lightweight (transform+opacity only) animations that
+   fire on click, restarted via JS by toggling these classes.
+   Automatically neutralised on .low-perf / reduced-motion,
+   same as every other animation on the page.
+   ========================================================= */
+@keyframes dzPunch{
+  0%{ transform:scale(1); }
+  35%{ transform:scale(.82); }
+  62%{ transform:scale(1.16); }
+  100%{ transform:scale(1); }
+}
+.dz-punch{ animation:dzPunch .42s cubic-bezier(.22,1.4,.36,1); }
+
+@keyframes dzHeartPop{
+  0%{ transform:scale(1) rotate(0); }
+  28%{ transform:scale(.68) rotate(-6deg); }
+  58%{ transform:scale(1.4) rotate(4deg); }
+  80%{ transform:scale(.94) rotate(-1deg); }
+  100%{ transform:scale(1) rotate(0); }
+}
+.dz-heart-pop i{ display:inline-block; animation:dzHeartPop .55s cubic-bezier(.22,1.4,.36,1); }
+
+@keyframes dzBadgePop{
+  0%{ transform:scale(0); }
+  55%{ transform:scale(1.4); }
+  75%{ transform:scale(.9); }
+  100%{ transform:scale(1); }
+}
+#cart-badge.dz-badge-pop,#wishlist-badge.dz-badge-pop{ animation:dzBadgePop .4s cubic-bezier(.22,1.4,.36,1); }
+
+@keyframes dzBurstPiece{
+  0%{ transform:translate(-50%,-50%) translate(0,0) scale(1); opacity:1; }
+  100%{ transform:translate(-50%,-50%) translate(var(--tx),var(--ty)) scale(0); opacity:0; }
+}
+.dz-burst{ position:absolute; inset:0; pointer-events:none; z-index:5; overflow:visible; }
+.dz-burst-piece{
+  position:absolute; left:50%; top:50%; width:5px; height:5px; border-radius:50%;
+  background:#EF4444; animation:dzBurstPiece .6s cubic-bezier(.22,.85,.32,1) forwards;
+}
+
+.dz-fly-dot{
+  position:fixed; z-index:9999; border-radius:50%; pointer-events:none;
+  background:var(--accent); box-shadow:0 0 12px rgba(var(--accent-rgb),.65);
+  transition:left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1),
+             transform .55s cubic-bezier(.4,0,.2,1), opacity .55s ease .15s;
+}
+
+/* =========================================================
    PERFORMANCE MODE
    Applied via <html class="low-perf"> when JS detects an
    older / low-memory device, a slow connection, or the OS
@@ -2697,12 +2746,67 @@ function makeProductCard(prod) {
         <button class="prod-add" title="Add to cart"><i class="fa-solid fa-plus"></i></button>
       </div>
     </div>`;
-  d.querySelector('.prod-add').onclick = e => { e.stopPropagation(); if ((Number(prod.price)||0) <= 0) claimFreeProduct(prod); else addToCart(prod); };
+  d.querySelector('.prod-add').onclick = e => { e.stopPropagation(); if ((Number(prod.price)||0) <= 0) claimFreeProduct(prod); else addToCart(prod, e.currentTarget); };
   d.onclick = () => { trackRecentlyViewed(prod); openProductDetail(prod.id, false); };
   return d;
 }
 
-function addToCart(prod) { Cart.add(prod); Analytics.logCart(prod.id, prod.name); showToast(`"${prod.name}" added to cart`); }
+/* ---- click micro-interaction helpers ---- */
+function _dzRetrigger(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth; // force reflow so the animation restarts
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+function _dzHeartBurst(btn) {
+  if (!btn || document.documentElement.classList.contains('low-perf')) return;
+  const wrap = document.createElement('span');
+  wrap.className = 'dz-burst';
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const piece = document.createElement('i');
+    piece.className = 'dz-burst-piece';
+    const angle = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+    const dist = 14 + Math.random() * 8;
+    piece.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+    piece.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+    wrap.appendChild(piece);
+  }
+  const pos = getComputedStyle(btn).position;
+  if (pos === 'static') btn.style.position = 'relative';
+  btn.appendChild(wrap);
+  setTimeout(() => wrap.remove(), 650);
+}
+function _dzFlyToCart(fromEl) {
+  const cartBtn = document.getElementById('cart-btn');
+  if (!fromEl || !cartBtn || document.documentElement.classList.contains('low-perf')) return;
+  const from = fromEl.getBoundingClientRect();
+  const to = cartBtn.getBoundingClientRect();
+  const dot = document.createElement('span');
+  dot.className = 'dz-fly-dot';
+  dot.style.width = dot.style.height = '10px';
+  dot.style.left = `${from.left + from.width / 2 - 5}px`;
+  dot.style.top = `${from.top + from.height / 2 - 5}px`;
+  document.body.appendChild(dot);
+  requestAnimationFrame(() => {
+    dot.style.left = `${to.left + to.width / 2 - 5}px`;
+    dot.style.top = `${to.top + to.height / 2 - 5}px`;
+    dot.style.transform = 'scale(.4)';
+    dot.style.opacity = '0';
+  });
+  setTimeout(() => {
+    dot.remove();
+    _dzRetrigger(cartBtn, 'dz-punch');
+  }, 560);
+}
+function addToCart(prod, sourceEl) {
+  Cart.add(prod);
+  Analytics.logCart(prod.id, prod.name);
+  showToast(`"${prod.name}" added to cart`);
+  if (sourceEl) { _dzRetrigger(sourceEl, 'dz-punch'); _dzFlyToCart(sourceEl); }
+  else { _dzRetrigger(document.getElementById('cart-btn'), 'dz-punch'); }
+}
 
 // ── FREE products (price === 0) — no cart, no payment ──────────────
 // Delivers the product straight to My Products for a signed-in user.
@@ -3018,10 +3122,10 @@ function openProductDetail(id, fromAllPage = true) {
 
   window.onVariantChange = function() {}; // no-op, replaced by per-group listeners
 
-  document.getElementById('pd-add-btn').onclick = () => addToCart(activeProd);
-  document.getElementById('pd-buy-btn').onclick = () => {
+  document.getElementById('pd-add-btn').onclick = (e) => addToCart(activeProd, e.currentTarget);
+  document.getElementById('pd-buy-btn').onclick = (e) => {
     if ((Number(activeProd.price)||0) <= 0) { claimFreeProduct(activeProd); return; }
-    addToCart(activeProd); closeProductDetail(); toggleCart();
+    addToCart(activeProd, e.currentTarget); closeProductDetail(); toggleCart();
   };
   document.getElementById('pd-free-btn').onclick = () => claimFreeProduct(activeProd);
   updatePdActionButtons(); // set correct buttons immediately, even with no variants
@@ -3305,7 +3409,7 @@ function renderCartItems() {
 
 function changeQty(id, d) { Cart.setQty(id, (Cart.get().find(i=>i.id===id)?.qty||1)+d); renderCartItems(); }
 function removeItem(id) { Cart.remove(id); renderCartItems(); }
-function updateCartBadge() { const c=Cart.count(); const b=document.getElementById('cart-badge'); b.textContent=c; b.style.display=c?'flex':'none'; }
+function updateCartBadge() { const c=Cart.count(); const b=document.getElementById('cart-badge'); const prev=b.textContent; b.textContent=c; b.style.display=c?'flex':'none'; if(c && String(c)!==prev) _dzRetrigger(b,'dz-badge-pop'); }
 
 // ===== CHECKOUT =====
 let _coProofFiles = []; // proof screenshots (File objects or data URLs)
@@ -4673,6 +4777,8 @@ function toggleWishlist(prodId, btn) {
     btn.classList.toggle('active', isNow);
     btn.innerHTML = `<i class="${isNow?'fa-solid':'fa-regular'} fa-heart"></i>`;
     btn.title = isNow ? 'Remove from wishlist' : 'Add to wishlist';
+    _dzRetrigger(btn, 'dz-heart-pop');
+    if (isNow) _dzHeartBurst(btn);
   }
   updateWishlistBadge();
   showToast(isNow ? '❤️ Added to wishlist' : 'Removed from wishlist');
@@ -4682,8 +4788,10 @@ function updateWishlistBadge() {
   const c = Wishlist.count();
   const b = document.getElementById('wishlist-badge');
   if (!b) return;
+  const prev = b.textContent;
   b.textContent = c;
   b.style.display = c ? 'flex' : 'none';
+  if (c && String(c) !== prev) _dzRetrigger(b, 'dz-badge-pop');
 }
 
 function openWishlist() {
