@@ -236,7 +236,9 @@ body.flash-on #topbar{top:56px}
   body.flash-on #mobile-nav{top:234px}
   #user-menu{top:196px !important}
   #hero{padding:288px 5vw 0}
-  .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner{padding-top:192px}
+  .all-products-inner,.product-page-inner,.mp-inner,.wishlist-inner{padding-top:216px}
+  body.flash-on .all-products-inner,body.flash-on .product-page-inner,
+  body.flash-on .mp-inner,body.flash-on .wishlist-inner{padding-top:254px}
 }
 @media(max-width:480px){
   .topbar-logo-text{display:none}
@@ -800,7 +802,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #all-products-page.active{display:block}
-.all-products-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
+.all-products-inner{max-width:1160px;margin:0 auto;padding:160px 5vw 60px}
 .all-hdr{display:flex;align-items:center;gap:1rem;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap}
 .search-bar{
   display:flex;align-items:center;gap:.5rem;padding:.5rem .9rem;
@@ -834,7 +836,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #product-page.active{display:block}
-.product-page-inner{max-width:1060px;margin:0 auto;padding:140px 5vw 60px}
+.product-page-inner{max-width:1060px;margin:0 auto;padding:160px 5vw 60px}
 .back-btn{
   display:inline-flex;align-items:center;gap:.4rem;color:var(--text-muted);
   font-size:.85rem;margin-bottom:2rem;cursor:pointer;transition:color var(--transition);
@@ -1035,7 +1037,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
   background:var(--bg);overflow-y:auto;
 }
 #my-products-page.active{display:block}
-.mp-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
+.mp-inner{max-width:1160px;margin:0 auto;padding:160px 5vw 60px}
 .mp-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
 .mp-hdr-left h2{font-size:1.6rem;font-weight:800;margin-bottom:.2rem}
 .mp-hdr-left p{color:var(--text-muted);font-size:.875rem}
@@ -1195,6 +1197,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 0
 /* push nav down when banner visible */
 body.flash-on #nav{top:108px}
 body.flash-on #mobile-nav{top:182px}
+@media(min-width:701px){
+  body.flash-on .all-products-inner,body.flash-on .product-page-inner,
+  body.flash-on .mp-inner,body.flash-on .wishlist-inner{padding-top:198px}
+}
 
 /* ===== NAV SEARCH ===== */
 #nav-search-wrap{position:relative;display:flex;align-items:center}
@@ -1247,7 +1253,7 @@ body.flash-on #mobile-nav{top:182px}
   background:var(--bg);overflow-y:auto;
 }
 #wishlist-page.active{display:block}
-.wishlist-inner{max-width:1160px;margin:0 auto;padding:140px 5vw 60px}
+.wishlist-inner{max-width:1160px;margin:0 auto;padding:160px 5vw 60px}
 /* Wishlist nav btn */
 #wishlist-nav-btn{position:relative;overflow:visible;width:38px;height:38px;border-radius:8px;
   background:var(--card);border:1px solid var(--border);
@@ -1794,24 +1800,33 @@ footer::before{
    PERFORMANCE MODE
    Applied via <html class="low-perf"> when JS detects an
    older / low-memory device, a slow connection, or the OS
-   'reduce motion' setting. Strips blur/shadow/animation
-   heavy visuals so the page stays smooth. Nothing here
-   removes elements or breaks click handlers — purely visual.
+   'reduce motion' setting. Strips blur/shadow and the heavy,
+   continuously-looping decorative animations (ambient blobs,
+   glow pulses, floating orbs...) so the page stays smooth.
+   Short, discrete hover/click feedback (button scale, icon
+   wiggle) is transform-only and effectively free to render, so
+   it's deliberately left alone — killing it bought no
+   performance and only made the site feel unresponsive.
    ========================================================= */
-.low-perf, .low-perf *{
-  animation-play-state:paused !important;
-  animation-duration:0s !important;
-  animation-delay:0s !important;
-  transition-duration:0s !important;
-  transition-delay:0s !important;
-  scroll-behavior:auto !important;
-}
 .low-perf *{
+  scroll-behavior:auto !important;
   backdrop-filter:none !important;
   -webkit-backdrop-filter:none !important;
   filter:none !important;
   box-shadow:none !important;
   text-shadow:none !important;
+}
+/* the actual perf cost: infinite/looping animations, killed outright */
+.low-perf .dz-blob,
+.low-perf .dig-orb,
+.low-perf .dig-sphere,
+.low-perf .dig-star,
+.low-perf .dig-sparkline path,
+.low-perf .testi-track,
+.low-perf .mp-skeleton,
+.low-perf #wa-float a::before,
+.low-perf #flash-banner{
+  animation:none !important;
 }
 /* decorative floating orbs / sparkline glow — pure eye-candy, safe to hide */
 .low-perf .dig-orb,
