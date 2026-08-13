@@ -476,6 +476,38 @@ const Firestore = {
     return docToObject(await res.json());
   },
 
+  // Atomically "claims" collection/id — creates a tiny doc there ONLY if
+  // one doesn't already exist there, using Firestore's
+  // currentDocument.exists=false precondition, and returns whether THIS
+  // call was the one that created it.
+  //
+  // Used as a one-shot lock around order delivery. Both the payment-status
+  // poll (payment-return.html hits this every ~3s) and the SlickPay
+  // webhook independently check "is this order still pending?" and, if so,
+  // call deliverOrder() then mark the order delivered — but that read-then-
+  // write has no atomicity of its own, so if the poll and the webhook land
+  // within the same few hundred ms of each other, both can see 'pending'
+  // and both call deliverOrder(), creating two purchase records (two
+  // license keys / access links) for one payment. Firestore's REST API has
+  // no multi-document transactions here, but a single conditional write
+  // does the same job: only one of the two racing requests can win the
+  // claim, so deliverOrder() only ever runs once per order.
+  async claimOnce(env, collection, id) {
+    const safeId = assertSafeDocId(id);
+    const token = await getFirebaseAccessToken(env);
+    const base  = await this._baseUrl(env);
+    const res = await fetch(`${base}/${collection}/${safeId}?currentDocument.exists=false`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { claimedAt: toFirestoreValue(new Date().toISOString()) } }),
+    });
+    // 409 = someone else's request already created this doc first — they
+    // won the race, so we must NOT deliver again.
+    if (res.status === 409) return false;
+    if (!res.ok) throw new Error(`Firestore claimOnce failed: ${res.status} ${await res.text()}`);
+    return true;
+  },
+
   async deleteDoc(env, collection, id) {
     const safeId = assertSafeDocId(id);
     const token = await getFirebaseAccessToken(env);
@@ -1070,11 +1102,18 @@ export default {
 
         if (completed === 1 && order.status !== 'delivered') {
           try {
-            await deliverOrder(env, order);
-            await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
-              status: 'delivered',
-              paidAt: new Date().toISOString(),
-            });
+            // Claim delivery for this order before doing it — see
+            // Firestore.claimOnce() for why: the checkout/status poll can
+            // land at nearly the same moment as this webhook, and without
+            // this lock both could deliver the same order twice.
+            const won = await Firestore.claimOnce(env, 'order_delivery_locks', orderId);
+            if (won) {
+              await deliverOrder(env, order);
+              await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
+                status: 'delivered',
+                paidAt: new Date().toISOString(),
+              });
+            }
           } catch (fsErr) {
             console.error('[webhook] delivery failed:', fsErr.message);
           }
@@ -1291,8 +1330,11 @@ export default {
         if (order.status === 'paid' || order.status === 'delivered') {
           if (order.status === 'paid') {
             try {
-              await deliverOrder(env, order);
-              await Firestore.updateDoc(env, 'slickpay_orders', orderId, { status: 'delivered' });
+              const won = await Firestore.claimOnce(env, 'order_delivery_locks', orderId);
+              if (won) {
+                await deliverOrder(env, order);
+                await Firestore.updateDoc(env, 'slickpay_orders', orderId, { status: 'delivered' });
+              }
             } catch (fsErr) {
               console.error('[checkout/status] delivery retry failed:', fsErr.message);
             }
@@ -1317,11 +1359,18 @@ export default {
         // then mark the order as delivered so we never re-run this twice.
         if (completed === 1 && order.status === 'pending') {
           try {
-            await deliverOrder(env, order);
-            await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
-              status:  'delivered',
-              paidAt:  new Date().toISOString(),
-            });
+            // Same claim-before-deliver lock as the webhook handler above —
+            // this poll and the webhook can both observe status:'pending'
+            // within the same instant, so only whichever one wins the
+            // claim is allowed to actually deliver.
+            const won = await Firestore.claimOnce(env, 'order_delivery_locks', orderId);
+            if (won) {
+              await deliverOrder(env, order);
+              await Firestore.updateDoc(env, 'slickpay_orders', orderId, {
+                status:  'delivered',
+                paidAt:  new Date().toISOString(),
+              });
+            }
           } catch (fsErr) {
             console.error('[checkout/status] Firestore update failed:', fsErr.message);
           }
