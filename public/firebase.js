@@ -299,8 +299,14 @@ const UserAuth = {
       return { error: 'This Google account is not available for sign-in. Please use a different account.' };
     }
 
-    // Check if user doc already exists with a phone (returning Google user)
-    const existing = await _db.collection('users').doc(user.uid).get();
+    // Check if user doc already exists with a phone (returning Google user).
+    // Read via a Firestore instance bound to the PROBE app — the user is
+    // only signed in there right now (that's the point of the probe: the
+    // real _auth/_db session hasn't been touched yet), so this read has to
+    // go through the probe app's own auth context or Firestore rules
+    // correctly reject it as unauthenticated (permission-denied).
+    const probeDb = firebase.firestore(auth.app);
+    const existing = await probeDb.collection('users').doc(user.uid).get();
     if (existing.exists && existing.data().phone) {
       // Returning user, confirmed — NOW it's safe to actually log them
       // into the real storefront session. Reuse the Google credential we
@@ -311,6 +317,8 @@ const UserAuth = {
       if (credential) {
         await _auth.signInWithCredential(credential);
       }
+      // _db is bound to _app/_auth, which is now signed in (the line
+      // above), so this write is properly authenticated as the real user.
       await _db.collection('users').doc(user.uid).set({
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
