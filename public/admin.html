@@ -1162,7 +1162,7 @@ function doLogin() {
     'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Firebase API key is invalid or restricted.',
   };
 
-  firebase.auth().setPersistence(
+  _auth.setPersistence(
     remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION
   ).then(() => Auth.login(pass)).then(ok => {
     if (btn) btn.disabled = false;
@@ -1195,7 +1195,7 @@ function toggleEye() {
 // Firebase restores its own session on reload (per the persistence set
 // at login) — wait for it to report whether the admin is already
 // signed in, instead of trusting a locally-set flag.
-firebase.auth().onAuthStateChanged(function(user) {
+_auth.onAuthStateChanged(function(user) {
   const isAdmin = !!user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase();
   if (isAdmin) {
     if (document.readyState === 'loading') {

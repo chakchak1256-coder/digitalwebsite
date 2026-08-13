@@ -27,10 +27,25 @@ const firebaseConfig = {
   appId: "1:566506288076:web:58544c8c56cdab0df42369"
 };
 
-firebase.initializeApp(firebaseConfig);
-const _auth    = firebase.auth();
-const _db      = firebase.firestore();
-const _storage = firebase.storage();
+// ── App isolation (storefront vs admin) ────────────────────────────
+// index.html and admin.html both load this file, but they must NOT
+// share one Firebase Auth session. A single default app stores its
+// session under one localStorage key regardless of which page wrote
+// it, so logging into the admin panel in one tab overwrote the
+// customer session in another tab (and vice versa) — Firebase would
+// broadcast the change via the `storage` event and both tabs would
+// end up pointed at whichever login happened most recently.
+//
+// Giving each page its own NAMED app gives each one its own
+// persistence key (`firebase:authUser:<apiKey>:<appName>`), so the
+// two sessions live side-by-side in localStorage and never overwrite
+// each other. admin.html sets window.__IS_ADMIN = true before this
+// file loads (see admin.html), which is what lets this file tell the
+// two pages apart.
+const _app = firebase.initializeApp(firebaseConfig, window.__IS_ADMIN ? 'adminApp' : 'storefrontApp');
+const _auth    = firebase.auth(_app);
+const _db      = firebase.firestore(_app);
+const _storage = firebase.storage(_app);
 
 // ================================================================
 // USER AUTH — Firebase Authentication
