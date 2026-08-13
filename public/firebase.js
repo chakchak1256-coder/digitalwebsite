@@ -47,6 +47,25 @@ const _auth    = firebase.auth(_app);
 const _db      = firebase.firestore(_app);
 const _storage = firebase.storage(_app);
 
+// ── Google sign-in probe app ────────────────────────────────────────
+// A second, throwaway named app used ONLY to run the Google
+// popup/redirect sign-in itself (see UserAuth.loginWithGoogle /
+// completeGoogleRegistration). We need to know who a Google account is
+// and whether they've finished registration BEFORE deciding whether to
+// touch the real storefront session (_auth) — signing in directly on
+// _auth would replace whatever customer session was already active the
+// instant the popup succeeds, even if that Google account turns out to
+// be new/incomplete/blocked and everything then gets signed out again.
+// Running the probe on its own app instance means _auth is never
+// touched until we're sure; only a confirmed, completed login reuses
+// the Google credential via _auth.signInWithCredential(...).
+function _getGoogleProbeAuth() {
+  let app;
+  try { app = firebase.app('googleProbeApp'); }
+  catch (e) { app = firebase.initializeApp(firebaseConfig, 'googleProbeApp'); }
+  return firebase.auth(app);
+}
+
 // ================================================================
 // USER AUTH — Firebase Authentication
 // ================================================================
@@ -214,9 +233,22 @@ const UserAuth = {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
+      // ── Isolated probe app ──────────────────────────────────────
+      // signInWithPopup/signInWithRedirect on _auth would immediately
+      // REPLACE whatever storefront session is currently active in this
+      // tab — before we've even checked whether this Google account has
+      // finished registration. If it hasn't, _afterGoogleAuth() then
+      // signs out again, which meant an already-logged-in customer got
+      // silently logged out just from clicking "Sign in with Google" and
+      // not finishing it (or picking the wrong account). Doing the
+      // popup/redirect on a throwaway named app instead means _auth (the
+      // real, currently-logged-in session) is never touched unless and
+      // until we've confirmed the Google account is fully registered —
+      // see _afterGoogleAuth()'s use of signInWithCredential below.
+      const probeAuth = _getGoogleProbeAuth();
       let cred;
       try {
-        cred = await _auth.signInWithPopup(provider);
+        cred = await probeAuth.signInWithPopup(provider);
       } catch (popupErr) {
         // ── Popup-blocked fallback ───────────────────────────────
         // Many browsers/environments (Safari's popup rules, browsers
@@ -232,14 +264,14 @@ const UserAuth = {
         // had succeeded.
         if (popupErr.code === 'auth/popup-blocked' ||
             popupErr.code === 'auth/operation-not-supported-in-this-environment') {
-          await _auth.signInWithRedirect(provider);
+          await probeAuth.signInWithRedirect(provider);
           // The page is now navigating away — this promise intentionally
           // never resolves normally from here.
           return { redirecting: true };
         }
         throw popupErr;
       }
-      return await this._afterGoogleAuth(cred);
+      return await this._afterGoogleAuth(cred, probeAuth);
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return { error: null };
@@ -251,30 +283,34 @@ const UserAuth = {
   // Shared logic for "just got a Google credential, now what" — used by
   // both the popup path above and the redirect-result path below, so the
   // two don't drift out of sync.
-  async _afterGoogleAuth(cred) {
+  async _afterGoogleAuth(cred, probeAuth) {
+    const auth = probeAuth || _getGoogleProbeAuth();
     const user = cred.user;
     const isNew = cred.additionalUserInfo && cred.additionalUserInfo.isNewUser;
 
     // ── Reserved-account guard ──────────────────────────────────
     // The admin account (ADMIN_EMAIL) must only ever be reached via
     // the dedicated admin.html email+password login (Auth.login).
-    // This file shares one Firebase Auth instance between the
-    // storefront (UserAuth) and the admin panel (Auth), so if the
-    // browser's active/cached Google session happens to be the
-    // admin's Google account, signInWithPopup/Redirect could silently
-    // authenticate *that* account here — which would then also
-    // satisfy Auth.isLoggedIn() (it just compares email), handing
-    // out admin access through the public sign-in button. Hard-block
-    // that outcome unconditionally, no matter how it happened.
+    // Hard-block that outcome unconditionally, no matter how it
+    // happened. Signs out the PROBE instance only — _auth (and whatever
+    // real customer session might be active there) was never touched.
     if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      await _auth.signOut();
+      await auth.signOut();
       return { error: 'This Google account is not available for sign-in. Please use a different account.' };
     }
 
     // Check if user doc already exists with a phone (returning Google user)
     const existing = await _db.collection('users').doc(user.uid).get();
     if (existing.exists && existing.data().phone) {
-      // Returning user — just update timestamp and return
+      // Returning user, confirmed — NOW it's safe to actually log them
+      // into the real storefront session. Reuse the Google credential we
+      // already have (no second popup) rather than calling
+      // signInWithPopup again on _auth.
+      const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(cred);
+      await auth.signOut(); // done with the probe instance either way
+      if (credential) {
+        await _auth.signInWithCredential(credential);
+      }
       await _db.collection('users').doc(user.uid).set({
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
@@ -285,9 +321,10 @@ const UserAuth = {
       return { user: this._current, isNewUser: false };
     }
 
-    // New Google user (or existing without phone) — sign them out temporarily
-    // so they can complete the username+phone+OTP step before being fully registered
-    await _auth.signOut();
+    // New Google user (or existing without phone) — sign out the PROBE
+    // instance only. _auth, and whatever real customer session was
+    // active there before this click, is completely untouched.
+    await auth.signOut();
     return {
       isNewUser: true,
       googleProfile: {
@@ -308,7 +345,8 @@ const UserAuth = {
   // whether the popup or the redirect path was used.
   async _handleRedirectResult() {
     try {
-      const result = await _auth.getRedirectResult();
+      const probeAuth = _getGoogleProbeAuth();
+      const result = await probeAuth.getRedirectResult();
       if (!result || !result.user) return;
 
       // If completeGoogleRegistration()'s popup-blocked fallback stashed an
@@ -321,8 +359,8 @@ const UserAuth = {
       } catch (se) { /* sessionStorage unavailable */ }
 
       const r = pendingReg
-        ? await this._finishGoogleRegistration(result.user, pendingReg.googleProfile, pendingReg.username, pendingReg.phone)
-        : await this._afterGoogleAuth(result);
+        ? await this._finishGoogleRegistration(result.user, pendingReg.googleProfile, pendingReg.username, pendingReg.phone, result)
+        : await this._afterGoogleAuth(result, probeAuth);
 
       window.dispatchEvent(new CustomEvent('google-redirect-result', { detail: r }));
     } catch (e) {
@@ -335,19 +373,19 @@ const UserAuth = {
   // Called after Google user completes username + phone step
   async completeGoogleRegistration(googleProfile, username, phone) {
     try {
-      // Re-authenticate with Google FIRST. loginWithGoogle() signs the user
-      // out right after the initial popup (so a half-registered account
-      // can't act as "logged in"), which means we're signed out at this
-      // point. The duplicate-name/phone checks below read the 'users'
-      // collection, and Firestore rules require request.auth != null for
-      // that — running the reads before this re-auth caused every
-      // completion attempt to fail with permission-denied, regardless of
-      // whether the name/phone was actually taken.
+      // Re-authenticate with Google FIRST, on the isolated PROBE instance
+      // — not _auth. This step used to run on _auth directly, which meant
+      // an already-logged-in customer's real session got silently
+      // replaced (then left signed out if registration was abandoned)
+      // just from opening this form. The duplicate-name/phone checks and
+      // the Worker call below only need a valid ID token, which the
+      // probe instance provides just as well.
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'none', login_hint: googleProfile.email });
+      const probeAuth = _getGoogleProbeAuth();
       let cred;
       try {
-        cred = await _auth.signInWithPopup(provider);
+        cred = await probeAuth.signInWithPopup(provider);
       } catch (popupErr) {
         // ── Popup-blocked fallback ───────────────────────────────
         // Same reasoning as loginWithGoogle(): some browsers/environments
@@ -361,12 +399,12 @@ const UserAuth = {
           try {
             sessionStorage.setItem('_pendingGoogleReg', JSON.stringify({ googleProfile, username, phone }));
           } catch (se) { /* sessionStorage unavailable — redirect will fall back to a plain login prompt */ }
-          await _auth.signInWithRedirect(provider);
+          await probeAuth.signInWithRedirect(provider);
           return { redirecting: true };
         }
         throw popupErr;
       }
-      return await this._finishGoogleRegistration(cred.user, googleProfile, username, phone);
+      return await this._finishGoogleRegistration(cred.user, googleProfile, username, phone, cred);
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return { error: 'Google sign-in was cancelled. Please try again.' };
@@ -377,20 +415,18 @@ const UserAuth = {
 
   // Shared by completeGoogleRegistration()'s popup path and its
   // redirect-fallback resume path in _handleRedirectResult().
-  async _finishGoogleRegistration(user, googleProfile, username, phone) {
+  // `credResult` is the raw sign-in result (has .user and can yield a
+  // reusable credential via GoogleAuthProvider.credentialFromResult) —
+  // used at the end to finalize the login on the real _auth instance.
+  async _finishGoogleRegistration(user, googleProfile, username, phone, credResult) {
+    const probeAuth = _getGoogleProbeAuth();
     // ── Reserved-account guard ──────────────────────────────────
     // Same protection as in loginWithGoogle(): this re-auth step can
     // sign in SILENTLY using whatever Google session is already active
-    // in the browser. If that happens to be the admin's Google account,
-    // never let it complete — that would create/overwrite the admin's
-    // Firestore 'users' doc from the public signup form and, since
-    // Auth.isLoggedIn() just compares email against the same shared
-    // _auth instance, hand out admin access. Check this before the uid
-    // identity check below, since an admin-account sign-in could
-    // otherwise still match if googleProfile.uid happened to be the
-    // admin's uid.
+    // in the browser. Never let it complete for the admin's account.
+    // Only the PROBE instance is touched here — _auth is untouched.
     if ((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      await _auth.signOut();
+      await probeAuth.signOut();
       return { error: 'This Google account is not available for sign-in. Please use a different account.' };
     }
 
@@ -403,7 +439,7 @@ const UserAuth = {
     // different person's account. Bail out hard if the authenticated
     // uid doesn't match the account that actually started registration.
     if (user.uid !== googleProfile.uid) {
-      await _auth.signOut();
+      await probeAuth.signOut();
       return {
         error: `Signed in as ${user.email}, but registration was started with ${googleProfile.email}. ` +
                `Please make sure only that Google account is active in this browser, then try again.`
@@ -413,18 +449,11 @@ const UserAuth = {
     // ── Complete registration server-side ────────────────────────
     // Duplicate-username/phone checks and the actual user-doc write now
     // happen in the Worker (/api/complete-google-registration), using the
-    // service account instead of this client SDK. Firestore security
-    // rules split "get" (read one doc by ID) from "list"/query
-    // permissions — most default rule setups only grant the former, so
-    // the client-side `.where('name', '==', ...)` duplicate check here
-    // was hitting permission-denied on every single signup, regardless
-    // of what's configured in the Firebase Console. Routing this through
-    // the Worker's service account sidesteps that class of problem
-    // entirely — no Firestore Rules changes needed.
+    // service account instead of this client SDK.
     const idToken = await user.getIdToken();
     const backendUrl = (window.DIGISTORE_BACKEND_URL || '').replace(/\/+$/, '');
     if (!backendUrl) {
-      await _auth.signOut();
+      await probeAuth.signOut();
       return { error: 'Sign-up is temporarily unavailable (server not configured). Please contact support.' };
     }
     let res, data;
@@ -436,18 +465,28 @@ const UserAuth = {
       });
       data = await res.json();
     } catch (ne) {
-      await _auth.signOut();
+      await probeAuth.signOut();
       return { error: 'Could not reach the server. Please check your connection and try again.' };
     }
     if (!res.ok || data.error) {
       // Duplicate username/phone (409) is a normal validation outcome —
       // let the user fix the field and stay on the form rather than
       // signing them out.
-      if (res.status !== 409) await _auth.signOut();
+      if (res.status !== 409) await probeAuth.signOut();
       return { error: data.error || 'Registration failed. Please try again.' };
     }
 
     await user.updateProfile({ displayName: data.user.name }).catch(() => {});
+
+    // Registration confirmed server-side — NOW finalize the real login on
+    // _auth, reusing the Google credential (no second popup). Only at
+    // this point does the storefront's actual session change.
+    try {
+      const credential = credResult && firebase.auth.GoogleAuthProvider.credentialFromResult(credResult);
+      if (credential) await _auth.signInWithCredential(credential);
+    } catch (ce) { /* non-fatal — this._current below still reflects the completed account */ }
+    await probeAuth.signOut();
+
     this._current = data.user;
     window.dispatchEvent(new Event('auth:change'));
     return { user: this._current };
