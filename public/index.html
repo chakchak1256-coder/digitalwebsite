@@ -9,6 +9,24 @@
     var authed = localStorage.getItem('dz_auth') === '1';
     document.documentElement.setAttribute('data-authed', authed ? 'true' : 'false');
   })();
+  // Performance mode — detect low-end devices / slow connections and trim
+  // decorative effects (blur, shadows, animations) so the site stays fast.
+  // This never touches functionality, only visual polish.
+  (function(){
+    try{
+      var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      var mem = navigator.deviceMemory || 4;
+      var cores = navigator.hardwareConcurrency || 4;
+      var saveData = !!(conn && conn.saveData);
+      var slowNet = !!(conn && /^(slow-2g|2g|3g)$/.test(conn.effectiveType || ''));
+      var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var lowPerf = saveData || slowNet || mem <= 2 || cores <= 2 || reducedMotion;
+      var stored = localStorage.getItem('dz_perf');
+      if(stored === 'low') lowPerf = true;
+      if(stored === 'full') lowPerf = false;
+      if(lowPerf) document.documentElement.classList.add('low-perf');
+    }catch(e){}
+  })();
 </script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -1731,6 +1749,35 @@ footer::before{
 }
 @keyframes dzShimmer{ 0%{ background-position:160% 0; } 100%{ background-position:-60% 0; } }
 
+
+/* =========================================================
+   PERFORMANCE MODE
+   Applied via <html class="low-perf"> when JS detects an
+   older / low-memory device, a slow connection, or the OS
+   'reduce motion' setting. Strips blur/shadow/animation
+   heavy visuals so the page stays smooth. Nothing here
+   removes elements or breaks click handlers — purely visual.
+   ========================================================= */
+.low-perf, .low-perf *{
+  animation-play-state:paused !important;
+  animation-duration:0s !important;
+  animation-delay:0s !important;
+  transition-duration:0s !important;
+  transition-delay:0s !important;
+  scroll-behavior:auto !important;
+}
+.low-perf *{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  filter:none !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+/* decorative floating orbs / sparkline glow — pure eye-candy, safe to hide */
+.low-perf .dig-orb,
+.low-perf .dig-sparkline .dig-glowpath{
+  display:none !important;
+}
 </style>
 </head>
 <body>
